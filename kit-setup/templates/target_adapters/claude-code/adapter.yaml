@@ -1,0 +1,59 @@
+# target_adapters/claude-code/adapter.yaml
+# Render package for Claude Code runner.
+# Knows where to put files, what frontmatter to attach, what the runner supports.
+
+adapter_version: "1.0.0"
+id: claude-code
+
+# Where the runner reads its project-level config.
+config_dir: ".claude"
+instruction_file: "CLAUDE.md"
+settings_file: ".claude/settings.json"
+
+# Per-artifact output paths. Use {id}, {feature}, {module} as placeholders.
+# null = runner does not support this artifact type — renderer skips with warning.
+artifact_paths:
+  agent:       ".claude/agents/{id}.md"
+  skill:       ".claude/skills/{id}/SKILL.md"
+  command:     ".claude/commands/{id}.md"
+  rule:        "CLAUDE.md#{id}"             # rendered as a section in CLAUDE.md
+  user_prompt: ".claude/prompts/{id}.md"
+
+# Per-artifact frontmatter templates. null = no frontmatter for this type.
+artifact_frontmatter:
+  agent:       frontmatter/agent.yaml
+  skill:       frontmatter/skill.yaml
+  command:     frontmatter/command.yaml
+  rule:        null                          # rules are sections, no frontmatter
+  user_prompt: null
+
+# What the runner actually supports. Renderer uses this to fail fast on
+# misconfigured manifests (e.g. cursor + per_agent_model is not supported).
+capabilities:
+  subagents: true
+  per_agent_model: true                      # frontmatter.model per agent
+  per_agent_tools: true                      # frontmatter.tools whitelist
+  scoped_rules: false                        # rules apply globally via CLAUDE.md
+  hooks: true                                # .claude/hooks/<event>.mjs
+  mcp_inline_in_settings: true               # .claude/settings.json mcpServers
+  skills_directory_format: true              # skill = directory containing SKILL.md
+  slash_commands: true
+
+# Optional global config rendered into settings_file.
+settings_template: settings.json.template
+
+# Render-time validators / transforms. Order matters.
+transforms:
+  agent:
+    - validate_unique_name
+    - inject_resolved_model
+    - validate_tools_whitelist
+  skill:
+    - validate_skill_id_kebab_case
+    - ensure_skill_directory_exists
+  rule:
+    - inject_section_anchor                  # produces "## <id>" header in CLAUDE.md
+  command:
+    - validate_slash_prefix
+
+notes: conventions.md

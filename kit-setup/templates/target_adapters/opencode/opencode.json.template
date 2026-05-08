@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "{{PROVIDER_ID}}": {
+      "options": {
+        "baseURL": "{{PROVIDER_BASE_URL}}",
+        "apiKey": "{env:{{PROVIDER_API_KEY_ENV}}}"
+      }
+    }
+  },
+  "mcp": {{MCP_SERVERS_JSON}}
+}

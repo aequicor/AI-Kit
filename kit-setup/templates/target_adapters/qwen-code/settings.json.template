@@ -1,0 +1,14 @@
+{
+  "contextFileName": "AGENTS.md",
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "{{RESOLVED_MODEL}}",
+        "name": "{{RESOLVED_MODEL}}",
+        "baseUrl": "{{PROVIDER_BASE_URL}}"
+      }
+    ]
+  },
+  "model": { "name": "{{RESOLVED_MODEL}}" },
+  "mcpServers": {{MCP_SERVERS_JSON}}
+}

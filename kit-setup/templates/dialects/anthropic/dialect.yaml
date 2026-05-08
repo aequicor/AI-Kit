@@ -1,0 +1,64 @@
+# dialects/anthropic/dialect.yaml
+# Wrapper package for Anthropic Claude family.
+
+dialect_version: "1.0.0"
+id: anthropic
+display_name: "Anthropic Claude"
+
+# Bound to model.family value(s)
+applies_to_families: [anthropic]
+
+# Allowed placeholders. Renderer warns if a wrapper uses something not here.
+placeholders:
+  - AGENT_ID
+  - AGENT_DESC
+  - BODY                         # mandatory in agent / skill / command / rule wrappers
+  - PROJECT_NAME
+  - STACK_SUMMARY
+  - LANGUAGE_CODE
+  - FORBIDDEN_PATTERNS
+  - TOOLS_LIST
+  - TOOLS_LIST_CSV
+  - RESOLVED_MODEL
+  - KNOWLEDGE_ROUTING
+  - SKILL_ID
+  - SKILL_DESCRIPTION
+  - SKILL_TRIGGERS
+  - SKILL_OUTPUT_FORMAT
+  - COMMAND_NAME
+  - COMMAND_DESCRIPTION
+  - COMMAND_ARGS
+  - RULE_DESC
+  - "snippet:*"                  # snippet invocation: {{snippet:project_context}}
+
+# Per-artifact wrappers. Path is relative to this dialect.yaml.
+wrappers:
+  agent:       wrappers/agent.md
+  skill:       wrappers/skill.md
+  command:     wrappers/command.md
+  rule:        wrappers/rule.md
+  user_prompt: wrappers/user_prompt.md
+
+# Family-specific snippets. Override _shared/snippets/<NAME>.md by dropping
+# the same filename here.
+snippets_dir: snippets
+
+# Style guidance — informational + linter rules.
+style:
+  prefer_xml_tags: true
+  prefer_markdown_headings: false
+  use_thinking_blocks: true      # Claude likes <thinking>…</thinking>
+  max_directive_lines: 200
+  forbidden_constructs:
+    - "ALL CAPS DIRECTIVES"      # Claude reacts emotionally rather than precisely
+    - "redundant step 1, step 2 enumerations"
+    - "ты должен / ты обязан / you MUST repeated more than twice"
+    - "marketing speak (revolutionary, world-class, …)"
+
+# Auto-transforms applied to the wrapped output by the renderer.
+auto_transform:
+  collapse_double_newlines: true
+  trim_trailing_whitespace: true
+  ensure_trailing_newline: true
+
+notes: conventions.md

@@ -1,0 +1,7 @@
+# .aider.conf.yml
+model: {{PROVIDER_ID}}/{{RESOLVED_MODEL}}
+auto-commits: false
+dirty-commits: false
+read:
+  - CONVENTIONS.md
+  - knowledge/conventions.md

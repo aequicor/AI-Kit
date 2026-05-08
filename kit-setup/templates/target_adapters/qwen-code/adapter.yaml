@@ -1,0 +1,40 @@
+adapter_version: "1.0.0"
+id: qwen-code
+
+config_dir: ".qwen"
+instruction_file: "AGENTS.md"          # via contextFileName in settings.json
+settings_file: ".qwen/settings.json"
+
+artifact_paths:
+  agent:       ".qwen/agents/{id}.md"
+  skill:       ".qwen/skills/{id}/SKILL.md"
+  command:     ".qwen/commands/{id}.md"
+  rule:        "AGENTS.md#{id}"
+  user_prompt: ".qwen/prompts/{id}.md"
+
+artifact_frontmatter:
+  agent:       frontmatter/agent.yaml
+  skill:       frontmatter/skill.yaml
+  command:     frontmatter/command.yaml
+  rule:        null
+  user_prompt: null
+
+capabilities:
+  subagents: true
+  per_agent_model: true
+  per_agent_tools: true
+  scoped_rules: false
+  hooks: false
+  mcp_inline_in_settings: true         # .qwen/settings.json mcpServers
+  skills_directory_format: true        # Anthropic-style skill format
+  slash_commands: true
+
+settings_template: settings.json.template
+
+transforms:
+  agent:
+    - inject_resolved_model
+  skill:
+    - validate_skill_id_kebab_case
+
+notes: conventions.md

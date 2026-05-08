@@ -1,0 +1,34 @@
+adapter_version: "1.0.0"
+id: cursor
+
+config_dir: ".cursor"
+instruction_file: ".cursor/rules"      # directory, not file
+settings_file: ".cursor/mcp.json"
+
+artifact_paths:
+  agent:       null                    # Cursor has no subagents
+  skill:       null                    # Cursor has no skills
+  command:     null
+  rule:        ".cursor/rules/{id}.mdc"
+  user_prompt: ".cursor/rules/_prompts/{id}.mdc"
+
+artifact_frontmatter:
+  rule:        frontmatter/rule.yaml
+  user_prompt: frontmatter/user_prompt.yaml
+
+capabilities:
+  subagents: false
+  per_agent_model: false               # model is global
+  scoped_rules: true                   # globs + alwaysApply
+  hooks: false
+  mcp_inline_in_settings: true
+  slash_commands: false
+
+settings_template: mcp.json.template
+
+transforms:
+  rule:
+    - validate_globs_or_always_apply
+    - validate_mdc_extension
+
+notes: conventions.md

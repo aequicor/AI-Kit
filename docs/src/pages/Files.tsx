@@ -1,14 +1,30 @@
 import { useTranslation } from 'react-i18next';
 
-const FILES: { file: string; provider: string; purpose: string }[] = [
-  { file: 'CLAUDE.md', provider: 'Claude Code', purpose: 'claudemd' },
-  { file: '.claude/settings.json', provider: 'Claude Code', purpose: 'claudeSettings' },
-  { file: '.claude/agents/*.md', provider: 'Claude Code', purpose: 'claudeAgents' },
-  { file: 'opencode.json', provider: 'OpenCode', purpose: 'opencodeJson' },
-  { file: '.opencode/agents/*.md', provider: 'OpenCode', purpose: 'opencodeAgents' },
-  { file: '.planning/CURRENT.md', provider: 'both', purpose: 'current' },
-  { file: '.planning/MORNING_REPORT.md', provider: 'both', purpose: 'morning' },
-  { file: '.planning/tasks/', provider: 'both', purpose: 'tasks' },
+type Row = { file: string; target: string; purpose: string };
+
+const FILES: Row[] = [
+  // claude-code
+  { file: 'CLAUDE.md', target: 'claude-code', purpose: 'claudemd' },
+  { file: '.claude/agents/*.md', target: 'claude-code', purpose: 'claudeAgents' },
+  { file: '.claude/skills/<id>/SKILL.md', target: 'claude-code', purpose: 'claudeSkills' },
+  { file: '.claude/commands/*.md', target: 'claude-code', purpose: 'claudeCommands' },
+  { file: '.claude/prompts/*.md', target: 'claude-code', purpose: 'claudePrompts' },
+  { file: '.claude/settings.json', target: 'claude-code', purpose: 'claudeSettings' },
+  // cursor
+  { file: '.cursor/rules/*.mdc', target: 'cursor', purpose: 'cursorRules' },
+  { file: '.cursor/rules/_prompts/*.mdc', target: 'cursor', purpose: 'cursorPrompts' },
+  { file: '.cursor/mcp.json', target: 'cursor', purpose: 'cursorMcp' },
+  // opencode
+  { file: 'AGENTS.md', target: 'opencode', purpose: 'agentsMd' },
+  { file: '.opencode/agents/*.md', target: 'opencode', purpose: 'opencodeAgents' },
+  { file: 'opencode.json', target: 'opencode', purpose: 'opencodeSettings' },
+  // aider
+  { file: 'CONVENTIONS.md', target: 'aider', purpose: 'aiderConventions' },
+  { file: '.aider.conf.yml', target: 'aider', purpose: 'aiderConf' },
+  // qwen-code
+  { file: 'AGENTS.md', target: 'qwen-code', purpose: 'agentsMd' },
+  { file: '.qwen/agents/*.md', target: 'qwen-code', purpose: 'opencodeAgents' },
+  { file: '.qwen/settings.json', target: 'qwen-code', purpose: 'qwenSettings' },
 ];
 
 export default function Files() {
@@ -28,16 +44,16 @@ export default function Files() {
           <table>
             <thead>
               <tr>
+                <th>{t('files.target')}</th>
                 <th>{t('files.file')}</th>
-                <th>{t('files.provider')}</th>
                 <th>{t('files.purpose')}</th>
               </tr>
             </thead>
             <tbody>
-              {FILES.map((f) => (
-                <tr key={f.file}>
+              {FILES.map((f, i) => (
+                <tr key={`${f.target}-${f.file}-${i}`}>
+                  <td><code>{f.target}</code></td>
                   <td><code>{f.file}</code></td>
-                  <td>{f.provider}</td>
                   <td>{t(`files.purposes.${f.purpose}`)}</td>
                 </tr>
               ))}

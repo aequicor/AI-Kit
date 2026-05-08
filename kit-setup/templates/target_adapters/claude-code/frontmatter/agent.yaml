@@ -1,0 +1,4 @@
+name: "{{AGENT_ID}}"
+description: "{{AGENT_DESC}}"
+tools: "{{TOOLS_LIST_CSV}}"
+model: "{{RESOLVED_MODEL}}"

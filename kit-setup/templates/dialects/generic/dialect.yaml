@@ -1,0 +1,17 @@
+dialect_version: "1.0.0"
+id: generic
+display_name: "Generic (no wrapping)"
+applies_to_families: [generic, llama, mistral, "*"]   # catch-all
+placeholders:
+  - BODY
+  - "snippet:*"
+wrappers:
+  agent:       wrappers/agent.md
+  skill:       wrappers/skill.md
+  command:     wrappers/command.md
+  rule:        wrappers/rule.md
+  user_prompt: wrappers/user_prompt.md
+style: {}
+auto_transform:
+  ensure_trailing_newline: true
+notes: conventions.md

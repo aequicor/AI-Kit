@@ -22,34 +22,34 @@
     "faq": "FAQ"
   },
   "home": {
-    "badge": "User Guide · v1.0",
-    "title": "AI agent setup — in seconds",
-    "lead": "AI Kit generates configuration for Claude Code and OpenCode for any project. One prompt, one binary — and your repo is ready for AI-assisted development.",
+    "badge": "User Guide · v2.0",
+    "title": "AI agent setup — in seconds",
+    "lead": "AI Kit generates configuration for Claude Code, Cursor, OpenCode, Aider, and Qwen Code from a single manifest. One prompt, one binary — and your repo is ready for AI-assisted development across every runner you use.",
     "ctaQuick": "Quick Start",
     "ctaGithub": "View on GitHub",
     "what": {
       "eyebrow": "What it does",
       "title": "Everything an AI agent needs to start working in your repo",
-      "sub": "AI Kit produces CLAUDE.md, .claude/settings.json, opencode.json, agent definitions, and a .planning/ structure that match the ai-agent-kit workflow. Works with Kotlin, Java, Python, TypeScript, Go, Rust and more."
+      "sub": "AI Kit consumes a single .aikit/manifest.yaml and produces per-runner artifacts: CLAUDE.md and .claude/agents/*.md for Claude Code, .cursor/rules/*.mdc for Cursor, AGENTS.md and opencode.json for OpenCode, .aider.conf.yml and CONVENTIONS.md for Aider, .qwen/settings.json for Qwen Code. Same source of truth, five output shapes."
     },
     "features": {
       "eyebrow": "Features",
       "title": "Why AI Kit",
       "providers": {
-        "title": "Two providers",
-        "body": "Generate config for Claude Code, OpenCode, or both at once."
+        "title": "Five runners",
+        "body": "Generate configs for Claude Code, Cursor, OpenCode, Aider, and Qwen Code — pick any subset via render_targets in the manifest."
       },
       "languages": {
         "title": "Any stack",
-        "body": "Pick a language and (optionally) a framework — generation adapts to your project."
+        "body": "Declare your stack and modules in the manifest; per-agent prompts and rules adapt to it via shared snippets."
       },
       "planning": {
-        "title": "Planning system",
-        "body": "Optional .planning/ directory with current task, morning report, and per-task notes."
+        "title": "Verify before write",
+        "body": "Run verify to validate the manifest end-to-end (schema, references, model resolution, file collisions) before any file lands on disk."
       },
       "agents": {
         "title": "Agent definitions",
-        "body": "Pre-baked subagent files for repetitive engineering chores."
+        "body": "Per-agent prompt bodies are wrapped by family-specific dialects (Anthropic XML, OpenAI markdown, Qwen DO/DON'T) at render time."
       }
     },
     "next": {
@@ -57,15 +57,15 @@
       "title": "Pick your path",
       "quickstart": {
         "title": "Quick Start",
-        "body": "The recommended way — paste a single prompt into Claude Code or OpenCode and let the agent do the rest."
+        "body": "The recommended way — paste a single prompt into Claude Code or OpenCode and let the agent draft the manifest and run the binary."
       },
       "cli": {
         "title": "CLI Usage",
-        "body": "Prefer running things yourself? Download the binary and call it directly with flags."
+        "body": "Prefer running things yourself? Download the binary and call verify and generate against your manifest."
       },
       "files": {
         "title": "Generated Files",
-        "body": "See exactly what AI Kit creates in your repository and what each file does."
+        "body": "See exactly what AI Kit produces per render target."
       },
       "build": {
         "title": "Build from Source",
@@ -81,65 +81,64 @@
     "step1": "Open Claude Code or OpenCode in your project directory.",
     "step2Title": "2. Paste this prompt",
     "step2": "Paste the prompt below and let the agent take it from there.",
-    "step3Title": "3. Answer a few questions",
-    "step3": "The agent will ask about project name, language, framework, provider and model. It downloads the binary, runs it, and confirms the generated files.",
-    "tip": "Re-running the kit overwrites existing files safely — feel free to tweak answers and run again."
+    "step3Title": "3. The agent does the rest",
+    "step3": "It inspects your project, drafts .aikit/manifest.yaml (stack, modules, agents, render targets, providers), runs kit-setup verify (looping on errors), then runs kit-setup generate. You get the rendered file list to confirm.",
+    "tip": "Re-running generate overwrites the kit unconditionally. Edit the manifest and re-run whenever you need to tweak."
   },
   "cli": {
     "eyebrow": "CLI",
     "title": "CLI Usage",
-    "lead": "Prefer running the binary yourself? Download it from the Releases page and call it directly.",
+    "lead": "Prefer running the binary yourself? Download it from the Releases page and run verify and generate against your manifest.",
     "downloads": "Downloads",
     "platform": "Platform",
     "binary": "Binary",
     "examples": "Examples",
-    "flags": "Flags reference",
-    "flag": "Flag",
+    "subcommands": "Subcommands",
+    "subcommand": "Subcommand",
     "description": "Description",
-    "default": "Default",
-    "flagsList": {
-      "name": "Project name",
-      "path": "Target directory",
-      "lang": "Programming language (kotlin / java / python / typescript / go / rust / other)",
-      "framework": "Framework name (omit if none)",
-      "provider": "AI provider — claude / opencode / both",
-      "model": "Model id (e.g. claude-sonnet-4-6)",
-      "noPlanning": "Skip .planning/ generation",
-      "noAgents": "Skip agent definition files"
+    "exit": "Exit code",
+    "exitCodes": "Exit codes",
+    "subcommandsList": {
+      "verify": "Validates the manifest. Emits {\"valid\": bool, \"errors\": [...]}",
+      "generate": "Renders the kit. Emits {\"ok\": bool, \"generated\": [...], \"errors\": [...]?}",
+      "help": "Prints help text and exits.",
+      "version": "Prints the binary version and exits."
     },
-    "defaults": {
-      "name": "directory name",
-      "path": ". (current dir)",
-      "lang": "kotlin",
-      "framework": "—",
-      "provider": "both",
-      "model": "claude-sonnet-4-6",
-      "noPlanning": "enabled",
-      "noAgents": "enabled"
+    "exitMeanings": {
+      "zero": "Success.",
+      "one": "Manifest invalid (verify) or refused by validation (generate).",
+      "two": "Usage error, manifest load failure, parse error, or runtime I/O failure."
     }
   },
   "files": {
     "eyebrow": "Files",
     "title": "Generated Files",
-    "lead": "What lands in your project after running the kit.",
+    "lead": "What lands in your project per render target. Pick targets via render_targets in the manifest.",
+    "target": "Render target",
     "file": "File",
-    "provider": "Provider",
     "purpose": "Purpose",
     "purposes": {
-      "claudemd": "Top-level guidance Claude Code reads on every session.",
-      "claudeSettings": "Permissions, env vars, and hooks for Claude Code.",
-      "claudeAgents": "Subagent definitions used by Claude Code.",
-      "opencodeJson": "OpenCode project configuration.",
-      "opencodeAgents": "Subagent definitions used by OpenCode.",
-      "current": "Currently in-progress task and notes.",
-      "morning": "Daily summary of what changed and what's next.",
-      "tasks": "Per-task work logs."
+      "claudemd": "Top-level guidance file Claude Code reads on every session — composed from knowledge.constitution sections.",
+      "claudeAgents": "Per-agent definitions with frontmatter (name, description, tools, resolved model).",
+      "claudeSkills": "Anthropic-style skill bundles wrapped in family-specific XML.",
+      "claudeCommands": "Slash-command bodies (/kit-status, /kit-resume, custom).",
+      "claudePrompts": "User-facing prompt templates.",
+      "claudeSettings": "Permissions, MCP servers, and env vars for Claude Code.",
+      "cursorRules": "Per-section .mdc rule files (constitution split across files, alwaysApply: true).",
+      "cursorPrompts": "User prompt templates as scoped Cursor rules.",
+      "cursorMcp": "MCP server config for Cursor.",
+      "opencodeAgents": "Per-agent definitions for OpenCode.",
+      "opencodeSettings": "OpenCode project configuration with provider + MCP block.",
+      "agentsMd": "Top-level guidance file shared by OpenCode and Qwen Code (don't enable both at once — they collide).",
+      "aiderConventions": "CONVENTIONS.md auto-loaded into Aider sessions.",
+      "aiderConf": "Global Aider configuration with model binding.",
+      "qwenSettings": "Qwen Code settings, including modelProviders block."
     }
   },
   "build": {
     "eyebrow": "Build",
     "title": "Build from Source",
-    "lead": "If you want to compile the binary yourself, you'll need JDK 11+.",
+    "lead": "If you want to compile the binary yourself, you'll need JDK 21.",
     "clone": "Clone the repository",
     "compile": "Compile for your platform",
     "windows": "Windows",
@@ -154,15 +153,15 @@
     "items": [
       {
         "q": "Does the kit overwrite existing files?",
-        "a": "Yes. It safely overwrites files it manages. If you have a customised CLAUDE.md, back it up before re-running."
+        "a": "Yes. Every generate run overwrites unconditionally. If you've customised CLAUDE.md or any other generated file, edit the manifest or its referenced templates rather than the output — the next generate will clobber direct edits."
       },
       {
-        "q": "Which provider should I pick?",
-        "a": "Both. Generating both Claude Code and OpenCode configs is cheap and lets you switch tools without redoing setup."
+        "q": "Which render targets should I pick?",
+        "a": "The ones you actually use. Picking too many is fine, but opencode + qwen-code together collide on AGENTS.md and verify will reject the combo — drop one."
       },
       {
         "q": "What if my language isn't in the list?",
-        "a": "Pass --lang other and skip --framework. Generation falls back to a generic template you can refine."
+        "a": "Declare it under stack.languages. The manifest is free-form there; the values surface into prompts via shared snippets."
       },
       {
         "q": "Where do I report bugs?",

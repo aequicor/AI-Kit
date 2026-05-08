@@ -1,0 +1,4 @@
+# /{{COMMAND_NAME}}
+{{COMMAND_DESCRIPTION}}
+
+{{BODY}}

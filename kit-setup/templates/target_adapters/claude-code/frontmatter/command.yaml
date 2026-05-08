@@ -1,0 +1,2 @@
+description: "{{COMMAND_DESCRIPTION}}"
+allowed-tools: "{{TOOLS_LIST_CSV}}"

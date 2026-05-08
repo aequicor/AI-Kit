@@ -10,16 +10,19 @@ import com.aikit.setup.command.VerifyCommand
 import com.aikit.setup.command.VerifyService
 import com.aikit.setup.generation.DefaultKitGenerator
 import com.aikit.setup.generation.KitGenerator
+import com.aikit.setup.generation.PackageLoader
 import com.aikit.setup.io.FileSystem
+import com.aikit.setup.manifest.BlockYamlParser
 import com.aikit.setup.manifest.DefaultManifestLoader
 import com.aikit.setup.manifest.ManifestLoader
-import com.aikit.setup.manifest.StubYamlParser
 import com.aikit.setup.manifest.YamlParser
 import com.aikit.setup.output.Console
 import com.aikit.setup.output.GenerateResultRenderer
 import com.aikit.setup.output.JsonGenerateResultRenderer
 import com.aikit.setup.output.JsonVerifyResultRenderer
 import com.aikit.setup.output.VerifyResultRenderer
+import com.aikit.setup.templates.EmbeddedTemplateRegistry
+import com.aikit.setup.templates.TemplateRegistry
 import com.aikit.setup.validation.RuleBasedValidator
 import com.aikit.setup.validation.Validator
 import com.aikit.setup.validation.defaultRules
@@ -50,10 +53,16 @@ class KitSetupApp(
     constructor(
         files: FileSystem,
         console: Console,
-        yamlParser: YamlParser = StubYamlParser(),
+        yamlParser: YamlParser = BlockYamlParser(),
         manifestLoader: ManifestLoader = DefaultManifestLoader(files, yamlParser),
-        validator: Validator = RuleBasedValidator(defaultRules()),
-        kitGenerator: KitGenerator = DefaultKitGenerator(files),
+        templates: TemplateRegistry = EmbeddedTemplateRegistry(),
+        packages: PackageLoader = PackageLoader(templates, yamlParser),
+        validator: Validator = RuleBasedValidator(defaultRules(packages)),
+        kitGenerator: KitGenerator = DefaultKitGenerator(
+            files = files,
+            templates = templates,
+            packages = packages,
+        ),
         verifyResultRenderer: VerifyResultRenderer = JsonVerifyResultRenderer(),
         generateResultRenderer: GenerateResultRenderer = JsonGenerateResultRenderer(),
     ) : this(

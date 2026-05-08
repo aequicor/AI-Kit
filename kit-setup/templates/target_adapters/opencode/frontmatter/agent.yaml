@@ -1,0 +1,8 @@
+description: "{{AGENT_DESC}}"
+mode: "{{AGENT_MODE}}"
+model: "{{PROVIDER_ID}}/{{RESOLVED_MODEL}}"
+temperature: {{TEMPERATURE}}
+permission:
+  edit: {{PERMISSION_EDIT}}
+  bash: {{PERMISSION_BASH}}
+  webfetch: {{PERMISSION_WEB}}

@@ -1,0 +1,3 @@
+description: "{{RULE_DESC}}"
+globs: {{RULE_GLOBS_JSON}}
+alwaysApply: {{RULE_ALWAYS_APPLY}}

@@ -1,0 +1,33 @@
+adapter_version: "1.0.0"
+id: aider
+
+config_dir: ".aider"
+instruction_file: "CONVENTIONS.md"     # auto-loaded into Aider session
+settings_file: ".aider.conf.yml"
+
+artifact_paths:
+  agent:       null                    # Aider has no subagents
+  skill:       null                    # No skills concept
+  command:     null
+  rule:        "CONVENTIONS.md#{id}"
+  user_prompt: ".aider/prompts/{id}.md"
+
+artifact_frontmatter:
+  rule:        null
+  user_prompt: null
+
+capabilities:
+  subagents: false
+  per_agent_model: false               # model is set in .aider.conf.yml globally
+  scoped_rules: false
+  hooks: false
+  mcp_inline_in_settings: false        # MCP not natively supported
+  slash_commands: false
+
+settings_template: aider.conf.yml.template
+
+transforms:
+  rule:
+    - inject_section_anchor
+
+notes: conventions.md

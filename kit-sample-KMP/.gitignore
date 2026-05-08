@@ -5,3 +5,4 @@ kotlin-js-store/
 .idea/
 *.iml
 local.properties
+.kotlin

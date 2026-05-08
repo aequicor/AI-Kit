@@ -1,0 +1,40 @@
+adapter_version: "1.0.0"
+id: opencode
+
+config_dir: ".opencode"
+instruction_file: "AGENTS.md"
+settings_file: "opencode.json"
+
+artifact_paths:
+  agent:       ".opencode/agents/{id}.md"
+  skill:       ".opencode/skills/{id}/SKILL.md"
+  command:     ".opencode/commands/{id}.md"
+  rule:        "AGENTS.md#{id}"
+  user_prompt: ".opencode/prompts/{id}.md"
+
+artifact_frontmatter:
+  agent:       frontmatter/agent.yaml
+  skill:       frontmatter/skill.yaml
+  command:     frontmatter/command.yaml
+  rule:        null
+  user_prompt: null
+
+capabilities:
+  subagents: true
+  per_agent_model: true                # frontmatter.model
+  per_agent_tools: true                # frontmatter.permission
+  scoped_rules: false
+  hooks: false                         # plugins via .opencode/plugins/*.ts instead
+  plugins: true
+  mcp_inline_in_settings: true
+  skills_directory_format: true
+  slash_commands: true
+
+settings_template: opencode.json.template
+
+transforms:
+  agent:
+    - inject_resolved_model
+    - validate_permission_block
+
+notes: conventions.md

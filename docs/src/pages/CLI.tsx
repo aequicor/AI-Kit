@@ -9,15 +9,17 @@ const DOWNLOADS = [
 
 const RELEASE_BASE = 'https://github.com/aequicor/AI-Kit/releases/latest/download/';
 
-const FLAGS = [
-  { flag: '--name <name>', desc: 'name', def: 'name' },
-  { flag: '--path <path>', desc: 'path', def: 'path' },
-  { flag: '--lang <language>', desc: 'lang', def: 'lang' },
-  { flag: '--framework <name>', desc: 'framework', def: 'framework' },
-  { flag: '--provider <claude|opencode|both>', desc: 'provider', def: 'provider' },
-  { flag: '--model <model-id>', desc: 'model', def: 'model' },
-  { flag: '--no-planning', desc: 'noPlanning', def: 'noPlanning' },
-  { flag: '--no-agents', desc: 'noAgents', def: 'noAgents' },
+const SUBCOMMANDS = [
+  { command: 'verify [<path>]', key: 'verify' },
+  { command: 'generate [<path>]', key: 'generate' },
+  { command: '--help / -h', key: 'help' },
+  { command: '--version / -v', key: 'version' },
+];
+
+const EXIT_CODES = [
+  { code: '0', key: 'zero' },
+  { code: '1', key: 'one' },
+  { code: '2', key: 'two' },
 ];
 
 export default function CLI() {
@@ -57,25 +59,42 @@ export default function CLI() {
           </table>
 
           <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.examples')}</h2>
-          <pre><code>{`kit-setup --name my-app --path . --lang kotlin --provider both
-kit-setup -p . -l typescript -f react --provider claude
-kit-setup --help`}</code></pre>
+          <pre><code>{`kit-setup verify   .aikit/manifest.yaml
+kit-setup generate .aikit/manifest.yaml
+kit-setup --help
+kit-setup --version`}</code></pre>
 
-          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.flags')}</h2>
+          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.subcommands')}</h2>
           <table>
             <thead>
               <tr>
-                <th>{t('cli.flag')}</th>
+                <th>{t('cli.subcommand')}</th>
                 <th>{t('cli.description')}</th>
-                <th>{t('cli.default')}</th>
               </tr>
             </thead>
             <tbody>
-              {FLAGS.map((f) => (
-                <tr key={f.flag}>
-                  <td><code>{f.flag}</code></td>
-                  <td>{t(`cli.flagsList.${f.desc}`)}</td>
-                  <td>{t(`cli.defaults.${f.def}`)}</td>
+              {SUBCOMMANDS.map((s) => (
+                <tr key={s.key}>
+                  <td><code>{s.command}</code></td>
+                  <td>{t(`cli.subcommandsList.${s.key}`)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.exitCodes')}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>{t('cli.exit')}</th>
+                <th>{t('cli.description')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EXIT_CODES.map((e) => (
+                <tr key={e.code}>
+                  <td><code>{e.code}</code></td>
+                  <td>{t(`cli.exitMeanings.${e.key}`)}</td>
                 </tr>
               ))}
             </tbody>

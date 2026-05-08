@@ -186,9 +186,15 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 The Gradle wrapper script ships without the executable bit in some
 checkouts — `chmod +x ./gradlew` once if needed.
 
-There is **no test source set yet**. Interfaces are designed to be
-mockable; when tests land, wire them per Kotlin Multiplatform conventions
-(`commonTest` for shared, per-target source sets for native-specific).
+Tests live in `src/commonTest/` using `kotlin("test")`. Run them on the
+host with `./gradlew macosArm64Test` (or `:linuxX64Test` / `:mingwX64Test`
+on the matching platform; `./gradlew allTests` runs every enabled host).
+The current suite covers `BlockYamlParser`, `ModelResolver`,
+`PlaceholderEngine`, `parseSkillSections`, `Json.encode`, and the
+validation rules. New tests should follow the same per-package layout
+(`commonTest/kotlin/com/aikit/setup/<package>/<Type>Test.kt`) and use the
+`InMemoryTemplateRegistry` test helper for code that takes a
+`TemplateRegistry`.
 
 ## Easy to get wrong
 

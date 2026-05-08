@@ -1,11 +1,34 @@
 package com.aikit.setup.validation
 
+import com.aikit.setup.generation.PackageLoader
+import com.aikit.setup.validation.rules.AgentPromptPresentRule
+import com.aikit.setup.validation.rules.ManifestVersionRule
+import com.aikit.setup.validation.rules.ModelProviderExistsRule
+import com.aikit.setup.validation.rules.ProjectSlugRule
+import com.aikit.setup.validation.rules.RenderTargetsExistRule
+import com.aikit.setup.validation.rules.RequiredTopLevelKeysRule
+import com.aikit.setup.validation.rules.ResolvableModelsRule
+import com.aikit.setup.validation.rules.TargetCollisionRule
+import com.aikit.setup.validation.rules.UniqueIdsRule
+
 /**
- * Returns the default rule set applied by both `verify` and the pre-flight
- * step of `generate`.
+ * Default rule set applied by both `verify` and the pre-flight step of
+ * `generate`. New constraints land as their own [ValidationRule] subclass
+ * (one per file under [com.aikit.setup.validation.rules]) and get appended
+ * here — the runner is open for extension, closed for modification.
  *
- * Empty for now — rules are added incrementally as the manifest schema firms
- * up. Each rule keeps its own error codes so agents can rely on stable
- * identifiers across releases.
+ * The [packages] dependency is passed through to rules that need to inspect
+ * adapter/dialect packages (currently only [ResolvableModelsRule]). Pure
+ * structural rules ignore it.
  */
-fun defaultRules(): List<ValidationRule> = emptyList()
+fun defaultRules(packages: PackageLoader): List<ValidationRule> = listOf(
+    RequiredTopLevelKeysRule(),
+    ManifestVersionRule(),
+    ProjectSlugRule(),
+    UniqueIdsRule(),
+    RenderTargetsExistRule(),
+    ModelProviderExistsRule(),
+    AgentPromptPresentRule(),
+    ResolvableModelsRule(packages),
+    TargetCollisionRule(packages),
+)
