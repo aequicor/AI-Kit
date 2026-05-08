@@ -1,4 +1,3 @@
-import { Link, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ThemeToggle from './ThemeToggle';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -6,11 +5,14 @@ import LanguageSwitcher from './LanguageSwitcher';
 const REPO = 'https://github.com/aequicor/AI-Kit';
 
 const NAV = [
-  { to: '/quickstart', key: 'quickstart' },
-  { to: '/cli', key: 'cli' },
-  { to: '/files', key: 'files' },
-  { to: '/build', key: 'build' },
-  { to: '/faq', key: 'faq' },
+  { hash: '#what', key: 'what' },
+  { hash: '#problems', key: 'problems' },
+  { hash: '#how', key: 'how' },
+  { hash: '#scenarios', key: 'scenarios' },
+  { hash: '#commands', key: 'commands' },
+  { hash: '#targets', key: 'targets' },
+  { hash: '#faq', key: 'faq' },
+  { hash: '#start', key: 'start' },
 ] as const;
 
 function Logo() {
@@ -34,19 +36,14 @@ export default function Header() {
   return (
     <nav className="topnav">
       <div className="nav-inner">
-        <Link to="/" className="nav-logo">
+        <a href="#top" className="nav-logo">
           <Logo />
           <span>{t('brand')}</span>
-        </Link>
+        </a>
         <ul className="nav-links">
           {NAV.map((item) => (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                className={({ isActive }) => (isActive ? 'active' : undefined)}
-              >
-                {t(`nav.${item.key}`)}
-              </NavLink>
+            <li key={item.hash}>
+              <a href={item.hash}>{t(`nav.${item.key}`)}</a>
             </li>
           ))}
         </ul>
