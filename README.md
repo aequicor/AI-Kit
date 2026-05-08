@@ -70,3 +70,9 @@ gradlew.bat mingwX64Binaries
 ./gradlew macosArm64Binaries   # Apple Silicon
 ./gradlew macosX64Binaries     # Intel
 ```
+
+---
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
