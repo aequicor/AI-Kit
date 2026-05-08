@@ -64,7 +64,9 @@ Download the binary for your platform from [Releases](https://github.com/aequico
 ```sh
 # Catalog of variants bundled in this binary — agents, prompt dialects, target
 # adapters, commands, skills, knowledge sections, profile_axes (with
-# cardinality), profiles (with axis + description), and more.
+# cardinality), profiles (with axis + description), and `enums` listing the
+# canonical values for validator-enforced fields (provider_auth, model_tier,
+# cost_hint, knowledge_store_kind).
 # Default output is one line of JSON; use --format human for a readable tree.
 kit-setup schema
 kit-setup schema --format human

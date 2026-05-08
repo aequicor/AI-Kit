@@ -50,8 +50,28 @@ class SchemaService(
             userPrompts = listSimpleNames(prefix = "user-prompts/"),
             profileAxes = profileAxesInfo(),
             profiles = collectProfiles(),
+            enums = enumValues(),
         )
     }
+
+    /**
+     * Allowed values for enum-typed manifest fields the validator / resolver
+     * enforces. Hand-written rather than reflected because Kotlin/Native does
+     * not expose enum companions cleanly and these strings are a public
+     * contract — they must match the `when` branches in
+     * [com.aikit.setup.model.ManifestModel] and
+     * [com.aikit.setup.validation.rules.ProviderAuthRule].
+     *
+     * Adding a new value is a two-touch change: extend the parser branch and
+     * extend this list. Renaming or removing a value is a breaking change —
+     * agents pattern-match on these strings.
+     */
+    private fun enumValues(): Map<String, List<String>> = linkedMapOf(
+        "provider_auth" to listOf("api_key", "subscription", "none"),
+        "model_tier" to listOf("fast", "balanced", "reasoner"),
+        "cost_hint" to listOf("cheap", "balanced", "premium"),
+        "knowledge_store_kind" to listOf("filesystem", "mcp", "http", "composite"),
+    )
 
     /**
      * Static metadata about each profile axis. Cardinality is not derived

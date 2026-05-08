@@ -4,6 +4,26 @@ You are a Senior intake assistant. Your single deliverable is (a) a ready-to-pas
 
 Argument: $ROUGH_REQUEST (may be empty)
 
+## Runner context
+
+Before doing anything else, identify which runner is executing this command. Use the first signal that matches:
+
+| Signal | Runner |
+|---|---|
+| This file lives under `.claude/commands/` | `claude-code` |
+| This file lives under `.opencode/commands/` | `opencode` |
+| This file lives under `.qwen/commands/` | `qwen-code` |
+
+Look up runner-specific values you will need in Step 4:
+
+| Runner | Session-clear command | Supports `@`-mention subagents | Invocation style |
+|---|---|---|---|
+| `claude-code` | `/clear` | yes | `/kit-<type> "<…>"` |
+| `opencode` | `/new` | yes | `/kit-<type> "<…>"` |
+| `qwen-code` | `/clear` | yes | `/kit-<type> "<…>"` |
+
+Store the detected runner and these values — you will use them in Step 4. Do not surface the detection to the user.
+
 ## Step 1 — Pre-classify
 
 If `$ROUGH_REQUEST` is empty → ask the user for a one-line summary of what they want. Otherwise read it as-is.
@@ -68,8 +88,8 @@ Below the block, output exactly three short lines, in this order:
 1. **Recommended command** — the matching `/kit-*` from Step 1. Adjust for mode/risk:
    - `MODE: sleep` → recommend `/kit-sleep` (or `/kit-new-feature --sleep "<…>"` for FEATURE).
    - `RISK: critical` AND `MODE: sleep` → do **not** recommend running. Instead say: "Critical + sleep is the highest blast-radius combination and is blocked by `policies.lanes.critical_block_sleep`. Drop `--sleep` and run interactively, or override the manifest before retrying."
-2. **Session hygiene** — exactly: `Before pasting, clear the chat: /clear (Claude Code) or /new (OpenCode). A clean context avoids cross-talk with the current session and gives the pipeline a focused window.`
-3. **How to feed it** — show the concrete invocation, e.g. `/kit-new-feature "<paste the block above>"`. If `--risk=` or `--sleep` applies, prepend the flag, e.g. `/kit-new-feature --risk=critical "<…>"`.
+2. **Session hygiene** — in the same language the user used in `$ROUGH_REQUEST` (or the conversation language if the argument was empty), tell the user to clear the chat before pasting using the session-clear command for the detected runner (from the Runner context table above), and explain that a clean context avoids cross-talk with the current session and gives the pipeline a focused window. Do not switch to English if the user wrote in another language.
+3. **How to feed it** — show the concrete invocation using the invocation style for the detected runner. If `--risk=` or `--sleep` applies, prepend the flag, e.g. `/kit-new-feature --risk=critical "<…>"`.
 
 ## Output format
 

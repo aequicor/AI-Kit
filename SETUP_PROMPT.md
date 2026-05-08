@@ -197,8 +197,11 @@ One line of JSON, exit 0. **Treat its output as the only valid namespace** — a
 | `commands`, `skills`, `knowledge_sections`, `shared_snippets`, `rules`, `user_prompts` | Bundled assets the renderer can reference; mostly useful for the knowledge constitution and rules sections. |
 | `profile_axes` | Each profile axis with its cardinality contract — `exactly_one` (must pick exactly one of this axis) or `zero_or_more`. Read this **before** choosing profiles. |
 | `profiles` | Every bundled profile: `{name, axis, description}`. Authoritative — never invent profile names. |
+| `enums` | Allowed values for enum-typed manifest fields the validator enforces. Keys: `provider_auth` (values for `providers[].auth`), `model_tier` (`models[].tier`, also `task_types[].prefers`/`min_tier`), `cost_hint` (`models[].cost_hint`, `model_selection.max_cost`), `knowledge_store_kind` (`knowledge.specs.kind` / `knowledge.session.kind`). **Write only the canonical values listed here** — aliases the parser tolerates are not advertised and may be removed. |
 
 Use `--format human` only when sanity-checking by eye; the JSON form is what you parse.
+
+**`enums.provider_auth` is the field most often gotten wrong.** Three options: `api_key` (default; requires `api_key_env`), `subscription` (runner is signed in — Claude Code / Cursor / Qwen Code; **omit `api_key_env`**), `none` (local backend, e.g. Ollama). Picking the wrong one is silent at `verify` for `subscription`/`none` but breaks the runner at first call. See Phase A.6 for the decision matrix.
 
 ---
 

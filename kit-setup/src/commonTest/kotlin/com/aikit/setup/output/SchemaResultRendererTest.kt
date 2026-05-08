@@ -32,6 +32,12 @@ class SchemaResultRendererTest {
             ProfileEntry("nextjs", "framework", "Next.js"),
             ProfileEntry("solid", "capability", "SOLID rules"),
         ),
+        enums = linkedMapOf(
+            "provider_auth" to listOf("api_key", "subscription", "none"),
+            "model_tier" to listOf("fast", "balanced", "reasoner"),
+            "cost_hint" to listOf("cheap", "balanced", "premium"),
+            "knowledge_store_kind" to listOf("filesystem", "mcp", "http", "composite"),
+        ),
     )
 
     @Test
@@ -59,7 +65,12 @@ class SchemaResultRendererTest {
                 """"profiles":[""" +
                 """{"name":"typescript-pnpm","axis":"language","description":"TS + pnpm"},""" +
                 """{"name":"nextjs","axis":"framework","description":"Next.js"},""" +
-                """{"name":"solid","axis":"capability","description":"SOLID rules"}]}""",
+                """{"name":"solid","axis":"capability","description":"SOLID rules"}],""" +
+                """"enums":{""" +
+                """"provider_auth":["api_key","subscription","none"],""" +
+                """"model_tier":["fast","balanced","reasoner"],""" +
+                """"cost_hint":["cheap","balanced","premium"],""" +
+                """"knowledge_store_kind":["filesystem","mcp","http","composite"]}}""",
             rendered,
         )
     }
@@ -115,5 +126,22 @@ class SchemaResultRendererTest {
         assertTrue(rendered.contains("capability (0..N, 0):"), "got: $rendered")
         // Empty buckets get an explicit placeholder so users can see the axis exists.
         assertTrue(rendered.contains("(none bundled)"), "got: $rendered")
+    }
+
+    @Test
+    fun humanRendererListsEnumValuesPerField() {
+        val rendered = HumanSchemaResultRenderer().render(catalog)
+
+        assertTrue(rendered.contains("enums") && rendered.contains("(4) :"), "got: $rendered")
+        assertTrue(
+            rendered.contains("provider_auth : api_key, subscription, none"),
+            "got: $rendered",
+        )
+        assertTrue(rendered.contains("model_tier : fast, balanced, reasoner"), "got: $rendered")
+        assertTrue(rendered.contains("cost_hint : cheap, balanced, premium"), "got: $rendered")
+        assertTrue(
+            rendered.contains("knowledge_store_kind : filesystem, mcp, http, composite"),
+            "got: $rendered",
+        )
     }
 }

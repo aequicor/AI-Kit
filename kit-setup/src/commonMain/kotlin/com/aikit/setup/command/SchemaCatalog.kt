@@ -38,6 +38,18 @@ data class SchemaCatalog(
      * [profileAxes] cardinality to know how many of each may appear.
      */
     val profiles: List<ProfileEntry>,
+    /**
+     * Allowed values for enum-typed manifest fields the validator enforces
+     * (e.g. `providers[].auth`, `models[].tier`). Keys are agent-facing
+     * field names (`provider_auth`, `model_tier`, `cost_hint`,
+     * `knowledge_store_kind`); values are the canonical lowercase strings.
+     *
+     * Aliases accepted by the parser (`api-key`, `runner_managed`, …) are
+     * deliberately not advertised — agents should write the canonical form.
+     * Iteration order matches insertion order; the renderer relies on it for
+     * stable output.
+     */
+    val enums: Map<String, List<String>>,
 )
 
 /**

@@ -34,7 +34,10 @@ interface SchemaResultRenderer {
  *   "knowledge_sections": [...],
  *   "shared_snippets": [...],
  *   "rules": [...],
- *   "user_prompts": [...] }
+ *   "user_prompts": [...],
+ *   "profile_axes": [...],
+ *   "profiles": [...],
+ *   "enums": { "provider_auth": [...], "model_tier": [...], ... } }
  * ```
  */
 class JsonSchemaResultRenderer : SchemaResultRenderer {
@@ -55,6 +58,7 @@ class JsonSchemaResultRenderer : SchemaResultRenderer {
             "user_prompts" to catalog.userPrompts,
             "profile_axes" to catalog.profileAxes.map(::axisToMap),
             "profiles" to catalog.profiles.map(::profileToMap),
+            "enums" to catalog.enums,
         ),
     )
 
@@ -92,7 +96,23 @@ class HumanSchemaResultRenderer : SchemaResultRenderer {
         appendLine(line("shared_snippets", catalog.sharedSnippets))
         appendLine(line("rules", catalog.rules))
         appendLine(line("user_prompts", catalog.userPrompts))
-        append(profilesBlock(catalog))
+        appendLine(profilesBlock(catalog))
+        appendLine()
+        append(enumsBlock(catalog))
+    }
+
+    /**
+     * Renders the enum block — one line per field with its allowed values
+     * comma-separated. Mirrors the inline form of [line] for collection labels
+     * but the values come from a fixed map rather than a bundled list.
+     */
+    private fun enumsBlock(catalog: SchemaCatalog): String = buildString {
+        val title = "${"enums".padEnd(LABEL_WIDTH)}(${catalog.enums.size})"
+        appendLine("$title :")
+        for ((field, values) in catalog.enums) {
+            appendLine("  $field : ${values.joinToString(", ")}")
+        }
+        if (isNotEmpty() && last() == '\n') deleteAt(length - 1)
     }
 
     /**
