@@ -1,0 +1,72 @@
+import { Link, NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import ThemeToggle from './ThemeToggle';
+import LanguageSwitcher from './LanguageSwitcher';
+
+const REPO = 'https://github.com/aequicor/AI-Kit';
+
+const NAV = [
+  { to: '/quickstart', key: 'quickstart' },
+  { to: '/cli', key: 'cli' },
+  { to: '/files', key: 'files' },
+  { to: '/build', key: 'build' },
+  { to: '/faq', key: 'faq' },
+] as const;
+
+function Logo() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden>
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#lg)" />
+      <path
+        d="M10 22 L13 11 L16 22 M11 18 H15 M18 11 V22 M18 11 H21 a3 3 0 0 1 0 6 H18"
+        stroke="#ffffff"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+export default function Header() {
+  const { t } = useTranslation();
+  return (
+    <nav className="topnav">
+      <div className="nav-inner">
+        <Link to="/" className="nav-logo">
+          <Logo />
+          <span>{t('brand')}</span>
+        </Link>
+        <ul className="nav-links">
+          {NAV.map((item) => (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                className={({ isActive }) => (isActive ? 'active' : undefined)}
+              >
+                {t(`nav.${item.key}`)}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+        <div className="nav-right">
+          <LanguageSwitcher />
+          <ThemeToggle />
+          <a className="nav-gh" href={REPO} target="_blank" rel="noreferrer" aria-label="GitHub">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2.16c-3.2.7-3.88-1.37-3.88-1.37-.52-1.34-1.28-1.7-1.28-1.7-1.05-.71.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.7 1.26 3.36.96.11-.75.4-1.26.74-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.21-1.5 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.66.79.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+  );
+}

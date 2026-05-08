@@ -1,0 +1,178 @@
+{
+  "brand": "AI Kit",
+  "tagline": "User Guide",
+  "theme": {
+    "switchToDark": "Switch to dark theme",
+    "switchToLight": "Switch to light theme"
+  },
+  "lang": {
+    "label": "Language"
+  },
+  "install": {
+    "title": "Paste this prompt",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "nav": {
+    "home": "Overview",
+    "quickstart": "Quick Start",
+    "cli": "CLI",
+    "files": "Files",
+    "build": "Build",
+    "faq": "FAQ"
+  },
+  "home": {
+    "badge": "User Guide · v1.0",
+    "title": "AI agent setup — in seconds",
+    "lead": "AI Kit generates configuration for Claude Code and OpenCode for any project. One prompt, one binary — and your repo is ready for AI-assisted development.",
+    "ctaQuick": "Quick Start",
+    "ctaGithub": "View on GitHub",
+    "what": {
+      "eyebrow": "What it does",
+      "title": "Everything an AI agent needs to start working in your repo",
+      "sub": "AI Kit produces CLAUDE.md, .claude/settings.json, opencode.json, agent definitions, and a .planning/ structure that match the ai-agent-kit workflow. Works with Kotlin, Java, Python, TypeScript, Go, Rust and more."
+    },
+    "features": {
+      "eyebrow": "Features",
+      "title": "Why AI Kit",
+      "providers": {
+        "title": "Two providers",
+        "body": "Generate config for Claude Code, OpenCode, or both at once."
+      },
+      "languages": {
+        "title": "Any stack",
+        "body": "Pick a language and (optionally) a framework — generation adapts to your project."
+      },
+      "planning": {
+        "title": "Planning system",
+        "body": "Optional .planning/ directory with current task, morning report, and per-task notes."
+      },
+      "agents": {
+        "title": "Agent definitions",
+        "body": "Pre-baked subagent files for repetitive engineering chores."
+      }
+    },
+    "next": {
+      "eyebrow": "Next steps",
+      "title": "Pick your path",
+      "quickstart": {
+        "title": "Quick Start",
+        "body": "The recommended way — paste a single prompt into Claude Code or OpenCode and let the agent do the rest."
+      },
+      "cli": {
+        "title": "CLI Usage",
+        "body": "Prefer running things yourself? Download the binary and call it directly with flags."
+      },
+      "files": {
+        "title": "Generated Files",
+        "body": "See exactly what AI Kit creates in your repository and what each file does."
+      },
+      "build": {
+        "title": "Build from Source",
+        "body": "Compile the binary yourself with Gradle and Kotlin/Native."
+      }
+    }
+  },
+  "quickstart": {
+    "eyebrow": "Quick Start",
+    "title": "From zero to a configured project",
+    "lead": "The fastest way: paste a single prompt into Claude Code or OpenCode inside your project.",
+    "step1Title": "1. Open your AI agent",
+    "step1": "Open Claude Code or OpenCode in your project directory.",
+    "step2Title": "2. Paste this prompt",
+    "step2": "Paste the prompt below and let the agent take it from there.",
+    "step3Title": "3. Answer a few questions",
+    "step3": "The agent will ask about project name, language, framework, provider and model. It downloads the binary, runs it, and confirms the generated files.",
+    "tip": "Re-running the kit overwrites existing files safely — feel free to tweak answers and run again."
+  },
+  "cli": {
+    "eyebrow": "CLI",
+    "title": "CLI Usage",
+    "lead": "Prefer running the binary yourself? Download it from the Releases page and call it directly.",
+    "downloads": "Downloads",
+    "platform": "Platform",
+    "binary": "Binary",
+    "examples": "Examples",
+    "flags": "Flags reference",
+    "flag": "Flag",
+    "description": "Description",
+    "default": "Default",
+    "flagsList": {
+      "name": "Project name",
+      "path": "Target directory",
+      "lang": "Programming language (kotlin / java / python / typescript / go / rust / other)",
+      "framework": "Framework name (omit if none)",
+      "provider": "AI provider — claude / opencode / both",
+      "model": "Model id (e.g. claude-sonnet-4-6)",
+      "noPlanning": "Skip .planning/ generation",
+      "noAgents": "Skip agent definition files"
+    },
+    "defaults": {
+      "name": "directory name",
+      "path": ". (current dir)",
+      "lang": "kotlin",
+      "framework": "—",
+      "provider": "both",
+      "model": "claude-sonnet-4-6",
+      "noPlanning": "enabled",
+      "noAgents": "enabled"
+    }
+  },
+  "files": {
+    "eyebrow": "Files",
+    "title": "Generated Files",
+    "lead": "What lands in your project after running the kit.",
+    "file": "File",
+    "provider": "Provider",
+    "purpose": "Purpose",
+    "purposes": {
+      "claudemd": "Top-level guidance Claude Code reads on every session.",
+      "claudeSettings": "Permissions, env vars, and hooks for Claude Code.",
+      "claudeAgents": "Subagent definitions used by Claude Code.",
+      "opencodeJson": "OpenCode project configuration.",
+      "opencodeAgents": "Subagent definitions used by OpenCode.",
+      "current": "Currently in-progress task and notes.",
+      "morning": "Daily summary of what changed and what's next.",
+      "tasks": "Per-task work logs."
+    }
+  },
+  "build": {
+    "eyebrow": "Build",
+    "title": "Build from Source",
+    "lead": "If you want to compile the binary yourself, you'll need JDK 11+.",
+    "clone": "Clone the repository",
+    "compile": "Compile for your platform",
+    "windows": "Windows",
+    "linux": "Linux",
+    "macosArm": "macOS Apple Silicon",
+    "macosIntel": "macOS Intel"
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "title": "Frequently asked questions",
+    "lead": "Quick answers to common questions about AI Kit.",
+    "items": [
+      {
+        "q": "Does the kit overwrite existing files?",
+        "a": "Yes. It safely overwrites files it manages. If you have a customised CLAUDE.md, back it up before re-running."
+      },
+      {
+        "q": "Which provider should I pick?",
+        "a": "Both. Generating both Claude Code and OpenCode configs is cheap and lets you switch tools without redoing setup."
+      },
+      {
+        "q": "What if my language isn't in the list?",
+        "a": "Pass --lang other and skip --framework. Generation falls back to a generic template you can refine."
+      },
+      {
+        "q": "Where do I report bugs?",
+        "a": "Open an issue on the GitHub repository — link in the footer."
+      }
+    ]
+  },
+  "footer": {
+    "repo": "Repository",
+    "releases": "Releases",
+    "license": "MIT License"
+  }
+}
