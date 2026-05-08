@@ -135,7 +135,17 @@ its `api_key_env` before generating.
 
 ## Phase B — Download the binary
 
-Detect OS + arch, then fetch from `https://github.com/aequicor/AI-Kit/releases/latest/download/`.
+**Required — do not skip.** Phases C, G, and H all invoke `$binary`; they cannot run until this phase has produced an executable on disk. Do not assume `kit-setup` is already on the user's `PATH` or left over from a previous session — always download fresh into the project's working directory so the version matches `https://github.com/aequicor/AI-Kit/releases/latest`.
+
+Steps:
+
+1. **Detect OS + arch.** Use `uname -s` / `uname -m` on Unix; check `$env:OS` / `$env:PROCESSOR_ARCHITECTURE` on Windows. `uname -m` returns `arm64` (Apple Silicon) or `x86_64` (Intel) on macOS.
+2. **Execute the matching block below.** Actually run the `curl` / `Invoke-WebRequest` and `chmod` commands with your shell tool — don't just quote them at the user and move on. If the command fails (HTTP error, no network, wrong arch), stop and report; do not fall through to Phase C with a missing or stale binary.
+3. **Verify the binary works** before proceeding:
+   ```bash
+   $binary --version
+   ```
+   Expected: a line like `kit-setup X.Y.Z`. If you get `command not found`, `permission denied`, or `cannot execute binary file`, the download did not complete or the wrong arch was chosen — fix the underlying issue and re-run before touching Phase C.
 
 ### Windows (PowerShell)
 ```powershell
@@ -163,8 +173,6 @@ curl -L "https://github.com/aequicor/AI-Kit/releases/latest/download/kit-setup-l
 chmod +x kit-setup
 binary="./kit-setup"
 ```
-
-`uname -m` returns `arm64` (Apple Silicon) or `x86_64` (Intel) on macOS.
 
 ---
 
@@ -765,6 +773,7 @@ If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run
 
 ## Boundaries
 
+- **Never skip Phase B.** Phases C, G, and H all shell out to `$binary`. If you reach `$binary schema` without having actually run the curl/Invoke-WebRequest in Phase B, you will either fail outright or — worse — silently improvise the schema from memory and propose ids that don't exist in the user's release. Always download, then `$binary --version` to confirm.
 - **Never invent ids.** Profile names, dialect ids, adapter ids, agent ids — every reference must trace back to `schema` output. If the user wants something not bundled, point them to `templates/profiles/` (for new profiles) or have them author a custom prompt/skill in their project tree.
 - **Never write literal API keys** into the manifest. The verifier scans for `sk-…`, `ghp_…`, `glpat-…`, `AKIA…`, `xox[bp]-…`, and high-entropy strings, and rejects them with `secret_pattern_match`.
 - **Never skip Phase E** (the proposal step). The user must confirm the configuration before files land in their repo. The kit overwrites unconditionally on generate; surprise overwrites erode trust.
