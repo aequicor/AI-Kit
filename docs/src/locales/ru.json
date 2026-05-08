@@ -22,7 +22,7 @@
     "faq": "FAQ"
   },
   "home": {
-    "badge": "Руководство · v2.0",
+    "badge": "Руководство · v2.1",
     "title": "Настройка AI-агента — за секунды",
     "lead": "AI Kit генерирует конфигурацию для Claude Code, Cursor, OpenCode, Aider и Qwen Code из единого манифеста. Один промпт, один бинарник — и репозиторий готов к работе с AI во всех ранерах, которыми вы пользуетесь.",
     "ctaQuick": "Быстрый старт",
@@ -101,7 +101,8 @@
     "subcommandsList": {
       "verify": "Проверяет манифест. Выводит {\"valid\": bool, \"errors\": [...]}",
       "generate": "Рендерит kit. Выводит {\"ok\": bool, \"generated\": [...], \"errors\": [...]?}",
-      "help": "Показывает справку и выходит.",
+      "schema": "Перечисляет варианты, встроенные в этот бинарь — agents, dialects, target adapters, commands, skills, profile_axes, profiles. По умолчанию JSON; --format human печатает читаемое дерево.",
+      "help": "Печатает справку и выходит.",
       "version": "Печатает версию бинарника и выходит."
     },
     "exitMeanings": {
@@ -128,10 +129,18 @@
       "cursorPrompts": "Пользовательские промпты как scoped-правила Cursor.",
       "cursorMcp": "Конфиг MCP для Cursor.",
       "opencodeAgents": "Описания агентов для OpenCode.",
+      "opencodeSkills": "Skill-бандлы для OpenCode (mutation-sample, gate-telemetry, definition-of-done и т.д.).",
+      "opencodeCommands": "Slash-команды для OpenCode (/kit-new-feature, /kit-fix, /kit-techdebt, ...).",
+      "opencodePrompts": "Шаблоны пользовательских промптов в OpenCode.",
       "opencodeSettings": "Конфигурация проекта OpenCode с провайдером и MCP-блоком.",
       "agentsMd": "Главная инструкция, общая для OpenCode и Qwen Code (не включайте оба сразу — будет коллизия).",
       "aiderConventions": "CONVENTIONS.md, который Aider загружает автоматически.",
+      "aiderPrompts": "Файлы промптов, на которые можно указать Aider.",
       "aiderConf": "Глобальная конфигурация Aider с привязкой модели.",
+      "qwenAgents": "Описания агентов для Qwen Code.",
+      "qwenSkills": "Skill-бандлы для Qwen Code.",
+      "qwenCommands": "Slash-команды для Qwen Code.",
+      "qwenPrompts": "Шаблоны пользовательских промптов в Qwen Code.",
       "qwenSettings": "Настройки Qwen Code, включая блок modelProviders."
     }
   },
@@ -162,6 +171,10 @@
       {
         "q": "Что делать, если моего языка нет в списке?",
         "a": "Пропишите его в stack.languages — поле свободное; значение попадает в промпты через общие сниппеты."
+      },
+      {
+        "q": "Что такое профили и как ими пользоваться?",
+        "a": "Профили — переиспользуемые фрагменты манифеста, сгруппированные по трём осям: language (ровно один — kotlin-gradle, typescript-pnpm, python-poetry, make-generic), framework (0..N — nextjs, react-spa, compose-multiplatform, paper-plugin) и capability (0..N — security-baseline, solid, clean-architecture, quality-gates). Перечислите их в stack.profiles, и резолвер вмерджит их в ваш манифест до валидации — заполнятся forbidden_patterns, language-tooling, UI-намёки фреймворка и политики по умолчанию. Полный каталог: kit-setup schema --format human."
       },
       {
         "q": "Куда сообщать о багах?",

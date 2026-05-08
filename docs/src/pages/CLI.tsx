@@ -12,6 +12,7 @@ const RELEASE_BASE = 'https://github.com/aequicor/AI-Kit/releases/latest/downloa
 const SUBCOMMANDS = [
   { command: 'verify [<path>]', key: 'verify' },
   { command: 'generate [<path>]', key: 'generate' },
+  { command: 'schema [--format json|human]', key: 'schema' },
   { command: '--help / -h', key: 'help' },
   { command: '--version / -v', key: 'version' },
 ];
@@ -59,7 +60,9 @@ export default function CLI() {
           </table>
 
           <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.examples')}</h2>
-          <pre><code>{`kit-setup verify   .aikit/manifest.yaml
+          <pre><code>{`kit-setup schema                       # JSON catalog of bundled variants
+kit-setup schema --format human        # readable tree
+kit-setup verify   .aikit/manifest.yaml
 kit-setup generate .aikit/manifest.yaml
 kit-setup --help
 kit-setup --version`}</code></pre>

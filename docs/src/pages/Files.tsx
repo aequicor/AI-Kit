@@ -17,13 +17,20 @@ const FILES: Row[] = [
   // opencode
   { file: 'AGENTS.md', target: 'opencode', purpose: 'agentsMd' },
   { file: '.opencode/agents/*.md', target: 'opencode', purpose: 'opencodeAgents' },
+  { file: '.opencode/skills/<id>/SKILL.md', target: 'opencode', purpose: 'opencodeSkills' },
+  { file: '.opencode/commands/*.md', target: 'opencode', purpose: 'opencodeCommands' },
+  { file: '.opencode/prompts/*.md', target: 'opencode', purpose: 'opencodePrompts' },
   { file: 'opencode.json', target: 'opencode', purpose: 'opencodeSettings' },
   // aider
   { file: 'CONVENTIONS.md', target: 'aider', purpose: 'aiderConventions' },
+  { file: '.aider/prompts/*.md', target: 'aider', purpose: 'aiderPrompts' },
   { file: '.aider.conf.yml', target: 'aider', purpose: 'aiderConf' },
   // qwen-code
   { file: 'AGENTS.md', target: 'qwen-code', purpose: 'agentsMd' },
-  { file: '.qwen/agents/*.md', target: 'qwen-code', purpose: 'opencodeAgents' },
+  { file: '.qwen/agents/*.md', target: 'qwen-code', purpose: 'qwenAgents' },
+  { file: '.qwen/skills/<id>/SKILL.md', target: 'qwen-code', purpose: 'qwenSkills' },
+  { file: '.qwen/commands/*.md', target: 'qwen-code', purpose: 'qwenCommands' },
+  { file: '.qwen/prompts/*.md', target: 'qwen-code', purpose: 'qwenPrompts' },
   { file: '.qwen/settings.json', target: 'qwen-code', purpose: 'qwenSettings' },
 ];
 

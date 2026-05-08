@@ -22,7 +22,7 @@
     "faq": "FAQ"
   },
   "home": {
-    "badge": "User Guide · v2.0",
+    "badge": "User Guide · v2.1",
     "title": "AI agent setup — in seconds",
     "lead": "AI Kit generates configuration for Claude Code, Cursor, OpenCode, Aider, and Qwen Code from a single manifest. One prompt, one binary — and your repo is ready for AI-assisted development across every runner you use.",
     "ctaQuick": "Quick Start",
@@ -101,6 +101,7 @@
     "subcommandsList": {
       "verify": "Validates the manifest. Emits {\"valid\": bool, \"errors\": [...]}",
       "generate": "Renders the kit. Emits {\"ok\": bool, \"generated\": [...], \"errors\": [...]?}",
+      "schema": "Lists variants bundled in this binary — agents, dialects, target adapters, commands, skills, profile_axes, profiles. Default output is JSON; --format human prints a readable tree.",
       "help": "Prints help text and exits.",
       "version": "Prints the binary version and exits."
     },
@@ -128,10 +129,18 @@
       "cursorPrompts": "User prompt templates as scoped Cursor rules.",
       "cursorMcp": "MCP server config for Cursor.",
       "opencodeAgents": "Per-agent definitions for OpenCode.",
+      "opencodeSkills": "Skill bundles for OpenCode (mutation-sample, gate-telemetry, definition-of-done, etc.).",
+      "opencodeCommands": "Slash-command bodies for OpenCode (/kit-new-feature, /kit-fix, /kit-techdebt, ...).",
+      "opencodePrompts": "User-prompt templates exposed in OpenCode.",
       "opencodeSettings": "OpenCode project configuration with provider + MCP block.",
       "agentsMd": "Top-level guidance file shared by OpenCode and Qwen Code (don't enable both at once — they collide).",
       "aiderConventions": "CONVENTIONS.md auto-loaded into Aider sessions.",
+      "aiderPrompts": "Per-prompt files Aider can be pointed at.",
       "aiderConf": "Global Aider configuration with model binding.",
+      "qwenAgents": "Per-agent definitions for Qwen Code.",
+      "qwenSkills": "Skill bundles for Qwen Code.",
+      "qwenCommands": "Slash-command bodies for Qwen Code.",
+      "qwenPrompts": "User-prompt templates exposed in Qwen Code.",
       "qwenSettings": "Qwen Code settings, including modelProviders block."
     }
   },
@@ -162,6 +171,10 @@
       {
         "q": "What if my language isn't in the list?",
         "a": "Declare it under stack.languages. The manifest is free-form there; the values surface into prompts via shared snippets."
+      },
+      {
+        "q": "What are profiles and how do I use them?",
+        "a": "Profiles are reusable manifest fragments grouped along three axes: language (exactly one — kotlin-gradle, typescript-pnpm, python-poetry, make-generic), framework (0..N — nextjs, react-spa, compose-multiplatform, paper-plugin), and capability (0..N — security-baseline, solid, clean-architecture, quality-gates). List them in stack.profiles and the resolver merges them into your manifest before validation, filling forbidden_patterns, language tooling, framework UI hints, and policy defaults. Run kit-setup schema --format human to see the bundled catalog."
       },
       {
         "q": "Where do I report bugs?",

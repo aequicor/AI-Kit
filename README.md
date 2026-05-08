@@ -2,7 +2,9 @@
 
 Generates AI agent configuration files for [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [OpenCode](https://opencode.ai), [Aider](https://aider.chat), and [Qwen Code](https://github.com/QwenLM/qwen-code) from a single manifest.
 
-The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets); the binary validates it and emits the per-runner files (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc. — depending on which targets you enable).
+The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits the per-runner files (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc. — depending on which targets you enable).
+
+The bundle ships a complete v7 agent pipeline: 5-agent roster (Main / Architect / CodeWriter / Verifier / BugFixer), 21 slash commands (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`, `/kit-revert-step`, ...), 10 skills (mutation-sample, gate-telemetry, definition-of-done, replan-on-discovery, ...), 12 stack profiles, and the policy machinery for risk-based lanes, ground-truth gates, and per-step commits.
 
 ---
 
@@ -14,7 +16,21 @@ Paste the prompt below into Claude Code or OpenCode inside your project:
 Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md and follow the instructions.
 ```
 
-The agent reads your project, drafts `.aikit/manifest.yaml`, runs `kit-setup verify` (looping on errors), then runs `kit-setup generate`.
+The agent reads your project, calls `kit-setup schema` to learn what's bundled, picks the right **profiles** for your stack, drafts `.aikit/manifest.yaml`, runs `kit-setup verify` (looping on errors), then runs `kit-setup generate`.
+
+---
+
+## Profiles — bundled presets you opt into
+
+Profiles are reusable manifest fragments grouped along three orthogonal axes. Listed in `stack.profiles: [...]`, they're merged into the manifest before validation, so a one-line opt-in fills `forbidden_patterns`, language tooling, framework UI hints, and policy defaults.
+
+| Axis | Cardinality | Bundled (v2.1) |
+|---|---|---|
+| `language` | exactly 1 | `kotlin-gradle`, `make-generic`, `python-poetry`, `typescript-pnpm` |
+| `framework` | 0..N | `compose-multiplatform`, `nextjs`, `paper-plugin`, `react-spa` |
+| `capability` | 0..N | `clean-architecture`, `quality-gates`, `security-baseline`, `solid` |
+
+Custom profiles drop under `kit-setup/templates/profiles/<axis>/<name>.yaml`. The full catalog (with descriptions and per-axis cardinality) is exposed by `kit-setup schema`.
 
 ---
 
@@ -46,8 +62,9 @@ Download the binary for your platform from [Releases](https://github.com/aequico
 | macOS Intel | `kit-setup-macos-x64` |
 
 ```sh
-# List variants bundled in this binary (agents, prompt dialects, target adapters,
-# commands, skills, knowledge sections, shared snippets, rules, user prompts).
+# Catalog of variants bundled in this binary — agents, prompt dialects, target
+# adapters, commands, skills, knowledge sections, profile_axes (with
+# cardinality), profiles (with axis + description), and more.
 # Default output is one line of JSON; use --format human for a readable tree.
 kit-setup schema
 kit-setup schema --format human
