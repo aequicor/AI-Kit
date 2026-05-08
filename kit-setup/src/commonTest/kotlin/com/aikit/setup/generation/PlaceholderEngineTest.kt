@@ -66,6 +66,92 @@ class PlaceholderEngineTest {
     }
 
     @Test
+    fun ifVariableTruthyKeepsBlock() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render(
+            "before\n{{#if TOOLS}}\n<tools>\n{{TOOLS}}\n</tools>\n{{/if}}\nafter",
+            mapOf("TOOLS" to "read,write"),
+        )
+        assertEquals("before\n<tools>\nread,write\n</tools>\nafter", out)
+    }
+
+    @Test
+    fun ifVariableMissingDropsBlock() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render(
+            "before\n{{#if TOOLS}}\n<tools>\n{{TOOLS}}\n</tools>\n{{/if}}\nafter",
+            emptyMap(),
+        )
+        assertEquals("before\nafter", out)
+    }
+
+    @Test
+    fun ifVariableBlankDropsBlock() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render(
+            "A\n{{#if X}}\nkept\n{{/if}}\nB",
+            mapOf("X" to "   "),
+        )
+        assertEquals("A\nB", out)
+    }
+
+    @Test
+    fun ifSnippetPresentAndNonBlankKeepsBlock() {
+        val templates = InMemoryTemplateRegistry(
+            mapOf("dialects/x/snippets/note.md" to "(note for {{NAME}})"),
+        )
+        val engine = PlaceholderEngine(templates, "dialects/x", null)
+        val out = engine.render(
+            "head\n{{#if snippet:note}}\n## Note\n{{snippet:note}}\n{{/if}}\ntail",
+            mapOf("NAME" to "demo"),
+        )
+        assertEquals("head\n## Note\n(note for demo)\ntail", out)
+    }
+
+    @Test
+    fun ifSnippetMissingDropsBlock() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render(
+            "head\n{{#if snippet:absent}}\n## Section\n{{snippet:absent}}\n{{/if}}\ntail",
+            emptyMap(),
+        )
+        assertEquals("head\ntail", out)
+    }
+
+    @Test
+    fun ifSnippetBlankAfterSubstitutionDropsBlock() {
+        // Snippet exists but expands to nothing once {{NAME}} resolves to "".
+        val templates = InMemoryTemplateRegistry(
+            mapOf("dialects/x/snippets/note.md" to "{{NAME}}"),
+        )
+        val engine = PlaceholderEngine(templates, "dialects/x", null)
+        val out = engine.render(
+            "head\n{{#if snippet:note}}\nkept\n{{/if}}\ntail",
+            mapOf("NAME" to ""),
+        )
+        assertEquals("head\ntail", out)
+    }
+
+    @Test
+    fun nestedIfBlocksResolveInnermostFirst() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render(
+            "before\n{{#if A}}\nouter\n{{#if B}}\ninner\n{{/if}}\nend\n{{/if}}\nafter",
+            mapOf("A" to "1", "B" to ""),
+        )
+        // B is falsy → inner block drops; A is truthy → outer kept.
+        assertEquals("before\nouter\nend\nafter", out)
+    }
+
+    @Test
+    fun unmatchedIfLeftIntact() {
+        val engine = PlaceholderEngine(InMemoryTemplateRegistry(emptyMap()), "dialects/x", null)
+        val out = engine.render("before {{#if X}} dangling", mapOf("X" to "v"))
+        // No closing tag → engine bails out, surfacing the bug instead of guessing.
+        assertTrue("{{#if X}}" in out)
+    }
+
+    @Test
     fun cyclicSnippetsDoNotInfiniteLoop() {
         val templates = InMemoryTemplateRegistry(
             mapOf(
