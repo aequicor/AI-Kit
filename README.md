@@ -11,7 +11,7 @@ The orchestrating agent writes one `.aikit/manifest.yaml` describing the project
 Paste the prompt below into Claude Code or OpenCode inside your project:
 
 ```
-Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/main/SETUP_PROMPT.md and follow the instructions.
+Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md and follow the instructions.
 ```
 
 The agent reads your project, drafts `.aikit/manifest.yaml`, runs `kit-setup verify` (looping on errors), then runs `kit-setup generate`.

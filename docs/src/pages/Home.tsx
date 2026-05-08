@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import InstallBox from '../components/InstallBox';
 
 const REPO = 'https://github.com/aequicor/AI-Kit';
-const PROMPT = 'Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/main/SETUP_PROMPT.md and follow the instructions.';
+const PROMPT = 'Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md and follow the instructions.';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -20,7 +20,7 @@ export default function Home() {
               {t('home.ctaGithub')}
             </a>
           </div>
-          <InstallBox command={PROMPT} highlightUrl="https://raw.githubusercontent.com/aequicor/AI-Kit/main/SETUP_PROMPT.md" />
+          <InstallBox command={PROMPT} highlightUrl="https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md" />
         </div>
       </section>
 

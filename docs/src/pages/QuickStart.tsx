@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import InstallBox from '../components/InstallBox';
 
-const PROMPT = 'Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/main/SETUP_PROMPT.md and follow the instructions.';
+const PROMPT = 'Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md and follow the instructions.';
 
 export default function QuickStart() {
   const { t } = useTranslation();
@@ -24,7 +24,7 @@ export default function QuickStart() {
           <p>{t('quickstart.step2')}</p>
           <InstallBox
             command={PROMPT}
-            highlightUrl="https://raw.githubusercontent.com/aequicor/AI-Kit/main/SETUP_PROMPT.md"
+            highlightUrl="https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md"
           />
 
           <h2 className="sec-title" style={{ fontSize: '1.25rem', marginTop: 36 }}>{t('quickstart.step3Title')}</h2>
