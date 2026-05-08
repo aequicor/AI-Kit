@@ -1,0 +1,17 @@
+---
+description: Consistency checker — verifies that technical spec does not contradict business requirements, and that test cases align with both. Returns PASS or CONFLICTS list. Final gate before PO sign-off.
+mode: subagent
+model: {{PROVIDER_ID}}/{{DEFAULT_MODEL}}
+temperature: 0.1
+steps: 10
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/ConsistencyChecker.body.md.template}}

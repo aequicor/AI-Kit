@@ -1,0 +1,16 @@
+---
+description: Orchestrator. Single entry point for PO. Plans, dispatches, writes checkpoint. Does not write code.
+mode: primary
+model: {{PROVIDER_ID}}/{{DEFAULT_MODEL}}
+temperature: 0.2
+steps: 100
+permission:
+  read: allow
+  edit: allow
+  task: allow
+  skill: allow
+  todowrite: allow
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/Main.body.md.template}}

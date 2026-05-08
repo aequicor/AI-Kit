@@ -1,0 +1,17 @@
+---
+description: BA — drafts and updates business requirements from PO task description. Called by @RequirementsPipeline in DRAFT or UPDATE mode.
+mode: subagent
+model: {{PROVIDER_ID}}/{{DEFAULT_MODEL}}
+temperature: 0.2
+steps: 20
+permission:
+  read: allow
+  edit: allow
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/BusinessAnalyst.body.md.template}}

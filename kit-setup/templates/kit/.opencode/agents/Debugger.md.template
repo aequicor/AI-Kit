@@ -1,0 +1,22 @@
+---
+# Tool categories (2 specialized domains, per AgentRequirements):
+# 1. Code ops: bash, lsp, serena_*
+# 2. Discovery: read, grep, glob
+description: Debugger — reproduces a bug, isolates root cause, writes failing test. Passes to @BugFixer for the fix. Read-only.
+mode: all
+model: {{PROVIDER_ID}}/{{CODER_MODEL}}
+temperature: 0.1
+steps: 10
+permission:
+  read: allow
+  edit: deny
+  bash: allow
+  grep: allow
+  glob: allow
+  lsp: allow
+  task: deny
+  webfetch: deny
+  "serena_*": allow
+---
+
+{{INCLUDE: _shared/agents/Debugger.body.md.template}}

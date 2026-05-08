@@ -1,0 +1,27 @@
+---
+# Tool categories (5 specialized domains, per AgentRequirements):
+# 1. Code ops: bash, edit, lsp, serena_*
+# 2. Knowledge/RAG: knowledge-my-app_*
+# 3. Library lookup: context7_*, webfetch
+# 4. Discovery: read, grep, glob
+# 5. Meta: skill
+description: Developer — implements one stage of the plan, writes tests, validates via LSP, builds the module, returns list of changed files
+mode: all
+model: {{PROVIDER_ID}}/{{CODER_MODEL}}
+temperature: 0.1
+steps: 20
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  lsp: allow
+  skill: allow
+  webfetch: allow
+  "knowledge-my-app_*": allow
+  "serena_*": allow
+  "context7_*": allow
+---
+
+{{INCLUDE: _shared/agents/CodeWriter.body.md.template}}

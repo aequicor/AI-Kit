@@ -1,0 +1,17 @@
+---
+description: Coverage checker — verifies that every requirement and corner case has at least one test case. Returns PASS or GAPS list. Called by @RequirementsPipeline.
+mode: subagent
+model: {{PROVIDER_ID}}/{{DEFAULT_MODEL}}
+temperature: 0.1
+steps: 10
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/CoverageChecker.body.md.template}}

@@ -1,0 +1,17 @@
+---
+description: TestRunner — operates on the living `<feature>-test-cases.md`. Updates Status, walks PO through PEND TCs, scans for FAIL/PEND rows, appends new TCs, manages the Defects log. Does NOT generate the file (that's @QA REQUIREMENTS). Does NOT write test code.
+mode: subagent
+model: {{PROVIDER_ID}}/{{CODER_MODEL}}
+temperature: 0.2
+steps: 25
+permission:
+  read: allow
+  edit: allow
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/TestRunner.body.md.template}}

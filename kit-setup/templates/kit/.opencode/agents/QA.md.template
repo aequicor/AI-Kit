@@ -1,0 +1,17 @@
+---
+description: QA — owns the living test-cases file. Two phases. REQUIREMENTS (called from requirements-pipeline) creates the file from requirements + corner cases. IMPLEMENTATION (called by @Main after spec / after final stage) appends impl-level cases. Single source of truth for /kit-fix.
+mode: subagent
+model: {{PROVIDER_ID}}/{{CODER_MODEL}}
+temperature: 0.1
+steps: 15
+permission:
+  read: allow
+  edit: allow
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/QA.body.md.template}}

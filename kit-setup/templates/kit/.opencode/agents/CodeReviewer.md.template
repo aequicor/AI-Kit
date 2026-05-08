@@ -1,0 +1,17 @@
+---
+description: Code Reviewer — read-only review of changesets (compilation readiness, code style, technical compliance, security)
+mode: subagent
+model: {{PROVIDER_ID}}/{{REVIEWER_MODEL}}
+temperature: 0.1
+steps: 10
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  task: deny
+  grep: allow
+  glob: allow
+  webfetch: deny
+---
+
+{{INCLUDE: _shared/agents/CodeReviewer.body.md.template}}

@@ -21,7 +21,7 @@ gradle-app.setting
 .claude/settings.local.json
 
 # OpenCode
-.opencode/
+/.opencode/
 
 # OS
 .DS_Store

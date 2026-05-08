@@ -1,0 +1,17 @@
+---
+description: Corner case attacker — reviews business requirements (BUSINESS mode) or technical spec (TECHNICAL mode) and returns open questions. Called by @RequirementsPipeline in loops until all questions are answered.
+mode: subagent
+model: {{PROVIDER_ID}}/{{DEFAULT_MODEL}}
+temperature: 0.1
+steps: 15
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/CornerCaseReviewer.body.md.template}}

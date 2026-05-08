@@ -1,0 +1,25 @@
+---
+# Tool categories (4 specialized domains, per AgentRequirements):
+# 1. Knowledge/RAG: knowledge-my-app_*
+# 2. Library lookup: context7_*, webfetch
+# 3. Discovery: read, grep, glob
+# 4. Clarification: question
+description: Designer — UI/UX design for {{UI_FRAMEWORK}} ({{PLATFORMS}}). Clarifies context, thinks step by step, produces screen/component/flow descriptions. Read-only, outputs design docs via task response.
+mode: subagent
+model: {{PROVIDER_ID}}/{{DESIGNER_MODEL}}
+temperature: 0.5
+steps: 10
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  grep: allow
+  glob: allow
+  question: allow
+  task: deny
+  webfetch: allow
+  "knowledge-my-app_*": allow
+  "context7_*": allow
+---
+
+{{INCLUDE: _shared/agents/Designer.body.md.template}}

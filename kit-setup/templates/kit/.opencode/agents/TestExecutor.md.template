@@ -1,0 +1,24 @@
+---
+# Tool categories:
+# 1. Build/test execution: bash
+# 2. Code reading (read-only on src/): read, grep, glob
+# 3. Vault report write: edit, knowledge-my-app_*
+# 4. Meta: skill (for tech-debt-record)
+description: TestExecutor — independent run of the full module test suite (build + unit + integration) after @CodeWriter, before @CodeReviewer. Maps in-scope TCs to PASS / FAIL / NOT_RUN and writes a run report. Does NOT edit src/ or test-cases.md.
+mode: subagent
+model: {{PROVIDER_ID}}/{{REVIEWER_MODEL}}
+temperature: 0.1
+steps: 15
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  task: deny
+  skill: allow
+  webfetch: deny
+  "knowledge-my-app_*": allow
+---
+
+{{INCLUDE: _shared/agents/TestExecutor.body.md.template}}

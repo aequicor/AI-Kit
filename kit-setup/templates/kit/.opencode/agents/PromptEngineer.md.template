@@ -1,0 +1,25 @@
+---
+# Tool categories (5 specialized domains, per AgentRequirements):
+# 1. File editing: edit
+# 2. Discovery: read, grep, glob
+# 3. Research: webfetch
+# 4. Meta: skill
+# 5. Clarification: question
+description: Prompt Engineer — maintains and optimizes prompts in .opencode/agents/ and SKILL files; monitors context efficiency
+mode: subagent
+model: {{PROVIDER_ID}}/{{REVIEWER_MODEL}}
+temperature: 0.2
+steps: 10
+permission:
+  read: allow
+  edit: allow
+  bash: deny
+  grep: allow
+  glob: allow
+  question: allow
+  task: deny
+  webfetch: allow
+  skill: allow
+---
+
+{{INCLUDE: _shared/agents/PromptEngineer.body.md.template}}

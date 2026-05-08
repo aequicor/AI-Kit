@@ -1,0 +1,20 @@
+---
+description: SecurityReviewer — adversarial security pass after @CodeReviewer for stages whose changeset touches auth, sessions, tokens, PII, payments, file uploads, deserialization, SQL/ORM, external HTTP, or RBAC. OWASP-aligned axes; classifies findings CRITICAL / HIGH / MEDIUM / LOW. Read-only on src/.
+mode: subagent
+model: {{PROVIDER_ID}}/{{REVIEWER_MODEL}}
+temperature: 0.1
+steps: 12
+permission:
+  read: allow
+  edit: allow
+  bash: deny
+  grep: allow
+  glob: allow
+  task: deny
+  webfetch: deny
+  skill: allow
+  "knowledge-my-app_*": allow
+  "serena_*": allow
+---
+
+{{INCLUDE: _shared/agents/SecurityReviewer.body.md.template}}
