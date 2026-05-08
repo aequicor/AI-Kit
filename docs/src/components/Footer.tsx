@@ -10,7 +10,7 @@ export default function Footer() {
       <span className="footer-sep">·</span>
       <a href={`${REPO}/releases`} target="_blank" rel="noreferrer">{t('footer.releases')}</a>
       <span className="footer-sep">·</span>
-      <span>{t('footer.license')}</span>
+      <a href={`${REPO}/blob/master/LICENSE`} target="_blank" rel="noreferrer">{t('footer.license')}</a>
     </footer>
   );
 }

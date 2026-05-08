@@ -173,6 +173,6 @@
   "footer": {
     "repo": "Репозиторий",
     "releases": "Релизы",
-    "license": "Лицензия MIT"
+    "license": "Лицензия Apache 2.0"
   }
 }
