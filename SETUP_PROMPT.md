@@ -719,16 +719,47 @@ If `errors` is non-empty (`secret_pattern_match`, `constitution_overflow`, etc.)
 
 ---
 
-## Phase I — Hand off
+## Phase I — Write KIT_README.md
+
+The kit isn't just a pile of files — it's the **workflows** those files enable. Drop a `KIT_README.md` at the project root so the user (and any teammate who clones the repo) knows which slash commands exist, what each one does, and which agent runs at each step.
+
+Author the file yourself with your file-writing tool. The binary does **not** produce this — it ships runner-facing artifacts only. Tailor every section to the manifest you just generated, and write the prose in the language picked in Phase 0. Aim for one screen of practical, project-specific content — not a tutorial.
+
+### Required sections
+
+1. **Overview.** One paragraph naming the project, the runners wired up (`render_targets`), and the regenerate command (`kit-setup generate .aikit/manifest.yaml`). Make it clear that `.aikit/manifest.yaml` is the source of truth — every generated file flows from it.
+
+2. **Daily workflows / slash commands.** This is the heart of the document. For each entry in `workflows[]`, write:
+   - The trigger (e.g. `/kit-new-feature <description>`).
+   - One or two sentences on **when** to reach for it (new features needing a spec, bugs with a clear repro, refactors, autonomous overnight runs, …).
+   - The pipeline of `steps[]` as a readable arrow chain — agent, task, gate, retry behaviour. Example:
+     `Architect (planning, approve) → CodeWriter (implementation, retry × 3) → Verifier (review, rollback on fail) → Verifier (ground-truth) → Verifier (diff-review)`
+   - Quote the actual `gate:`, `on_fail:`, and `max_retries:` values from the manifest — don't fabricate review checkpoints that don't exist.
+
+3. **Agent roster.** Small table of `agents[]`: id, role, one-line responsibility, preferred tier (`reasoner` / `balanced` / `fast`). Note that the concrete model is resolved at runtime from `models[]` based on the active runner's allowed providers — swapping a tier means editing the manifest, not the agent file.
+
+4. **Knowledge layout.** Where long-lived docs go (the `vault/specs/...` paths from `knowledge.specs.layout`), where session state lives (`knowledge.session.layout`), and a one-line summary of each constitution section.
+
+5. **Invoking agents directly.** Runner-specific. For Claude Code: `@Architect …`, `@CodeWriter …`. For Cursor: rules under `.cursor/rules/` attach automatically; the per-agent prompts live in `.cursor/rules/_prompts/`. For Aider: prompts live in `.aider/prompts/` and you pass them via `--message-file`. Cover **only** the runners actually in `render_targets`; skip the rest.
+
+6. **Updating the kit.** Three-step checklist: edit `.aikit/manifest.yaml`, run `kit-setup verify`, run `kit-setup generate`. Tell the user to commit the manifest and the regenerated files together so the kit stays reproducible.
+
+7. **Generated files.** The list returned by Phase H, grouped by render target — same grouping as the table in Phase H of this prompt, but trimmed to what was actually written.
+
+Use real ids — workflow triggers, agent names, module names, file paths — pulled from this user's manifest. No generic placeholders. The whole point of this file is that someone reading it tomorrow morning knows exactly what to type, without re-deriving it from the YAML.
+
+---
+
+## Phase J — Hand off
 
 Show the user:
 
-- Final list of generated files.
+- Final list of generated files (including `KIT_README.md`).
+- Point them at **`KIT_README.md`** as the day-to-day reference — slash commands, agent roster, knowledge layout, regenerate steps. Suggest one concrete first command to try (e.g. `/kit-new-feature 'add health endpoint'` for Claude Code).
 - For each provider with `auth: api_key`, remind the user to export the matching `api_key_env` in their shell (`echo $ANTHROPIC_API_KEY` should print non-empty). Skip this for `auth: subscription` (the runner's own login is what authenticates) and `auth: none`.
-- Recommendation to commit `.aikit/manifest.yaml` together with the generated files so the kit is reproducible.
-- Quick-start for their runner of choice — e.g. for Claude Code: "Open the project in Claude Code; the rendered `CLAUDE.md` is loaded automatically. Try `/kit-new-feature 'add health endpoint'` to start the standard pipeline."
+- Recommendation to commit `.aikit/manifest.yaml`, `KIT_README.md`, and the generated files together so the kit is reproducible.
 
-If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run Phase G + Phase H. The binary is designed for this loop.
+If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run Phase G + Phase H, then refresh `KIT_README.md` so it stays in sync. The binary is designed for this loop.
 
 ---
 
