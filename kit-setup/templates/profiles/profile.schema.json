@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aikit.example/schema/profile.schema.json",
+  "title": "kit-setup profile",
+  "description": "Reusable manifest fragment selectable from manifest.stack.profiles[]. Lives under templates/profiles/<axis>/<name>.yaml; the directory name MUST equal _profile_axis.",
+  "type": "object",
+  "required": ["_profile_name", "_profile_description", "_profile_axis"],
+  "oneOf": [
+    {
+      "title": "language axis",
+      "description": "Owns build/test/lint commands, language tooling (LSP, language-specific MCP), and language-level forbidden_patterns.",
+      "type": "object",
+      "properties": {
+        "_profile_name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "_profile_description": { "type": "string" },
+        "_profile_axis": { "const": "language" },
+        "stack": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "languages": { "type": "array", "items": { "type": "string" } },
+            "build_command": { "type": "string" },
+            "compile_command": { "type": "string" },
+            "lint_command": { "type": "string" },
+            "test_command": { "type": "string" },
+            "format_command": { "type": "string" },
+            "run_command": { "type": "string" }
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind"],
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string", "enum": ["lsp", "mcp-stdio", "mcp-http", "builtin"] },
+              "command": { "type": "string" },
+              "args": { "type": "array", "items": { "type": "string" } },
+              "url": { "type": "string" },
+              "extensions": { "type": "array", "items": { "type": "string" } },
+              "api_key_env": { "type": "string" },
+              "enabled": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "policies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "forbidden_patterns": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "framework axis",
+      "description": "Owns top-level ui block, stack.frameworks list-add, and framework-specific forbidden_patterns list-add.",
+      "type": "object",
+      "properties": {
+        "_profile_name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "_profile_description": { "type": "string" },
+        "_profile_axis": { "const": "framework" },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "framework": { "type": "string" },
+            "platforms": { "type": "array", "items": { "type": "string" } },
+            "colors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "hex": { "type": "string" },
+                  "purpose": { "type": "string" }
+                }
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "stack": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "frameworks": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "policies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "forbidden_patterns": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "capability axis",
+      "description": "Owns policies subtree only — forbidden_patterns list-add, secrets_policy.deny_patterns list-add, and policy defaults (slice_caps, lanes, ground_truth, telemetry, mutation_sample, test_strategy, session_isolation, auto_commit_per_step, allow_internal_steps).",
+      "type": "object",
+      "properties": {
+        "_profile_name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "_profile_description": { "type": "string" },
+        "_profile_axis": { "const": "capability" },
+        "policies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "forbidden_patterns": { "type": "array", "items": { "type": "string" } },
+            "secrets_policy": {
+              "type": "object",
+              "properties": {
+                "deny_literal_keys": { "type": "boolean" },
+                "deny_patterns": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "slice_caps": { "type": "object" },
+            "lanes": { "type": "object" },
+            "ground_truth": { "type": "object" },
+            "telemetry": { "type": "object" },
+            "mutation_sample": { "type": "object" },
+            "test_strategy": {},
+            "session_isolation": { "type": "object" },
+            "auto_commit_per_step": { "type": "boolean" },
+            "allow_internal_steps": { "type": "boolean" },
+            "auto_approve": {}
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

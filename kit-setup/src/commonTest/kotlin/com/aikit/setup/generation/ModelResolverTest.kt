@@ -85,6 +85,7 @@ class ModelResolverTest {
             sliceCaps = emptyMap(),
             modelConstraints = modelConstraints,
         ),
+        ui = null,
     )
 
     private fun agent(

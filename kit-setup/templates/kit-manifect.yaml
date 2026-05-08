@@ -607,28 +607,39 @@ tools:
 
 workflows:
   - id: feature
-    description: "BA → arch → code → verify → close."
-    trigger: "/new-feature"
+    description: "Classify → analysis → plan → confirm → execute (per step) → reconcile/trace/dod → diff-review → close."
+    trigger: "/kit-new-feature"
     steps:
       - { agent: Architect,  task: planning,       gate: approve }
       - { agent: CodeWriter, task: implementation, gate: auto, on_fail: retry, max_retries: 3 }
       - { agent: Verifier,   task: review,         gate: auto, on_fail: rollback }
+      - { agent: Verifier,   task: review,         gate: ground-truth }
       - { agent: Verifier,   task: review,         gate: diff-review }
 
   - id: bug-fix
-    description: "Triage → debug → fix → verify."
-    trigger: "/fix"
+    description: "Triage → debug → fix → verify → optional retro for CRITICAL/HIGH."
+    trigger: "/kit-fix"
     steps:
       - { agent: BugFixer, task: triage, gate: auto }
       - { agent: BugFixer, task: debug,  gate: auto }
       - { agent: Verifier, task: review, gate: approve }
 
   - id: tech-debt
-    trigger: "/techdebt"
+    description: "Drain accumulated tech-debt entries in a controlled batch."
+    trigger: "/kit-techdebt"
     steps:
       - { agent: Architect,  task: planning, gate: approve }
       - { agent: CodeWriter, task: refactor, gate: auto }
       - { agent: Verifier,   task: review,   gate: diff-review }
+
+  - id: sleep
+    description: "Autonomous run of FEATURE/TECH pipeline; auto-approves CONFIRM/diff-review/replan; writes MORNING_REPORT."
+    trigger: "/kit-sleep"
+    steps:
+      - { agent: Architect,  task: planning,       gate: auto }
+      - { agent: CodeWriter, task: implementation, gate: auto, on_fail: retry, max_retries: 6 }
+      - { agent: Verifier,   task: review,         gate: auto, on_fail: retry, max_retries: 6 }
+      - { agent: Verifier,   task: review,         gate: auto }       # diff-review auto-approved in sleep
 
 # ═══════════════════════════════════════════════════════════════════════════
 # POLICIES
@@ -652,15 +663,57 @@ policies:
   test_strategy: tdd_first        # tdd_first | test_after | mixed
 
   lanes:
-    default_risk: standard        # trivial | standard | critical
+    default_risk: standard                  # trivial | standard | critical
     auto_classify: true
     trivial_max_files: 1
     trivial_max_lines: 30
-    critical_block_sleep: true
+    trivial_no_new_public_symbols: true     # trivial lane forbids new public APIs
+    critical_block_sleep: true              # refuse /kit-sleep for critical tasks
+    critical_require_mutation_sample: true  # ≥3 mutants killed for critical backend
 
   ground_truth:
     required: true
     exclusions: { modules: [] }
+    default_types:
+      ui: screenshot
+      api: contract-test-pass
+      cli: command-output-diff
+      backend: mutation-sample-pass
+      refactor: diff-stat-and-smoke
+
+  # Mutation-sample skill configuration (used by @Verifier MODE=MUTATION-SAMPLE
+  # at 5.6 ground-truth gate for backend changes, and by /kit-mutate ad-hoc).
+  mutation_sample:
+    max_mutants: 10            # hard cap; 0 disables auto-invoke
+    timeout_seconds: 300       # per-mutant test-run cap
+    fallback_ai: false         # use AI mutation when native tool absent
+    scope: all_changed         # all_changed | smallest_file_only | diff_lines_only
+
+  # Per-step session isolation (clean session per step). After 5.6 CHECKPOINT
+  # @Main suggests /clear according to mode; SessionStart hook (Claude Code) /
+  # session.created plugin (OpenCode) inject pending-step context.
+  session_isolation:
+    mode: per_step             # per_step | per_milestone | overflow_only
+    prompt_style: both         # silent | stderr | both
+
+  # Auto-commit per step at 5.4b — required for /kit-step-resume and
+  # /kit-revert-step (they anchor on per-step commits).
+  auto_commit_per_step: true
+
+  # Runnable-slice gate at 3a. False (default) requires every plan step to
+  # declare a user-visible `Runnable: <one line>` field. True allows
+  # `Runnable: internal — <reason>` for pure-backend modules with no UI.
+  allow_internal_steps: false
+
+  # Gate-signal telemetry. Each gate verdict is appended to
+  # evals/runs/<kit_version>/gates.csv via the gate-telemetry skill.
+  # Together with defects.csv gives the kit a self-cleaning gate-evaluation
+  # mechanism: gates with rolling signal_ratio < threshold AND no
+  # defect_origin matches are flagged as deprecation candidates by /kit-status.
+  telemetry:
+    gates_log_enabled: true
+    evaluation_window_tasks: 30
+    signal_ratio_threshold: 0.05
 
   forbidden_patterns:
     - "any in TypeScript without justification comment"

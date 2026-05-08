@@ -16,14 +16,17 @@ fun helpText(): String = """
     kit-setup — AI agent kit configurator
 
     USAGE:
-        kit-setup <subcommand> [<manifest-path>]
+        kit-setup <subcommand> [<args>...]
 
     SUBCOMMANDS:
         verify     Validate a manifest. Emits machine-readable JSON to stdout.
         generate   Generate the kit from a validated manifest. Overwrites existing files.
+        schema     List variants bundled in this binary (agents, dialects, adapters, ...).
 
     ARGUMENTS:
-        <manifest-path>   Path to the manifest file. Defaults to "$DEFAULT_MANIFEST_PATH".
+        <manifest-path>      Path to the manifest file (verify/generate).
+                             Defaults to "$DEFAULT_MANIFEST_PATH".
+        --format json|human  Output format for 'schema'. Defaults to 'json'.
 
     OPTIONS:
         -h, --help        Show this help.

@@ -1,0 +1,22 @@
+# kit-setup profile: Compose Multiplatform (framework axis)
+# Pair with kotlin-gradle.
+
+_profile_name: compose-multiplatform
+_profile_description: "Compose Multiplatform — Compose Desktop + Android + iOS conventions"
+_profile_axis: framework
+
+ui:
+  framework: "Compose Multiplatform"
+  platforms: ["Desktop", "Android", "iOS"]
+
+stack:
+  frameworks: [compose-multiplatform]
+
+policies:
+  forbidden_patterns:
+    - "Recomposition-unsafe state read внутри @Composable (читайте mutableStateOf через .value или by remember)"
+    - "Side-effect в @Composable теле без LaunchedEffect / DisposableEffect"
+    - "Захардкоженные размеры в dp без ссылки на токены дизайн-системы"
+    - "Platform-specific API в commonMain (выносите в expect/actual или платформенный sourceSet)"
+    - "Blocking I/O на Compose UI dispatcher (используйте Dispatchers.IO через withContext)"
+    - "Хранение Android Context в commonMain (риск утечки — используйте платформенный sourceSet)"

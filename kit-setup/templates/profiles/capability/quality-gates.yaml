@@ -1,0 +1,47 @@
+# kit-setup profile: Test-quality + traceability gates (capability axis)
+# Adds reviewer-side patterns that strengthen vacuous-assertion / untraceable-test detection.
+
+_profile_name: quality-gates
+_profile_description: "Test-quality + traceability forbidden patterns — language-agnostic"
+_profile_axis: capability
+
+policies:
+  forbidden_patterns:
+    # ── Vacuous assertions ───────────────────────────────────────────────────
+    - "Тест, чьё единственное assertion — non-null / non-empty / defined проверка результата SUT — для Critical/High EC требуется проверка ожидаемого поведения, а не факта что что-то вернулось"
+    - "Тест, утверждающий только что не было исключения (пустой catch, комментарий 'no throw = pass')"
+    - "Тест, сравнивающий значение само с собой или с константой возвращаемой SUT (assertTrue(result.success), assertEquals(x, x)) — тавтология"
+    - "Тело тест-метода с // TODO: add assertion — тест без assertion это не coverage"
+
+    # ── Untraceable tests ────────────────────────────────────────────────────
+    - "Имя тест-метода не описывает сценарий (test1, foo, doStuff, sample) — имя должно описывать сценарий per spec-to-code-trace skill"
+    - "Тест не упражняет ни одну ветку SUT (mocks возвращают defaults, нет вариаций входов)"
+    - "Тест assert-ит на mock return value, который сам же сконфигурировал (mock.return = X; assert(x == X))"
+
+    # ── Hidden / silent skips ────────────────────────────────────────────────
+    - "Тест с @Disabled / @Ignore / @Skip / it.skip / xit / @pytest.mark.skip без tracked reason (issue link, ticket или DECISIONS.md)"
+    - "Тест guarded runtime if-return или раннее return, никогда не выполняющий assertions в common path — invisible disable"
+    - "Закомментированный тест без объяснительной строки сверху"
+
+    # ── Untraceable production code ──────────────────────────────────────────
+    - "Production-ветка для Critical/High EC без соответствующего теста (if (qty <= 0) reject без теста на qty <= 0)"
+    - "Public-функция без теста ни в одном test файле, ссылающемся на неё (orphan handler / orphan symbol)"
+    - "Spec-defined endpoint (HTTP method + path) без matching route handler в коде (endpoint-orphan)"
+
+    # ── TDD discipline ───────────────────────────────────────────────────────
+    - "Production-код закоммичен в одном change со своим первым тестом, и тест проходит сразу (нет failing-test шага)"
+    - "Тест вызывает SUT с захардкоженными inputs всегда удовлетворяющими pre-condition — тест не загоняет corner case"
+
+    # ── Determinism / flakiness ──────────────────────────────────────────────
+    - "Тест зависит от Thread.sleep / setTimeout / time.sleep без deterministic альтернативы (test clock, virtual time, manual scheduler)"
+    - "Тест ходит в реальную сеть / реальный DNS / реальный filesystem вне project tmpdir"
+    - "Тест зависит от системных часов без injected clock"
+    - "Тест зависит от order итерации HashMap / dict без сортировки"
+
+    # ── Test data smells ─────────────────────────────────────────────────────
+    - "Тест copy-paste-ит fixture в 3+ методах вместо shared builder/factory"
+    - "Тест импортирует production-константы (MAX_RETRIES) и assert-ит против них — тавтология"
+
+    # ── Coverage blind spots ─────────────────────────────────────────────────
+    - "Catch-блок чей единственный эффект — log and continue: error path молча проглочен (re-throw, transform или 'cannot fail here' с доказательством)"
+    - "if (false) / dead-ветка в коде — coverage tools помечают её covered хотя это не так"

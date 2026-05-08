@@ -1,0 +1,23 @@
+# kit-setup profile: Next.js (framework axis)
+# Pair with typescript-pnpm.
+
+_profile_name: nextjs
+_profile_description: "Next.js — App Router conventions, RSC/Client boundary discipline"
+_profile_axis: framework
+
+ui:
+  framework: "Next.js (React)"
+  platforms: ["Web"]
+
+stack:
+  frameworks: [next.js]
+
+policies:
+  forbidden_patterns:
+    - "use client директива в файле, который не использует hooks/event handlers (лишний client bundle)"
+    - "Импорт server-only API (fs, child_process, secrets) в файле с 'use client'"
+    - "fetch() без revalidate / cache hints в Server Component (явный контракт обязателен)"
+    - "Хардкод URL в getStaticProps / generateStaticParams вместо env-переменных"
+    - "Прямой доступ к window / document вне useEffect / 'use client' boundary"
+    - "Mutation внутри Server Component (Server Actions для записи)"
+    - "Утечка PII в metadata: { } экспорт страницы"

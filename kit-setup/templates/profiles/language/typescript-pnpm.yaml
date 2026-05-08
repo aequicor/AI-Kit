@@ -1,0 +1,32 @@
+# kit-setup profile: TypeScript + pnpm (language axis)
+# Pair with framework profile (nextjs / react-spa / ...) and capability profiles.
+
+_profile_name: typescript-pnpm
+_profile_description: "TypeScript + pnpm baseline — typescript-language-server, eslint, prettier"
+_profile_axis: language
+
+stack:
+  languages: [typescript]
+  build_command:   "pnpm build"
+  compile_command: "pnpm tsc --noEmit"
+  lint_command:    "pnpm lint"
+  test_command:    "pnpm test"
+  format_command:  "pnpm format"
+  run_command:     "pnpm dev"
+
+tools:
+  - id: lsp-typescript
+    kind: lsp
+    command: typescript-language-server
+    args: ["--stdio"]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]
+    enabled: true
+
+policies:
+  forbidden_patterns:
+    - "any в TypeScript без обоснующего комментария"
+    - "// @ts-ignore без issue-id (используйте // @ts-expect-error <CODE> с пояснением)"
+    - "console.log в production-коде (используйте структурированный логгер)"
+    - "Non-null assertion (!) поверх unknown без runtime-проверки"
+    - "as any cast вместо явного описания типа"
+    - "require() в .ts файле (используйте ESM import)"

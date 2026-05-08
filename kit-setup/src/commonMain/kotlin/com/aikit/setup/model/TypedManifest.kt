@@ -29,6 +29,13 @@ data class TypedManifest(
     val workflows: List<Workflow>,
     val knowledge: Knowledge?,
     val policies: Policies,
+    /**
+     * Optional UI surface declared by a framework profile or by the user's
+     * manifest. `null` for backend/CLI/library projects. The generator and
+     * the @Architect agent inspect this to decide whether to emit / require
+     * a UI section in spec.md.
+     */
+    val ui: Ui?,
 )
 
 /** Project-wide task-type defaults declared under `task_types:`. */

@@ -45,8 +45,29 @@ object ManifestModel {
             workflows = root.field("workflows")?.asList()?.map(::readWorkflow).orEmpty(),
             knowledge = readKnowledgeOrNull(root.field("knowledge")),
             policies = readPolicies(root.field("policies")),
+            ui = readUiOrNull(root.field("ui")),
         )
     }
+
+    private fun readUiOrNull(node: RawNode?): Ui? {
+        if (node.isNullish()) return null
+        // Treat empty mappings as "no UI" too — a profile that declared `ui: {}`
+        // is the same as not declaring it.
+        val mapping = (node as? RawNode.Mapping) ?: return null
+        if (mapping.entries.isEmpty()) return null
+        val colors = mapping.entries["colors"]?.asList()?.map(::readUiColor).orEmpty()
+        return Ui(
+            framework = mapping.entries["framework"]?.stringOrNull(),
+            platforms = mapping.entries["platforms"]?.asStringList().orEmpty(),
+            colors = colors,
+        )
+    }
+
+    private fun readUiColor(node: RawNode): UiColor = UiColor(
+        name = node.field("name").stringOr(""),
+        hex = node.field("hex")?.stringOrNull(),
+        purpose = node.field("purpose")?.stringOrNull(),
+    )
 
     private fun readProject(node: RawNode?): Project = Project(
         name = node?.field("name").stringOr("Unnamed"),

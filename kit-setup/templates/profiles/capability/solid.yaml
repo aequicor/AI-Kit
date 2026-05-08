@@ -1,0 +1,57 @@
+# kit-setup profile: SOLID + class-level OO design (capability axis)
+# Language-agnostic — pair with any language profile.
+#
+# Enforces SOLID principles plus DRY/YAGNI/KISS, immutability, Law of Demeter,
+# composition over inheritance. For deeper system-level layering, also add
+# the `clean-architecture` capability profile.
+
+_profile_name: solid
+_profile_description: "SOLID + class-level OO design rules — pair with clean-architecture for layering"
+_profile_axis: capability
+
+policies:
+  forbidden_patterns:
+    # ── S: Single Responsibility ──────────────────────────────────────────────
+    - "Класс с >1 причиной для изменения (god class, делает persistence + business logic + formatting одновременно)"
+    - "Метод длиннее 30 строк, смешивающий уровни абстракции (orchestration + low-level detail)"
+    - "Repository класс, содержащий business rules или validation логику"
+    - "Use case / interactor с >1 публичной business-операции"
+
+    # ── O: Open / Closed ─────────────────────────────────────────────────────
+    - "switch/when по type tags или string-дискриминаторам вместо полиморфизма"
+    - "Feature flag внутри domain logic вместо инъекции strategy/decorator"
+    - "Захардкоженный выбор алгоритма внутри класса, который должен делегировать strategy"
+
+    # ── L: Liskov Substitution ───────────────────────────────────────────────
+    - "Subclass, бросающий UnsupportedOperationException / NotImplementedError для унаследованных методов"
+    - "Subclass, ослабляющий preconditions или усиливающий postconditions родительского контракта"
+    - "Type-checking через instanceof/is внутри метода, принимающего базовый тип"
+
+    # ── I: Interface Segregation ─────────────────────────────────────────────
+    - "Интерфейс с >5–7 методами, которые клиенты реализуют лишь частично (fat interface)"
+    - "Передача full service/repository интерфейса в потребителя, использующего лишь 1 метод"
+    - "Marker-метод, реализованный как no-op, потому что интерфейс forced его"
+
+    # ── D: Dependency Inversion ──────────────────────────────────────────────
+    - "Concrete класс инстанцируется через 'new' / constructor внутри business logic (используйте DI / factory)"
+    - "Domain или use-case импортирует из infrastructure layer (DB, HTTP, filesystem)"
+    - "Static / global доступ к shared mutable state из domain logic (singletons как hidden dependencies)"
+    - "Тест, который не запускается без реальной БД/сети, потому что зависимость не была инвертирована"
+
+    # ── DRY / YAGNI / KISS ────────────────────────────────────────────────────
+    - "Дублирование business-логики в 2+ use cases вместо извлечения shared domain service"
+    - "Abstract base class или интерфейс созданы спекулятивно с 1 реализацией без планируемого расширения"
+    - "Over-engineered абстракция для одноразовой операции (factory-of-factories для фиксированного flow)"
+
+    # ── Immutability & side-effect control ───────────────────────────────────
+    - "Mutable публичное поле на domain entity или value object (используйте val / readonly)"
+    - "Метод, мутирующий свой аргумент вместо возврата нового значения (неожиданный side-effect)"
+    - "Shared mutable state, доступ без синхронизации в concurrent контексте"
+
+    # ── Law of Demeter / tell-don't-ask ──────────────────────────────────────
+    - "Длинная цепочка a.b().c().doSomething() ≥3 уровней — нарушает LoD"
+    - "Caller извлекает данные из объекта и принимает решения вместо того, чтобы попросить объект действовать"
+
+    # ── Composition over inheritance ─────────────────────────────────────────
+    - "Глубокая иерархия наследования (3+ уровня) ради переиспользования — предпочитайте композицию или делегирование"
+    - "Наследование от concrete класса исключительно ради переиспользования реализации"

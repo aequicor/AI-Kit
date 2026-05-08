@@ -1,0 +1,16 @@
+# kit-setup profile: Make-based generic (language axis)
+# Minimal language-agnostic baseline assuming Make drives build/lint/test.
+# Override commands in your manifest if your project uses something else.
+
+_profile_name: make-generic
+_profile_description: "Language-agnostic baseline driven by Make — no LSP, no formatter"
+_profile_axis: language
+
+stack:
+  languages: [generic]
+  build_command:   "make"
+  compile_command: "make check"
+  lint_command:    "make lint"
+  test_command:    "make test"
+  format_command:  "make format"
+  run_command:     "make run"

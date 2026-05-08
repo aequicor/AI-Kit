@@ -1,0 +1,31 @@
+# kit-setup profile: Security baseline (capability axis)
+# Universal security & hygiene patterns. Recommended in every install.
+
+_profile_name: security-baseline
+_profile_description: "Universal security & hygiene forbidden patterns plus deny-patterns for literal API keys"
+_profile_axis: capability
+
+policies:
+  forbidden_patterns:
+    - "Hardcoded secrets / API keys в коде (используйте переменные окружения)"
+    - "SQL string concatenation с user input (используйте parameterized queries)"
+    - "Логирование чувствительных данных (passwords, tokens, PII)"
+    - "TODO/FIXME в production-коде без tracking-записи (issue или DECISIONS.md)"
+    - "Disabled / закомментированные тесты без объяснения"
+    - "Catch Throwable/Exception generically с молчаливым проглатыванием"
+    - "@SuppressWarnings или @Suppress без issue-id или ссылки на DECISIONS.md в том же комментарии"
+    - "// @ts-ignore или // @ts-expect-error без issue-id (используйте rule-specific форму)"
+    - "# noqa или # type: ignore без rule-кода И одно-строчного reason"
+    - "// eslint-disable (file-level) — используйте line-level форму с rule-name и reason"
+    - "git commit --no-verify в скриптах, хуках или Makefile-целях"
+    - "// @SuppressLint, // ktlint-disable, // detekt:suppress без issue-id"
+
+  secrets_policy:
+    deny_literal_keys: true
+    deny_patterns:
+      - "sk-[A-Za-z0-9]{20,}"
+      - "sk-ant-[A-Za-z0-9_-]{20,}"
+      - "ghp_[A-Za-z0-9]{30,}"
+      - "glpat-[A-Za-z0-9_-]{20,}"
+      - "AKIA[0-9A-Z]{16}"
+      - "xox[bp]-[A-Za-z0-9-]{20,}"

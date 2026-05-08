@@ -1,0 +1,32 @@
+# kit-setup profile: Python + Poetry (language axis)
+# Pair with capability profiles. No framework profile is mandatory.
+
+_profile_name: python-poetry
+_profile_description: "Python + Poetry baseline — pyright LSP, ruff, mypy"
+_profile_axis: language
+
+stack:
+  languages: [python]
+  build_command:   "poetry build"
+  compile_command: "poetry run mypy ."
+  lint_command:    "poetry run ruff check ."
+  test_command:    "poetry run pytest"
+  format_command:  "poetry run ruff format ."
+  run_command:     "poetry run python -m"
+
+tools:
+  - id: lsp-python
+    kind: lsp
+    command: pyright-langserver
+    args: ["--stdio"]
+    extensions: [".py", ".pyi"]
+    enabled: true
+
+policies:
+  forbidden_patterns:
+    - "Bare except: (catch конкретные исключения)"
+    - "from module import * (используйте явные имена)"
+    - "Изменяемые default-аргументы (используйте None + early init)"
+    - "eval() / exec() с user-input"
+    - "print() в production-коде (используйте logging)"
+    - "# type: ignore без правила и одно-строчного reason"

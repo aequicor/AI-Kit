@@ -5,6 +5,8 @@ import com.aikit.setup.generation.GenerationResult
 import com.aikit.setup.generation.KitGenerator
 import com.aikit.setup.manifest.LoadResult
 import com.aikit.setup.manifest.ManifestLoader
+import com.aikit.setup.manifest.profile.ProfileResolver
+import com.aikit.setup.validation.ValidationResult
 import com.aikit.setup.validation.Validator
 
 /**
@@ -19,6 +21,7 @@ import com.aikit.setup.validation.Validator
  */
 class GenerateService(
     private val loader: ManifestLoader,
+    private val profileResolver: ProfileResolver,
     private val validator: Validator,
     private val generator: KitGenerator,
 ) {
@@ -33,7 +36,14 @@ class GenerateService(
                 message = loaded.message,
             )
         }
-        val manifest = (loaded as LoadResult.Success).manifest
+        val rawManifest = (loaded as LoadResult.Success).manifest
+
+        // Resolve profiles before validation so the rule set sees the merged
+        // manifest. Resolver failures masquerade as ordinary validation errors.
+        val manifest = when (val resolved = profileResolver.resolve(rawManifest)) {
+            is ProfileResolver.Result.Failure -> return GenerateOutcome.Invalid(ValidationResult(resolved.errors))
+            is ProfileResolver.Result.Success -> resolved.manifest
+        }
 
         val validation = validator.validate(manifest)
         if (!validation.valid) {

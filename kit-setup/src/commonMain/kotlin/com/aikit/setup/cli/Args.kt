@@ -8,9 +8,18 @@ package com.aikit.setup.cli
 const val DEFAULT_MANIFEST_PATH: String = ".aikit/manifest.yaml"
 
 /**
+ * Output format for the `schema` subcommand.
+ *
+ * `JSON` is the agent-facing wire format; `HUMAN` is a plain-text tree for
+ * humans inspecting the bundle. Default is `JSON` to stay consistent with
+ * the rest of the CLI surface.
+ */
+enum class SchemaFormat { JSON, HUMAN }
+
+/**
  * Parsed view of the command line.
  *
- * The CLI surface is deliberately tiny: two subcommands plus help/version.
+ * The CLI surface is deliberately tiny: three subcommands plus help/version.
  * Anything that doesn't match collapses into [Error]; the dispatcher in
  * `Main` then prints the message and exits with status `2`.
  */
@@ -21,6 +30,9 @@ sealed class Command {
 
     /** `kit-setup generate [<path>]` */
     data class Generate(val manifestPath: String) : Command()
+
+    /** `kit-setup schema [--format json|human]` */
+    data class Schema(val format: SchemaFormat) : Command()
 
     /** `kit-setup --help` (or no arguments). */
     data object Help : Command()
@@ -51,6 +63,7 @@ object Args {
         return when (first) {
             "verify" -> parsePathSubcommand("verify", argv) { Command.Verify(it) }
             "generate" -> parsePathSubcommand("generate", argv) { Command.Generate(it) }
+            "schema" -> parseSchema(argv)
             else -> Command.Error("Unknown subcommand: '$first'. Run 'kit-setup --help' for usage.")
         }
     }
@@ -71,5 +84,47 @@ object Args {
         }
         val path = rest.firstOrNull()?.takeIf { it.isNotBlank() } ?: DEFAULT_MANIFEST_PATH
         return build(path)
+    }
+
+    /**
+     * `schema` accepts a single optional `--format json|human` flag and no
+     * positional args — the catalog comes from the binary itself, not from
+     * a path on disk.
+     */
+    private fun parseSchema(argv: Array<String>): Command {
+        val rest = argv.drop(1)
+        var format = SchemaFormat.JSON
+        var i = 0
+        while (i < rest.size) {
+            val arg = rest[i]
+            when {
+                arg == "--format" -> {
+                    val value = rest.getOrNull(i + 1)
+                        ?: return Command.Error("'schema --format' requires a value: 'json' or 'human'.")
+                    format = parseFormat(value)
+                        ?: return Command.Error("Unknown --format value: '$value'. Expected 'json' or 'human'.")
+                    i += 2
+                }
+                arg.startsWith("--format=") -> {
+                    val value = arg.substringAfter('=')
+                    format = parseFormat(value)
+                        ?: return Command.Error("Unknown --format value: '$value'. Expected 'json' or 'human'.")
+                    i += 1
+                }
+                arg.startsWith("-") -> {
+                    return Command.Error("'schema' does not recognise flag '$arg'. Run 'kit-setup --help'.")
+                }
+                else -> {
+                    return Command.Error("'schema' takes no positional arguments. Got: '$arg'.")
+                }
+            }
+        }
+        return Command.Schema(format)
+    }
+
+    private fun parseFormat(value: String): SchemaFormat? = when (value.lowercase()) {
+        "json" -> SchemaFormat.JSON
+        "human" -> SchemaFormat.HUMAN
+        else -> null
     }
 }

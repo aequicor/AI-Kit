@@ -1,0 +1,23 @@
+# kit-setup profile: React SPA (framework axis)
+# Pair with typescript-pnpm.
+
+_profile_name: react-spa
+_profile_description: "React single-page app — Vite/CRA, hooks discipline, no SSR"
+_profile_axis: framework
+
+ui:
+  framework: "React (SPA)"
+  platforms: ["Web"]
+
+stack:
+  frameworks: [react]
+
+policies:
+  forbidden_patterns:
+    - "useEffect без массива зависимостей или с // eslint-disable react-hooks/exhaustive-deps"
+    - "setState внутри render-фазы компонента"
+    - "Прямой DOM-доступ через document.getElementById вместо ref"
+    - "Class component для нового кода (используйте functional + hooks)"
+    - "Inline объект/функция в JSX prop без useMemo/useCallback в горячем пути рендера"
+    - "Утечка подписки в useEffect без cleanup-функции"
+    - "Мутация state через прямое присваивание вместо setState (ссылочная неизменность)"

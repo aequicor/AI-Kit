@@ -1,0 +1,37 @@
+# kit-setup profile: Kotlin + Gradle KTS (language axis)
+# Pair with framework profile (compose-multiplatform / paper-plugin / ...) and capability profiles.
+
+_profile_name: kotlin-gradle
+_profile_description: "Kotlin + Gradle (KTS) baseline — kotlin-lsp, detekt, ktlint, serena MCP"
+_profile_axis: language
+
+stack:
+  languages: [kotlin]
+  build_command:   "./gradlew"
+  compile_command: "./gradlew compileKotlin"
+  lint_command:    "./gradlew detekt ktlintCheck"
+  test_command:    "./gradlew :[module]:test"
+  format_command:  "./gradlew detekt --auto-correct"
+
+tools:
+  - id: lsp-kotlin
+    kind: lsp
+    command: kotlin-lsp
+    args: []
+    extensions: [".kt", ".kts"]
+    enabled: true
+  - id: serena
+    kind: mcp-stdio
+    command: serena-mcp
+    args: ["--workspace", "."]
+    enabled: true
+
+policies:
+  forbidden_patterns:
+    - "Оператор !! (используйте requireNotNull/checkNotNull с message)"
+    - "GlobalScope.launch (всегда используйте scoped coroutine)"
+    - "Thread.sleep в suspend-коде (используйте delay())"
+    - "Пустой catch-блок"
+    - "Bare Exception/Throwable catch (ловите конкретные типы)"
+    - "lateinit вне DI-контейнеров, фрагментов и тестов"
+    - "runBlocking вне main и тестов"

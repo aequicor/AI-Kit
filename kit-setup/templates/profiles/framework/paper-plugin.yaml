@@ -1,0 +1,18 @@
+# kit-setup profile: Minecraft Paper plugin (framework axis)
+# Pair with kotlin-gradle. No UI surface in the user sense.
+
+_profile_name: paper-plugin
+_profile_description: "Minecraft Paper plugin (Bukkit/Paper API) — server-side conventions"
+_profile_axis: framework
+
+stack:
+  frameworks: [paper-plugin]
+
+policies:
+  forbidden_patterns:
+    - "Захардкоженные Bukkit ChatColor строки — используйте MiniMessage или component API"
+    - "Использование deprecated Bukkit API (используйте Paper-adventure components, не legacy ChatColors)"
+    - "Блокирование main server thread — планируйте async через Bukkit schedulers или coroutines"
+    - "Хранение Player ссылок за пределами event scope (утечка памяти)"
+    - "Вызов Bukkit API из non-main потока без переключения через scheduler"
+    - "Long-running task в event handler (offload в BukkitScheduler.runTaskAsynchronously)"
