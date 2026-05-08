@@ -147,14 +147,18 @@ Probe for an existing KnowledgeOS deployment (do **not** start one yourself
 — lifecycle is the user's responsibility):
 
 ```bash
-ls docker-compose*.y*ml 2>/dev/null
-grep -l "knowledgeos\|aequicor/knowledgeos" docker-compose*.y*ml 2>/dev/null
+ls *docker-compose*.y*ml *compose*.y*ml 2>/dev/null
+grep -rl "knowledgeos\|aequicor/knowledgeos" *.yml *.yaml *docker-compose*.y*ml *compose*.y*ml 2>/dev/null
 ```
+
+The user's compose file may be named `docker-compose.yml`,
+`knowledge-docker-compose.yml`, `compose.yaml`, or any variant — use a broad
+glob so it is not missed.
 
 Ask the user one question only when the probe finds something, or when the
 user volunteered a knowledge-server name in Phase A:
 
-> "I see a `docker-compose.yml` referencing KnowledgeOS — do you want the
+> "I see `<filename>` referencing KnowledgeOS — do you want the
 > kit's agents to call it for long-term memory? If yes, I need the URL of
 > the published `mcp` service (read it from the compose file's `ports:`
 > mapping for the `mcp` service, e.g. `8081:8080` → `http://localhost:8081/mcp`)."
