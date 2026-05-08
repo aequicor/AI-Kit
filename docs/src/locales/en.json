@@ -22,34 +22,34 @@
     "faq": "FAQ"
   },
   "home": {
-    "badge": "User Guide · v1.0",
-    "title": "AI agent setup — in seconds",
-    "lead": "AI Kit generates configuration for Claude Code and OpenCode for any project. One prompt, one binary — and your repo is ready for AI-assisted development.",
+    "badge": "User Guide · v2.0",
+    "title": "AI agent setup — in seconds",
+    "lead": "AI Kit configures Claude Code and OpenCode for any project from a single manifest. Paste one prompt, answer a few questions, and the agent writes a manifest and runs the binary — no scripts, no template fetches, ~85+ rendered files.",
     "ctaQuick": "Quick Start",
     "ctaGithub": "View on GitHub",
     "what": {
       "eyebrow": "What it does",
       "title": "Everything an AI agent needs to start working in your repo",
-      "sub": "AI Kit produces CLAUDE.md, .claude/settings.json, opencode.json, agent definitions, and a .planning/ structure that match the ai-agent-kit workflow. Works with Kotlin, Java, Python, TypeScript, Go, Rust and more."
+      "sub": "AI Kit produces top-level instructions, host configs, subagent definitions, slash commands, skills, an MCP servers file, planning scaffolds and a KnowledgeOS-compatible vault — all driven by .aikit/manifest.yaml. Works with Kotlin, Java, Python, TypeScript, Go, Rust and more."
     },
     "features": {
       "eyebrow": "Features",
       "title": "Why AI Kit",
       "providers": {
-        "title": "Two providers",
-        "body": "Generate config for Claude Code, OpenCode, or both at once."
+        "title": "Two hosts",
+        "body": "Render for Claude Code, OpenCode, or both at once — agent bodies are shared via INCLUDE."
       },
       "languages": {
-        "title": "Any stack",
-        "body": "Pick a language and (optionally) a framework — generation adapts to your project."
+        "title": "Profile-driven",
+        "body": "Five orthogonal axes (language, framework, host, provider, capability) compose the kit cleanly."
       },
       "planning": {
-        "title": "Planning system",
-        "body": "Optional .planning/ directory with current task, morning report, and per-task notes."
+        "title": "Planning + vault",
+        "body": ".planning/ scaffold plus a per-module KnowledgeOS vault (concepts/reference/how-to/tutorials/guidelines)."
       },
       "agents": {
-        "title": "Agent definitions",
-        "body": "Pre-baked subagent files for repetitive engineering chores."
+        "title": "Agent + command + skill set",
+        "body": "Pre-baked subagents, /kit-* slash commands, and skill specs — ready to dispatch."
       }
     },
     "next": {
@@ -61,11 +61,11 @@
       },
       "cli": {
         "title": "CLI Usage",
-        "body": "Prefer running things yourself? Download the binary and call it directly with flags."
+        "body": "Prefer running things yourself? Author a manifest and call verify + generate."
       },
       "files": {
         "title": "Generated Files",
-        "body": "See exactly what AI Kit creates in your repository and what each file does."
+        "body": "See exactly what AI Kit writes into your repository and what each file does."
       },
       "build": {
         "title": "Build from Source",
@@ -82,70 +82,86 @@
     "step2Title": "2. Paste this prompt",
     "step2": "Paste the prompt below and let the agent take it from there.",
     "step3Title": "3. Answer a few questions",
-    "step3": "The agent will ask about project name, language, framework, provider and model. It downloads the binary, runs it, and confirms the generated files.",
-    "tip": "Re-running the kit overwrites existing files safely — feel free to tweak answers and run again."
+    "step3": "The agent collects project facts, writes .aikit/manifest.yaml, downloads the binary, runs verify in a loop until the manifest is clean, and finishes with generate.",
+    "tip": "Re-running generate overwrites kit-managed files unconditionally. Back up customised CLAUDE.md or settings before re-running."
   },
   "cli": {
     "eyebrow": "CLI",
     "title": "CLI Usage",
-    "lead": "Prefer running the binary yourself? Download it from the Releases page and call it directly.",
+    "lead": "Prefer running the binary yourself? Download it from the Releases page, drop a manifest at .aikit/manifest.yaml, and call verify + generate.",
     "downloads": "Downloads",
     "platform": "Platform",
     "binary": "Binary",
     "examples": "Examples",
-    "flags": "Flags reference",
-    "flag": "Flag",
+    "subcommands": "Subcommands",
+    "subcommand": "Subcommand",
     "description": "Description",
-    "default": "Default",
-    "flagsList": {
-      "name": "Project name",
-      "path": "Target directory",
-      "lang": "Programming language (kotlin / java / python / typescript / go / rust / other)",
-      "framework": "Framework name (omit if none)",
-      "provider": "AI provider — claude / opencode / both",
-      "model": "Model id (e.g. claude-sonnet-4-6)",
-      "noPlanning": "Skip .planning/ generation",
-      "noAgents": "Skip agent definition files"
+    "output": "Output",
+    "exitCodesTitle": "Exit codes",
+    "exitCode": "Code",
+    "meaning": "Meaning",
+    "subcommandsList": {
+      "verify": {
+        "description": "Parse and validate the manifest against the schema. Does not write anything.",
+        "output": "{\"valid\": bool, \"errors\": [{path, code, message, hint?}]}"
+      },
+      "generate": {
+        "description": "Validate the manifest, then render every kit file into the target. Overwrites existing files.",
+        "output": "{\"ok\": bool, \"generated\": [...], \"errors\": [...]?}"
+      },
+      "help": {
+        "description": "Print help text and exit. Plain text, for humans.",
+        "output": "Usage / subcommands / exit codes."
+      },
+      "version": {
+        "description": "Print the binary version and exit.",
+        "output": "Single line, e.g. 2.0.0."
+      }
     },
-    "defaults": {
-      "name": "directory name",
-      "path": ". (current dir)",
-      "lang": "kotlin",
-      "framework": "—",
-      "provider": "both",
-      "model": "claude-sonnet-4-6",
-      "noPlanning": "enabled",
-      "noAgents": "enabled"
-    }
+    "exitCodes": {
+      "ok": "Success.",
+      "invalid": "Manifest invalid (verify) or generation refused due to invalid manifest.",
+      "error": "Usage error or runtime failure (missing file, parse error, I/O failure)."
+    },
+    "manifestNote": "The manifest path is positional and optional — it defaults to .aikit/manifest.yaml relative to the current directory. JSON output is always single-line on stdout, so agents can pipe it through jq."
   },
   "files": {
     "eyebrow": "Files",
     "title": "Generated Files",
-    "lead": "What lands in your project after running the kit.",
+    "lead": "What lands in your project after running generate. Single-host installs get ~85 files; multi-host (opencode + claude-code) ~135.",
     "file": "File",
-    "provider": "Provider",
+    "scope": "Scope",
     "purpose": "Purpose",
     "purposes": {
-      "claudemd": "Top-level guidance Claude Code reads on every session.",
+      "claudemd": "Top-level guidance Claude Code reads on every session — also acts as the @Main orchestrator body.",
+      "agentsmd": "Top-level guidance OpenCode (and other AGENTS.md-aware tools) reads on every session.",
       "claudeSettings": "Permissions, env vars, and hooks for Claude Code.",
-      "claudeAgents": "Subagent definitions used by Claude Code.",
-      "opencodeJson": "OpenCode project configuration.",
-      "opencodeAgents": "Subagent definitions used by OpenCode.",
-      "current": "Currently in-progress task and notes.",
-      "morning": "Daily summary of what changed and what's next.",
-      "tasks": "Per-task work logs."
+      "opencodeJson": "OpenCode project configuration — provider, models, permissions, MCP, LSP, formatter.",
+      "mcpJson": "Project-scope MCP servers for Claude Code (context7, knowledge-my-app, serena).",
+      "claudeAgents": "Subagent definitions used by Claude Code, dispatched via the Agent tool.",
+      "opencodeAgents": "Subagent definitions used by OpenCode, dispatched via the task tool.",
+      "commands": "Slash commands rendered per host (/kit-new-feature, /kit-fix, /kit-review, ...).",
+      "skills": "Skill specs that agents load on demand.",
+      "shared": "Per-host _shared.md, FILE_STRUCTURE.md, sessions, i18n bundle.",
+      "current": "Active task pointer — local-only, gitignored.",
+      "decisions": "Append-only architectural decisions log.",
+      "tasks": "Per-task scaffold (TASK.md.template) the agent instantiates per work item.",
+      "vault": "KnowledgeOS vault scaffolded per module: concepts/, reference/, how-to/, tutorials/, guidelines/.",
+      "moduleAgents": "Per-module instruction file under each module's source root.",
+      "autoMemory": "Append-only learnings file shared by every agent across sessions."
     }
   },
   "build": {
     "eyebrow": "Build",
     "title": "Build from Source",
-    "lead": "If you want to compile the binary yourself, you'll need JDK 11+.",
+    "lead": "If you want to compile the binary yourself, you'll need JDK 21. Linking is per-target — pick the one for your host.",
     "clone": "Clone the repository",
     "compile": "Compile for your platform",
     "windows": "Windows",
     "linux": "Linux",
     "macosArm": "macOS Apple Silicon",
-    "macosIntel": "macOS Intel"
+    "macosIntel": "macOS Intel",
+    "templatesNote": "All templates live under kit-setup/templates/. A Gradle codegen task bakes them into the binary on every build, so editing an agent body, command, or schema is just a normal file edit followed by a rebuild."
   },
   "faq": {
     "eyebrow": "FAQ",
@@ -153,16 +169,20 @@
     "lead": "Quick answers to common questions about AI Kit.",
     "items": [
       {
-        "q": "Does the kit overwrite existing files?",
-        "a": "Yes. It safely overwrites files it manages. If you have a customised CLAUDE.md, back it up before re-running."
+        "q": "Does generate overwrite existing files?",
+        "a": "Yes — unconditionally. Anything you've customised (CLAUDE.md, settings.json, agent files) must be backed up before re-running. The agent that drives the install is responsible for preserving prior state."
       },
       {
-        "q": "Which provider should I pick?",
-        "a": "Both. Generating both Claude Code and OpenCode configs is cheap and lets you switch tools without redoing setup."
+        "q": "Can I author the manifest by hand?",
+        "a": "Yes. Start from kit-setup/templates/manifest.example.yaml, drop it at .aikit/manifest.yaml, and run kit-setup verify until it's clean. The schema is published at kit-setup/templates/kit/manifest.schema.json."
       },
       {
-        "q": "What if my language isn't in the list?",
-        "a": "Pass --lang other and skip --framework. Generation falls back to a generic template you can refine."
+        "q": "Which hosts can I pick?",
+        "a": "opencode, claude-code, or both. Multi-host renders both trees side-by-side and shares agent bodies through _shared/ via INCLUDE."
+      },
+      {
+        "q": "Why does the binary refuse my manifest with api_key_literal_detected?",
+        "a": "It looked at provider.api_key_env or mcp.context7.api_key_env and matched a real-key heuristic (sk-... / ghp_... / AKIA... / 32+ chars high entropy). Use the env-var name (e.g. ROUTERAI_OPENCODE) instead and export the value via your shell."
       },
       {
         "q": "Where do I report bugs?",

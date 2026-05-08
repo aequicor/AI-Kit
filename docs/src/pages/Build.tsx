@@ -21,16 +21,18 @@ cd AI-Kit/kit-setup`}</code></pre>
           <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 36 }}>{t('build.compile')}</h2>
 
           <h3 style={{ marginTop: 24, color: 'var(--text)' }}>{t('build.windows')}</h3>
-          <pre><code>gradlew.bat mingwX64Binaries</code></pre>
+          <pre><code>gradlew.bat linkReleaseExecutableMingwX64</code></pre>
 
           <h3 style={{ marginTop: 24, color: 'var(--text)' }}>{t('build.linux')}</h3>
-          <pre><code>./gradlew linuxX64Binaries</code></pre>
+          <pre><code>./gradlew linkReleaseExecutableLinuxX64</code></pre>
 
           <h3 style={{ marginTop: 24, color: 'var(--text)' }}>{t('build.macosArm')}</h3>
-          <pre><code>./gradlew macosArm64Binaries</code></pre>
+          <pre><code>./gradlew linkReleaseExecutableMacosArm64</code></pre>
 
           <h3 style={{ marginTop: 24, color: 'var(--text)' }}>{t('build.macosIntel')}</h3>
-          <pre><code>./gradlew macosX64Binaries</code></pre>
+          <pre><code>./gradlew linkReleaseExecutableMacosX64</code></pre>
+
+          <p style={{ marginTop: 24 }}>{t('build.templatesNote')}</p>
         </div>
       </section>
     </>

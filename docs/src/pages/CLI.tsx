@@ -9,15 +9,17 @@ const DOWNLOADS = [
 
 const RELEASE_BASE = 'https://github.com/aequicor/AI-Kit/releases/latest/download/';
 
-const FLAGS = [
-  { flag: '--name <name>', desc: 'name', def: 'name' },
-  { flag: '--path <path>', desc: 'path', def: 'path' },
-  { flag: '--lang <language>', desc: 'lang', def: 'lang' },
-  { flag: '--framework <name>', desc: 'framework', def: 'framework' },
-  { flag: '--provider <claude|opencode|both>', desc: 'provider', def: 'provider' },
-  { flag: '--model <model-id>', desc: 'model', def: 'model' },
-  { flag: '--no-planning', desc: 'noPlanning', def: 'noPlanning' },
-  { flag: '--no-agents', desc: 'noAgents', def: 'noAgents' },
+const SUBCOMMANDS: { name: string; key: 'verify' | 'generate' | 'help' | 'version' }[] = [
+  { name: 'kit-setup verify [<manifest-path>]', key: 'verify' },
+  { name: 'kit-setup generate [<manifest-path>]', key: 'generate' },
+  { name: 'kit-setup --help | -h', key: 'help' },
+  { name: 'kit-setup --version | -v', key: 'version' },
+];
+
+const EXIT_CODES: { code: string; key: 'ok' | 'invalid' | 'error' }[] = [
+  { code: '0', key: 'ok' },
+  { code: '1', key: 'invalid' },
+  { code: '2', key: 'error' },
 ];
 
 export default function CLI() {
@@ -57,25 +59,53 @@ export default function CLI() {
           </table>
 
           <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.examples')}</h2>
-          <pre><code>{`kit-setup --name my-app --path . --lang kotlin --provider both
-kit-setup -p . -l typescript -f react --provider claude
-kit-setup --help`}</code></pre>
+          <pre><code>{`# Validate a manifest (defaults to .aikit/manifest.yaml)
+kit-setup verify
 
-          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.flags')}</h2>
+# Generate the kit from a validated manifest
+kit-setup generate .aikit/manifest.yaml
+
+# JSON output is single-line; pipe through jq if you like
+kit-setup verify | jq .
+
+kit-setup --help
+kit-setup --version`}</code></pre>
+
+          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.subcommands')}</h2>
           <table>
             <thead>
               <tr>
-                <th>{t('cli.flag')}</th>
+                <th>{t('cli.subcommand')}</th>
                 <th>{t('cli.description')}</th>
-                <th>{t('cli.default')}</th>
+                <th>{t('cli.output')}</th>
               </tr>
             </thead>
             <tbody>
-              {FLAGS.map((f) => (
-                <tr key={f.flag}>
-                  <td><code>{f.flag}</code></td>
-                  <td>{t(`cli.flagsList.${f.desc}`)}</td>
-                  <td>{t(`cli.defaults.${f.def}`)}</td>
+              {SUBCOMMANDS.map((s) => (
+                <tr key={s.key}>
+                  <td><code>{s.name}</code></td>
+                  <td>{t(`cli.subcommandsList.${s.key}.description`)}</td>
+                  <td><code>{t(`cli.subcommandsList.${s.key}.output`)}</code></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p style={{ marginTop: 24 }}>{t('cli.manifestNote')}</p>
+
+          <h2 className="sec-title" style={{ fontSize: '1.4rem', marginTop: 48 }}>{t('cli.exitCodesTitle')}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>{t('cli.exitCode')}</th>
+                <th>{t('cli.meaning')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EXIT_CODES.map((e) => (
+                <tr key={e.code}>
+                  <td><code>{e.code}</code></td>
+                  <td>{t(`cli.exitCodes.${e.key}`)}</td>
                 </tr>
               ))}
             </tbody>

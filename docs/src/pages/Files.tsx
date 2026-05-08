@@ -1,14 +1,24 @@
 import { useTranslation } from 'react-i18next';
 
-const FILES: { file: string; provider: string; purpose: string }[] = [
-  { file: 'CLAUDE.md', provider: 'Claude Code', purpose: 'claudemd' },
-  { file: '.claude/settings.json', provider: 'Claude Code', purpose: 'claudeSettings' },
-  { file: '.claude/agents/*.md', provider: 'Claude Code', purpose: 'claudeAgents' },
-  { file: 'opencode.json', provider: 'OpenCode', purpose: 'opencodeJson' },
-  { file: '.opencode/agents/*.md', provider: 'OpenCode', purpose: 'opencodeAgents' },
-  { file: '.planning/CURRENT.md', provider: 'both', purpose: 'current' },
-  { file: '.planning/MORNING_REPORT.md', provider: 'both', purpose: 'morning' },
-  { file: '.planning/tasks/', provider: 'both', purpose: 'tasks' },
+type Scope = 'Claude Code' | 'OpenCode' | 'both';
+
+const FILES: { file: string; scope: Scope; purpose: string }[] = [
+  { file: 'CLAUDE.md', scope: 'Claude Code', purpose: 'claudemd' },
+  { file: 'AGENTS.md', scope: 'OpenCode', purpose: 'agentsmd' },
+  { file: '.claude/settings.json', scope: 'Claude Code', purpose: 'claudeSettings' },
+  { file: 'opencode.json', scope: 'OpenCode', purpose: 'opencodeJson' },
+  { file: '.mcp.json', scope: 'Claude Code', purpose: 'mcpJson' },
+  { file: '.claude/agents/*.md', scope: 'Claude Code', purpose: 'claudeAgents' },
+  { file: '.opencode/agents/*.md', scope: 'OpenCode', purpose: 'opencodeAgents' },
+  { file: '<host>/commands/kit-*.md', scope: 'both', purpose: 'commands' },
+  { file: '<host>/skills/<name>/SKILL.md', scope: 'both', purpose: 'skills' },
+  { file: '<host>/_shared.md, FILE_STRUCTURE.md, sessions/, i18n/', scope: 'both', purpose: 'shared' },
+  { file: '.planning/CURRENT.md', scope: 'both', purpose: 'current' },
+  { file: '.planning/DECISIONS.md', scope: 'both', purpose: 'decisions' },
+  { file: '.planning/tasks/TASK.md.template', scope: 'both', purpose: 'tasks' },
+  { file: '<vault_path>/{concepts,reference,how-to,tutorials,guidelines}/', scope: 'both', purpose: 'vault' },
+  { file: '<source_root>/AGENTS.md or CLAUDE.md', scope: 'both', purpose: 'moduleAgents' },
+  { file: 'AUTO_MEMORY.md', scope: 'both', purpose: 'autoMemory' },
 ];
 
 export default function Files() {
@@ -29,7 +39,7 @@ export default function Files() {
             <thead>
               <tr>
                 <th>{t('files.file')}</th>
-                <th>{t('files.provider')}</th>
+                <th>{t('files.scope')}</th>
                 <th>{t('files.purpose')}</th>
               </tr>
             </thead>
@@ -37,7 +47,7 @@ export default function Files() {
               {FILES.map((f) => (
                 <tr key={f.file}>
                   <td><code>{f.file}</code></td>
-                  <td>{f.provider}</td>
+                  <td>{f.scope}</td>
                   <td>{t(`files.purposes.${f.purpose}`)}</td>
                 </tr>
               ))}
