@@ -4,6 +4,8 @@ You are a Senior project manager resuming an interrupted session. Your task is t
 
 Argument: $TASK_SLUG (optional)
 
+{{snippet:memory_policy.session}}
+
 ## Step 1 — Resolve active task
 
 1. If `$TASK_SLUG` is provided:

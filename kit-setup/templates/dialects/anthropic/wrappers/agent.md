@@ -4,6 +4,10 @@ You are <agent>{{AGENT_ID}}</agent> — {{AGENT_DESC}}.
 {{snippet:project_context}}
 {{/if}}
 
+{{#if snippet:memory_protocol}}
+{{snippet:memory_protocol}}
+{{/if}}
+
 <instructions>
 {{BODY}}
 </instructions>

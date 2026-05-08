@@ -133,6 +133,43 @@ on a missing `ANTHROPIC_API_KEY`. If the active render target is non-subscriptio
 *and* nothing is set, propose the matching provider and ask the user to populate
 its `api_key_env` before generating.
 
+### A.7 Knowledge backend (KnowledgeOS opt-in)
+
+By default the kit uses a **filesystem** cold-tier backend — long-term docs
+live as plain markdown under `vault/specs/`. Optionally the user can swap in
+[KnowledgeOS](https://github.com/aequicor/KnowledgeOS), an MCP knowledge
+server with semantic search, BM25, wikilink expansion, and reranking. Memory
+snippets in the rendered prompts gate on a `KNOWLEDGE_OS_ENABLED` flag; with
+the flag off, agents fall back to filesystem reads — no behaviour change is
+forced on the user.
+
+Probe for an existing KnowledgeOS deployment (do **not** start one yourself
+— lifecycle is the user's responsibility):
+
+```bash
+ls docker-compose*.y*ml 2>/dev/null
+grep -l "knowledgeos\|aequicor/knowledgeos" docker-compose*.y*ml 2>/dev/null
+```
+
+Ask the user one question only when the probe finds something, or when the
+user volunteered a knowledge-server name in Phase A:
+
+> "I see a `docker-compose.yml` referencing KnowledgeOS — do you want the
+> kit's agents to call it for long-term memory? If yes, I need the URL of
+> the published `mcp` service (read it from the compose file's `ports:`
+> mapping for the `mcp` service, e.g. `8081:8080` → `http://localhost:8081/mcp`)."
+
+Decision matrix:
+
+| Probe / user signal | Action in Phase F |
+|---|---|
+| No compose file, user did not mention a knowledge server | Skip — leave `knowledge.specs.kind: filesystem` (the default) |
+| Compose file references KnowledgeOS, user confirms | Add `knowledge-os` to `tools[]` (well-known id, see Phase F) and set `knowledge.specs.kind: mcp` with `tool: knowledge-os` |
+| User mentioned a custom MCP knowledge backend | Add an entry under any other id (the well-known flag stays off; agents go filesystem-fallback for snippets but the MCP server is still wired into runner configs) |
+
+**Never invent the URL.** If the user cannot point to a running deployment
+or to a `docker-compose.yml`, do not add the entry — propose filesystem.
+
 ---
 
 ## Phase B — Download the binary
@@ -551,6 +588,19 @@ knowledge:
     indexing:
       include: ["**/*.md"]
       exclude: ["**/draft-*.md"]
+    # ALTERNATIVE — when the user confirmed KnowledgeOS in Phase A.7, swap
+    # the block above for the one below AND add the matching `knowledge-os`
+    # entry under tools[] (see TOOLS section). The well-known `tool:
+    # knowledge-os` value is what flips KNOWLEDGE_OS_ENABLED on; layout keys
+    # become frontmatter filters used by KnowledgeOS's search_docs tool.
+    # kind: mcp
+    # tool: knowledge-os
+    # layout:
+    #   feature:    { fm.type: "domain",    fm.scope: "feature" }
+    #   subsystem:  { fm.type: "reference", fm.scope: "subsystem" }
+    #   decision:   { fm.type: "decision" }
+    #   techdebt:   { fm.type: "tech-debt" }
+    #   lookup:     { fm.type: "documentation" }
 
   session:
     kind: filesystem
@@ -571,6 +621,17 @@ tools:
   - id: web-search
     kind: builtin
     enabled: true
+
+  # KnowledgeOS — recommended cold-tier knowledge backend. Add ONLY if the
+  # user confirmed they have it running (see Phase A.7). The id `knowledge-os`
+  # is well-known: declaring this entry, together with `knowledge.specs.kind:
+  # mcp` and `knowledge.specs.tool: knowledge-os` (see knowledge block above),
+  # turns on KNOWLEDGE_OS_ENABLED in rendered prompts. Read the URL from the
+  # user's docker-compose ports mapping; never invent a value.
+  # - id: knowledge-os
+  #   kind: mcp-http
+  #   url: "http://<host>:<port>/mcp"   # from user's docker-compose, do not invent
+  #   enabled: true
 
 # ── WORKFLOWS (slash-command pipelines) ─────────────────────────────────────
 workflows:

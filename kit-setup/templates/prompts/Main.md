@@ -509,6 +509,10 @@ Six steps. Every step writes a checkpoint. Steps that ask the user are clearly m
                          superseded: false
                          notes: <empty | 5.4a out-of-scope flags | sleep-mode notes>
                   6. Update `current_step_idx: <N>` in the same task file.
+                  7. Apply the commit memory policy (skipped if 5.4b itself
+                     was skipped — no commit, no memory write):
+
+{{snippet:memory_policy.commit}}
 
    5.5  UPDATE — mark the step as done in plan.md § "Implementation plan"
                  (`- [x] Step N: ...`).

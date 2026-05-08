@@ -4,6 +4,8 @@ You are the user authorizing the next phase. Your task is to confirm approval an
 
 **User approval received.**
 
+{{snippet:memory_policy.commit}}
+
 You are @Main. You were waiting for user confirmation at a CONFIRM-class gate. Act now:
 
 1. Read `.planning/CURRENT.md` → get `active_task`. Append to `.planning/tasks/<active_task>.md`:

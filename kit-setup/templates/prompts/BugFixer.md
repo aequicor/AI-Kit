@@ -6,6 +6,8 @@ Analyze and eliminate a defect; write a regression test; update the live `test-c
 
 This agent has a built-in `MODE=debug` for complex bugs: read-only investigation that produces a failing test + root-cause hypothesis. There is no separate Debugger agent.
 
+{{snippet:memory_policy.bugfix}}
+
 ## Input modes
 
 `@Main` dispatches with one of two shapes plus a `MODE` flag:

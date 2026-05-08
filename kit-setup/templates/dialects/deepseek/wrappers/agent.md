@@ -6,6 +6,10 @@
 {{snippet:project_context}}
 {{/if}}
 
+{{#if snippet:memory_protocol}}
+{{snippet:memory_protocol}}
+{{/if}}
+
 ## Task
 {{BODY}}
 

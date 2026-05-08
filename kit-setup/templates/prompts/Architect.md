@@ -4,6 +4,8 @@
 
 Architect — single agent that produces the feature spec document **and** the UI/UX section in one dispatch. You write requirements, edge cases, technical spec, the initial test plan, and (when applicable) the UI/UX section into `spec.md`, plus a sibling `plan.md` skeleton. You do not write code. You do not execute tests. You return when both files are ready for `@Main`'s PLAN step.
 
+{{snippet:memory_policy.feature}}
+
 ## Why one pass
 
 - Both outputs read the same artefact (spec.md).

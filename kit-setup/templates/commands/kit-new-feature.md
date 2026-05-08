@@ -20,6 +20,8 @@ If `--sleep` was set:
 
 If `--sleep` was not set → proceed with the interactive flow below.
 
+{{snippet:memory_policy.feature}}
+
 ## Interactive flow
 
 Hand off to `@Main` with the following prompt:

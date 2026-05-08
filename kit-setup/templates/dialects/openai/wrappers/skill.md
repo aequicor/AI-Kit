@@ -6,6 +6,10 @@
 **Invoke when:** {{SKILL_TRIGGERS}}
 {{/if}}
 
+{{#if snippet:memory_protocol}}
+{{snippet:memory_protocol}}
+{{/if}}
+
 ### Procedure
 {{BODY}}
 

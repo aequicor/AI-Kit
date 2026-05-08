@@ -10,6 +10,10 @@
 </when_to_invoke>
 {{/if}}
 
+{{#if snippet:memory_protocol}}
+{{snippet:memory_protocol}}
+{{/if}}
+
 <procedure>
 {{BODY}}
 </procedure>

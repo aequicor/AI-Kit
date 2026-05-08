@@ -24,7 +24,7 @@
     "start": "Get started"
   },
   "home": {
-    "badge": "Documentation · v2.3.3",
+    "badge": "Documentation · v2.4.0",
     "title": "One manifest — configs for every AI assistant you use",
     "lead": "Cursor, Claude Code, OpenCode and Aider work better when your project tells them the conventions, allowed paths, and commands. Usually you write those configs by hand, in a different format for each tool. AI Kit produces them from one YAML file — and keeps them in sync.",
     "ctaQuick": "Set up in a minute",

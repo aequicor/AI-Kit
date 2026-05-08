@@ -11,6 +11,90 @@ Two independent components share this repo. They have **different toolchains and
 - `docs/` — React 18 + Vite + TypeScript SPA with i18n (en/ru via `react-i18next`). Deployed to GitHub Pages at `https://aequicor.github.io/AI-Kit/`. Note `vite.config.ts` sets `base: '/AI-Kit/'` — paths break if this is changed without renaming the repo.
 - `SETUP_PROMPT.md` — the prompt users paste into Claude Code/OpenCode. It downloads the latest binary from `https://github.com/aequicor/AI-Kit/releases/latest/download/`, has the orchestrating agent author `.aikit/manifest.yaml` for the target project, then runs `kit-setup verify` (loop on errors) and `kit-setup generate`. Any change to subcommands, default paths, JSON output shapes, or stable error codes **must** be reflected here, in the README CLI section, and in `docs/src/locales/*.json` (`cli.flagsList` / `cli.defaults`).
 
+## Template tree — how manifest fields map to `kit-setup/templates/`
+
+The template tree has seven orthogonal sub-trees. The manifest selects entries from each:
+
+```
+kit-setup/templates/
+├── schema/                  ← kit-manifect.schema.json (validation only, not rendered)
+├── _shared/snippets/        ← fallback snippets, overridden per-dialect by filename
+├── dialects/<family>/       ← selected by models[].family
+├── target_adapters/<id>/    ← selected by render_targets[] / targets[].id
+├── prompts/                 ← agent prompt bodies (picked by agents[].prompt.*)
+├── commands/                ← slash-command bodies (kit-<name>.md)
+├── skills/<id>/             ← skill definitions (one dir per skill)
+├── rules/                   ← rule snippets
+├── knowledge/               ← constitution sections (always-loaded hot tier)
+├── profiles/<axis>/<name>/  ← reusable manifest fragments (stack.profiles[])
+└── user-prompts/            ← user-facing prompt templates
+```
+
+### The four selection axes
+
+**1. Dialect — `models[].family` → `dialects/<family>/`**
+
+| `family` value | Folder |
+|---|---|
+| `anthropic` | `dialects/anthropic/` |
+| `openai` | `dialects/openai/` |
+| `qwen` | `dialects/qwen/` |
+| `deepseek` | `dialects/deepseek/` |
+| _(anything else)_ | `dialects/generic/` |
+
+Each dialect folder contains `dialect.yaml` (wrapper index + style rules), `conventions.md`, `wrappers/<artifact_type>.md` (agent / command / rule / skill / user_prompt), and optionally `snippets/` that override matching files in `_shared/snippets/` by filename.
+
+**2. Target adapter — `render_targets[]` → `target_adapters/<id>/`**
+
+| `render_targets` entry | Folder | Instruction file | Config dir |
+|---|---|---|---|
+| `claude-code` | `target_adapters/claude-code/` | `CLAUDE.md` | `.claude/` |
+| `cursor` | `target_adapters/cursor/` | `.cursor/rules/` | `.cursor/` |
+| `opencode` | `target_adapters/opencode/` | `AGENTS.md` | `.opencode/` |
+| `aider` | `target_adapters/aider/` | `CONVENTIONS.md` | _(root)_ |
+| `qwen-code` | `target_adapters/qwen-code/` | `AGENTS.md` | `.qwen/` |
+
+Each adapter folder contains `adapter.yaml` (artifact output paths, frontmatter templates, capability flags, transforms), `conventions.md`, `frontmatter/<type>.yaml` (per-artifact frontmatter), and a config-file template (`settings.json.template`, `opencode.json.template`, etc.).
+
+**3. Agent prompt body — `agents[].prompt` → `prompts/`**
+
+The renderer resolves the prompt in this order:
+1. `agents[].prompt.<family>` → `prompts/<name>.<family>.md` (e.g. `CodeWriter.anthropic.md`)
+2. `agents[].prompt.default` → `prompts/<name>.md`
+
+Built-in bodies: `Main.md`, `Architect.md`, `CodeWriter.md`, `BugFixer.md`, `Researcher.md`, `Verifier.md`. Per-family overrides exist for `CodeWriter` (anthropic, qwen).
+
+**4. Profiles — `stack.profiles[]` → `profiles/<axis>/<name>.yaml`**
+
+Profiles are discovered by bare name across three axes:
+
+| Axis | Cardinality | Owns |
+|---|---|---|
+| `language/` | exactly 1 | `stack.{languages, build/compile/lint/test/format/run}`, LSP/MCP entries, language-level `policies.forbidden_patterns` |
+| `framework/` | 0..N | `ui:` block, `stack.frameworks[]`, framework forbidden patterns |
+| `capability/` | 0..N | `policies` defaults: `slice_caps`, `lanes`, `ground_truth`, `telemetry`, `mutation_sample`, `test_strategy` |
+
+Available profiles: language — `kotlin-gradle`, `typescript-pnpm`, `python-poetry`, `make-generic`; framework — `react-spa`, `nextjs`, `compose-multiplatform`, `paper-plugin`; capability — `quality-gates`, `security-baseline`, `clean-architecture`, `solid`.
+
+### Render pipeline (abbreviated)
+
+```
+manifest.yaml
+  → validate against schema/kit-manifect.schema.json
+  → for each agent:
+      pick model (family) → dialects/<family>/
+      resolve prompt body → prompts/<name>[.<family>].md
+      wrap with dialect   → dialects/<family>/wrappers/<type>.md
+      expand snippets     → dialects/<family>/snippets/ then _shared/snippets/
+  → for each render_target:
+      load adapter        → target_adapters/<id>/adapter.yaml
+      apply frontmatter   → target_adapters/<id>/frontmatter/<type>.yaml
+      run transforms
+      write to <config_dir>/<artifact_path>
+```
+
+Adding a new template file requires a rebuild (`generateTemplates` task re-embeds the tree into `Templates.kt`).
+
 ## Common commands
 
 ### Kotlin CLI (`kit-setup/`)

@@ -640,6 +640,14 @@ class DefaultKitGenerator(
         for ((k, v) in manifest.policies.sliceCaps) {
             out["SLICE_CAPS_${k.uppercase()}"] = v
         }
+        // KnowledgeOS opt-in: the id `knowledge-os` is well-known. Declaring it
+        // in tools[] (kind: mcp-*, enabled) flips KNOWLEDGE_OS_ENABLED on, which
+        // memory snippets gate on. KNOWLEDGE_OS_DISABLED is its inverse so
+        // snippets can express the filesystem-fallback branch (the placeholder
+        // engine has no `{{#else}}`).
+        val osOn = isKnowledgeOsEnabled(manifest)
+        out["KNOWLEDGE_OS_ENABLED"] = if (osOn) "1" else ""
+        out["KNOWLEDGE_OS_DISABLED"] = if (osOn) "" else "1"
         return out
     }
 
@@ -711,6 +719,23 @@ class DefaultKitGenerator(
         written: MutableList<String>,
         errors: MutableList<GenerationError>,
     ) {
+        // Hard refuse to write under any `vault/` segment. The vault is user
+        // data (KnowledgeOS docs, hand-authored specs); the generator must
+        // never overwrite it. A path like `vault/foo` or `<adapter>/vault/x`
+        // is a misconfiguration in templates or a regression — surface it as
+        // a stable, public-contract error rather than silently destroying
+        // someone's notes.
+        if (refersToVault(outPath)) {
+            errors += GenerationError(
+                path = outPath,
+                code = "vault_write_refused",
+                message = "Refused to write `$outPath`: paths under any " +
+                    "`vault/` segment are user data and never overwritten by " +
+                    "the generator. This is a regression — fix the adapter " +
+                    "template or generator emitter.",
+            )
+            return
+        }
         val matches = outputGuard.scan(content)
         if (matches.isNotEmpty()) {
             errors += GenerationError(
@@ -741,4 +766,41 @@ class DefaultKitGenerator(
         val p = rel.trimStart('/')
         return if (r.isEmpty() || r == ".") p else "$r/$p"
     }
+
 }
+
+/**
+ * True when [outPath] refers to a location under any `vault/` directory
+ * segment. Match is case-sensitive — the project's vault convention is
+ * lowercase. Splits on both `/` and `\` so a Windows-style path that slips
+ * in from a buggy template is also caught. Module-level for direct unit
+ * testing without exercising the full generator pipeline.
+ */
+internal fun refersToVault(outPath: String): Boolean =
+    outPath.split('/', '\\').any { it == VAULT_DIR_NAME }
+
+/**
+ * Well-known tools[].id for KnowledgeOS (https://github.com/aequicor/KnowledgeOS).
+ * Declaring an entry with this id, kind starting with `mcp-`, and `enabled: true`
+ * turns on the `KNOWLEDGE_OS_ENABLED` placeholder flag — memory snippets in agent
+ * / command / skill prompts gate their MCP-based branch on it. Documented in
+ * `templates/kit-manifect.yaml` (search for KNOWLEDGE_OS_ENABLED).
+ */
+internal const val KNOWLEDGE_OS_TOOL_ID = "knowledge-os"
+
+/**
+ * Reserved directory name treated as user data. Any output path containing
+ * this segment is refused at write time with the stable error code
+ * `vault_write_refused` — see `DefaultKitGenerator.writeArtifact`.
+ */
+internal const val VAULT_DIR_NAME = "vault"
+
+/**
+ * Returns true when the manifest enables the KnowledgeOS MCP backend. Public to
+ * the module so the predicate can be unit-tested without exercising the full
+ * generator pipeline.
+ */
+internal fun isKnowledgeOsEnabled(manifest: TypedManifest): Boolean =
+    manifest.tools.any {
+        it.id == KNOWLEDGE_OS_TOOL_ID && it.enabled && it.kind.startsWith("mcp-")
+    }

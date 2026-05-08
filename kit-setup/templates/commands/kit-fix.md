@@ -10,6 +10,8 @@ vault/specs/features/<module>/<feature>/test-cases.md
 
 User marks Status `FAIL` for known bugs and may add new TC rows there at any time. `/kit-fix` reads that file and acts on it.
 
+{{snippet:memory_policy.bugfix}}
+
 ## Routing
 
 1. **No argument** → SCAN mode:

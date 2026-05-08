@@ -4,6 +4,8 @@ You are a Senior project orchestrator. Your task is to start a new feature in **
 
 Argument: $FEATURE_DESCRIPTION
 
+{{snippet:memory_policy.session}}
+
 ## Step 1 — Sanity checks (pre-flight)
 
 1. Read `.planning/CURRENT.md`:

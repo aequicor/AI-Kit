@@ -4,6 +4,8 @@ You are a Senior project manager re-entering an active feature mid-EXECUTE. Your
 
 Argument: $STEP_INDEX (optional integer; default = `current_step_idx + 1` from `.planning/tasks/<active_task>.md`)
 
+{{snippet:memory_policy.session}}
+
 ## Step 1 — Resolve active task and target step
 
 1. Read `.planning/CURRENT.md`:

@@ -501,6 +501,16 @@ agents:
 # Read/write contract is uniform across backends — agents call
 # {{KNOWLEDGE.read("path")}}, {{KNOWLEDGE.write(...)}}, {{KNOWLEDGE.search(...)}}
 # and the renderer wires the right transport per backend.
+#
+# Special case — KnowledgeOS (https://github.com/aequicor/KnowledgeOS):
+# when `specs.kind: mcp` and `specs.tool: knowledge-os` (the well-known id),
+# the renderer turns on the `KNOWLEDGE_OS_ENABLED` flag for snippet expansion
+# and prompts call KnowledgeOS's tools directly: `search_docs`, `get_doc`,
+# `write_doc`, `update_doc`, `list_docs`. If the well-known id is absent OR
+# the MCP endpoint is unreachable at runtime, agents fall back to filesystem
+# reads (Read / Grep) over the local vault/ tree — no behaviour change is
+# required from the user. The vault/ directory is treated as user data and
+# is never written to by `kit-setup generate`.
 
 knowledge:
 
@@ -557,6 +567,23 @@ knowledge:
       decision: "DECISIONS.md"     # session-level; promoted to specs.decision on close
 
 # ── Alternatives for the cold tier ─────────────────────────────────────────
+# Recommended MCP backend — KnowledgeOS. The `tool` value MUST be the
+# well-known id `knowledge-os` for the renderer to enable KnowledgeOS-aware
+# prompts (KNOWLEDGE_OS_ENABLED snippet flag). Logical layout keys map to
+# KnowledgeOS frontmatter filters used by `search_docs`.
+# specs:
+#   kind: mcp
+#   tool: knowledge-os            # FK into tools[].id — must be `knowledge-os`
+#   layout:
+#     feature:    { fm.type: "domain",        fm.scope: "feature" }
+#     subsystem:  { fm.type: "reference",     fm.scope: "subsystem" }
+#     decision:   { fm.type: "decision" }
+#     techdebt:   { fm.type: "tech-debt" }
+#     lookup:     { fm.type: "documentation" }
+#
+# Generic MCP / HTTP backends — when you have a custom knowledge service
+# that is not KnowledgeOS. The renderer leaves KNOWLEDGE_OS_ENABLED off and
+# wires the read/write/list/search verbs through the schema you provide.
 # specs:
 #   kind: mcp
 #   tool: knowledge-mcp           # foreign key into tools[].id
@@ -606,7 +633,26 @@ tools:
     args: ["--stdio"]
     extensions: [".ts", ".tsx", ".js", ".jsx"]
 
-  # Optional: knowledge backend served as MCP (referenced by knowledge.specs.tool)
+  # Optional: KnowledgeOS — recommended MCP knowledge backend.
+  # Repo: https://github.com/aequicor/KnowledgeOS
+  #
+  # The id `knowledge-os` is WELL-KNOWN. Declaring this entry, together with
+  # `knowledge.specs.kind: mcp` + `knowledge.specs.tool: knowledge-os`, turns
+  # on KNOWLEDGE_OS_ENABLED in rendered prompts. Agents then call
+  # `search_docs` / `get_doc` / `write_doc` / `update_doc` / `list_docs`
+  # against KnowledgeOS's vault. If this entry is absent OR the server is
+  # unreachable at call time, the same agents transparently fall back to
+  # Read / Grep over the local vault/ tree.
+  #
+  # KnowledgeOS lifecycle is the user's responsibility (docker compose up).
+  # No default URL is shipped — read the host:port from the user's
+  # docker-compose.yml (the published `mcp` service port) or ask the user.
+  # Do not invent a value.
+  # - id: knowledge-os
+  #   kind: mcp-http
+  #   url: "http://<host>:<port>/mcp"   # e.g. from docker-compose: ports: ["8081:8080"] → http://localhost:8081/mcp
+  #
+  # Optional: any other knowledge backend served as MCP
   # - id: knowledge-mcp
   #   kind: mcp-http
   #   url: "https://kb.internal/mcp"

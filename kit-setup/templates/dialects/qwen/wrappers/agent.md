@@ -4,6 +4,10 @@ ROLE: {{AGENT_ID}} — {{AGENT_DESC}}
 {{snippet:project_context}}
 {{/if}}
 
+{{#if snippet:memory_protocol}}
+{{snippet:memory_protocol}}
+{{/if}}
+
 DO:
 {{BODY}}
 
