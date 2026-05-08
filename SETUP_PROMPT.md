@@ -304,10 +304,10 @@ Knowledge
   · specs         filesystem at vault/specs/
   · session       .planning/ (gitignored)
 
-Reply in chat to confirm or override (e.g. "looks good", "drop quality-gates", "add Aider", "use sonnet only", "rename web to frontend").
+Reply "OK" to confirm, or describe what to change.
 ```
 
-Confirmation happens in plain chat. **Do not invent slash commands** like `/kit-approve` to gate the user's response — at this point the kit has not been generated yet, so no `/kit-*` command exists in the user's runner. The bundled workflow triggers (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`) only land in `.claude/commands/`, `.cursor/rules/`, etc. **after** Phase H. Throughout Phases 0–G, every interaction with the user is normal prose; the user types whatever they want, you parse it.
+**The closing line must be plain prose — no slash command, even as an example.** Do not write "Confirm with `/kit-approve`" or any other `/kit-*` invocation in the proposal: no `/kit-*` exists in the user's runner yet. The bundled workflow triggers (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`) only land in `.claude/commands/`, `.cursor/rules/`, etc. **after** Phase H. Inventing a confirmation command trains the user to copy-paste a string that does nothing — confirmation in Phase E is plain prose, anything from "OK" to "looks good" to "поехали" counts. If you translate the proposal to another language, translate the closing ask too — never substitute a slash command for a sentence.
 
 If the user confirms, proceed. If they override, apply the diff to the proposal and re-show. Loop until confirmed.
 
@@ -425,10 +425,17 @@ task_types:
   - { id: summarize,       prefers: fast }
 
 # ── PROMPT DIALECTS (one per family of any model in models[]) ───────────────
+# Bundled families: anthropic, openai, qwen, deepseek, generic.
+# Rule: every distinct `family` value across models[] needs an entry here, plus
+# `generic` as a fallback. A missing entry surfaces as `missing_dialect` at
+# generate. Note: openai-compatible providers (Ollama, OpenRouter, vLLM, …)
+# host models whose `family` is `openai` — include the `openai` dialect for them.
 prompt_dialects:
-  - { id: anthropic, path: ./dialects/anthropic }
-  - { id: generic,   path: ./dialects/generic }
-  # Add openai / qwen / deepseek when those families appear in models[].
+  - { id: anthropic, path: ./dialects/anthropic }   # for family: anthropic
+  - { id: openai,    path: ./dialects/openai }      # for family: openai (incl. openai-compatible providers)
+  - { id: generic,   path: ./dialects/generic }     # always include as fallback
+  # - { id: qwen,     path: ./dialects/qwen }       # add when family: qwen appears in models[]
+  # - { id: deepseek, path: ./dialects/deepseek }   # add when family: deepseek appears in models[]
 
 # ── TARGET ADAPTERS (one per id in targets[]) ───────────────────────────────
 target_adapters:
@@ -520,7 +527,12 @@ knowledge:
       - conventions:      { source: { include: knowledge/conventions.md } }
       - retrieval_hooks:  { source: { include: knowledge/retrieval-hooks.md } }
       - orchestration:    { source: { include: knowledge/orchestration.md } }
-    max_tokens: 4000
+    # Capability profiles (clean-architecture, solid, security-baseline,
+    # quality-gates) each inject 50–100 forbidden_patterns into the rendered
+    # constitution. 4000 overflows once two or more capabilities are stacked;
+    # 8000 leaves comfortable headroom. Bump higher only if `constitution_overflow`
+    # still fires after generate.
+    max_tokens: 8000
 
   specialists:
     triggers:
@@ -682,7 +694,7 @@ extends: []
 - **Profiles:** use the list confirmed in Phase E. Names must come from `schema.profiles`.
 - **Render targets and adapters:** every `id` in `render_targets[]` must exist in `targets[]` and `target_adapters[]`. Don't include adapters you don't render.
 - **Providers + models:** include providers either as `auth: subscription` (when the active runner is signed in — Claude Code / Cursor / Qwen Code) or as `auth: api_key` (only if the matching `api_key_env` is actually present in env). Don't add a provider with `auth: api_key` if its env var is missing — generation will pass but the runner will fail at first call. For each provider, include enough models to cover all three tiers (`reasoner`, `balanced`, `fast`) so agents can route by `prefers`.
-- **Prompt dialects:** include one per `family` value in your `models[]` list, plus `generic` as a fallback.
+- **Prompt dialects:** include one per distinct `family` value across `models[]`, plus `generic` as a fallback. Bundled families: `anthropic`, `openai`, `qwen`, `deepseek`, `generic`. Watch for `openai-compatible` providers (Ollama, OpenRouter, vLLM, …): their models should use `family: openai`, which means the `openai` dialect must be in `prompt_dialects[]`. A missing entry surfaces as `missing_dialect` at generate.
 - **Per-family prompts:** for each agent, include `<family>: { include: prompts/<Agent>.<family>.md }` only if `schema.agent_dialect_variants[<Agent>]` contains that family. Otherwise omit and rely on `default`.
 - **Tools:** `serena` and the language LSP are typically delivered by the language profile — they appear after profile resolution. You do not need to copy them into the manifest. Add `context7`, `web-search`, or knowledge MCP servers here explicitly.
 - **api_key_env:** environment variable **names**, never literal keys. The verifier rejects literal-looking secrets. Required only when `auth: api_key`; omit it for `auth: subscription` and `auth: none`. The verifier emits `missing_api_key_env` if `auth: api_key` is set without `api_key_env`.
@@ -767,12 +779,22 @@ Use real ids — workflow triggers, agent names, module names, file paths — pu
 
 ## Phase J — Hand off
 
-Show the user:
+The hand-off has one job: leave the user with the **first steps for working with the kit** — where to look, what to type, what to commit. Keep it tight (one screen) and grounded in the manifest you just generated.
 
-- Final list of generated files (including `KIT_README.md`).
-- Point them at **`KIT_README.md`** as the day-to-day reference — slash commands, agent roster, knowledge layout, regenerate steps. Suggest one concrete first command to try (e.g. `/kit-new-feature 'add health endpoint'` for Claude Code).
-- For each provider with `auth: api_key`, remind the user to export the matching `api_key_env` in their shell (`echo $ANTHROPIC_API_KEY` should print non-empty). Skip this for `auth: subscription` (the runner's own login is what authenticates) and `auth: none`.
-- Recommendation to commit `.aikit/manifest.yaml`, `KIT_README.md`, and the generated files together so the kit is reproducible.
+1. **Open `KIT_README.md` first.** Make its path the most prominent line in the hand-off (a clickable link in your runner's transcript — write it as `KIT_README.md`, not "the readme"). That file is the day-to-day reference: slash commands, agent roster, knowledge layout, regenerate loop. Tell the user to read it before doing anything else. Do **not** repeat its contents in chat — the file is the source of truth.
+
+2. **First steps to actually use the kit.** Walk through the day-one moves with concrete examples drawn from this project, in the order the user is most likely to need them. Pull every slash command from `workflows[].trigger` in the manifest you just generated — those are the only `/kit-*` commands that exist in the user's runner now. Typical flow when the canonical four workflows are bundled:
+   - `/kit-new-feature "<one-line description>"` — start a fresh feature with spec + plan + TDD. Pick a description that fits this project (from README, recent commits, or what came up in Phase A — e.g. "add /health endpoint", not a placeholder).
+   - `/kit-fix "<reproducible bug summary>"` — debug a known bug. Use a real example if one was visible in the repo, otherwise a believable one for the stack.
+   - `/kit-techdebt "<refactor target>"` — plan + execute a refactor against an actual area of the codebase.
+   - `/kit-sleep` — autonomous overnight run on the queued backlog.
+   If `workflows[]` has fewer entries (or differently-named triggers), list only those — the user's runner only has what was generated.
+
+3. **Generated files.** Show the list returned by Phase H, grouped by render target.
+
+4. **Provider env-var reminder.** For each provider with `auth: api_key`, remind the user to export the matching `api_key_env` in their shell (`echo $ANTHROPIC_API_KEY` should print non-empty). Skip this for `auth: subscription` (the runner's own login is what authenticates) and `auth: none`.
+
+5. **Commit recommendation.** Suggest committing `.aikit/manifest.yaml`, `KIT_README.md`, and the generated files together so the kit is reproducible.
 
 If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run Phase G + Phase H, then refresh `KIT_README.md` so it stays in sync. The binary is designed for this loop.
 
