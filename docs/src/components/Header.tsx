@@ -16,21 +16,15 @@ const NAV = [
 function Logo() {
   return (
     <svg viewBox="0 0 32 32" aria-hidden>
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#818cf8" />
-          <stop offset="100%" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#lg)" />
-      <path
-        d="M10 22 L13 11 L16 22 M11 18 H15 M18 11 V22 M18 11 H21 a3 3 0 0 1 0 6 H18"
-        stroke="#ffffff"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="#6366f1" />
+      <g stroke="#ffffff" strokeWidth="1.4" strokeLinecap="round" fill="none">
+        <line x1="16" y1="10.4" x2="10.4" y2="21.6" />
+        <line x1="16" y1="10.4" x2="21.6" y2="21.6" />
+        <line x1="10.4" y1="21.6" x2="21.6" y2="21.6" />
+      </g>
+      <circle cx="16" cy="10.4" r="2.6" fill="#ffffff" />
+      <circle cx="10.4" cy="21.6" r="2.6" fill="#ffffff" />
+      <circle cx="21.6" cy="21.6" r="2.6" fill="#ffffff" />
     </svg>
   );
 }
