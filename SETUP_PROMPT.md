@@ -10,18 +10,20 @@ Do not skip phases. Do not improvise field names — `kit-setup schema` is the s
 
 ## Phase 0 — Pick the conversation language
 
-Before doing anything else, ask the user which language they want to use for this setup conversation. Phrase it bilingually so the question is understandable regardless of the user's language:
+**Required — do not skip.** Before any other phase, **always** ask the user which language to use, exactly as written below. This is a hard gate: the user must answer before you read the repo, propose anything, or run a command. Never default to English silently. Short English fillers like "yes", "ok", "go", "continue", "let's start" are **not** a language choice — they just mean "start the setup", and the setup starts with this question.
+
+Phrase the question bilingually so it's understandable regardless of the user's language:
 
 > **What language should I use for this setup? / На каком языке вести настройку?**
 > (e.g. English, Русский, Español, 中文, …)
 
-Wait for the answer, then:
+Wait for an explicit answer that names a language, then:
 
 - Conduct **all** subsequent prose with the user (questions in Phase A, the proposal in Phase E, error explanations in Phase G, the hand-off summary in Phase I) in the chosen language.
-- Set `language_code` in the manifest (Phase F) to the matching ISO 639-1 code (`en`, `ru`, `es`, `zh`, …). When in doubt, default to `en`.
+- Set `language_code` in the manifest (Phase F) to the matching ISO 639-1 code (`en`, `ru`, `es`, `zh`, …).
 - Keep code, commands, file paths, manifest keys, profile names, error codes, and other technical identifiers verbatim — only the explanatory text around them gets translated.
 
-If the user's first message already makes the language obvious (e.g. they wrote to you in Russian), you may skip the question and proceed in that language, but still record the corresponding `language_code`.
+The **only** case in which you may skip the question is when the user's first substantive message in this conversation is itself clearly written in a non-English natural language (e.g. a full Russian sentence describing their project, not a one-word "yes" or "продолжить"). In that case, proceed in that language and record the corresponding `language_code`. When in doubt — ask.
 
 ---
 
@@ -773,6 +775,7 @@ If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run
 
 ## Boundaries
 
+- **Never skip Phase 0.** Always ask the bilingual language question first. English fillers like "yes", "ok", "continue", "go" do not count as a language choice — they mean "start the setup", which starts by asking. The only time you may proceed without asking is when the user's first substantive message is itself a full sentence in a non-English natural language.
 - **Never skip Phase B.** Phases C, G, and H all shell out to `$binary`. If you reach `$binary schema` without having actually run the curl/Invoke-WebRequest in Phase B, you will either fail outright or — worse — silently improvise the schema from memory and propose ids that don't exist in the user's release. Always download, then `$binary --version` to confirm.
 - **Never invent ids.** Profile names, dialect ids, adapter ids, agent ids — every reference must trace back to `schema` output. If the user wants something not bundled, point them to `templates/profiles/` (for new profiles) or have them author a custom prompt/skill in their project tree.
 - **Never write literal API keys** into the manifest. The verifier scans for `sk-…`, `ghp_…`, `glpat-…`, `AKIA…`, `xox[bp]-…`, and high-entropy strings, and rejects them with `secret_pattern_match`.
