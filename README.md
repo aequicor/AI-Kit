@@ -46,6 +46,12 @@ Download the binary for your platform from [Releases](https://github.com/aequico
 | macOS Intel | `kit-setup-macos-x64` |
 
 ```sh
+# List variants bundled in this binary (agents, prompt dialects, target adapters,
+# commands, skills, knowledge sections, shared snippets, rules, user prompts).
+# Default output is one line of JSON; use --format human for a readable tree.
+kit-setup schema
+kit-setup schema --format human
+
 # Validate the manifest. Emits one line of JSON; exit 0 = ok, 1 = invalid, 2 = load/usage error.
 kit-setup verify   .aikit/manifest.yaml
 
@@ -56,7 +62,7 @@ kit-setup --help
 kit-setup --version
 ```
 
-The manifest path argument is optional — both subcommands default to `.aikit/manifest.yaml` relative to the current directory. Run from your project root.
+The manifest path argument is optional — `verify` and `generate` default to `.aikit/manifest.yaml` relative to the current directory. Run from your project root. `schema` takes no path: the catalog is derived from the templates embedded in the binary at build time, so editing the local `templates/` after install does not change its output.
 
 ---
 
