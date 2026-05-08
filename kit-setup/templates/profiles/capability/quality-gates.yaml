@@ -1,0 +1,63 @@
+# ai-agent-kit profile: Quality gates (capability axis)
+# Usage: add to stack.profiles in your manifest to opt in to additional
+# test-quality and traceability forbidden patterns enforced by reviewers.
+#
+# This profile complements the v4.5 quality pipeline (TestExecutor +
+# TraceabilityChecker + DoDGate + SecurityReviewer + CornerCaseReviewer
+# IMPLEMENTATION mode). Those agents and the Definition-of-Done gate ship
+# in the base kit and apply to every install. This profile only adds
+# language-agnostic forbidden patterns that strengthen what reviewers
+# scan for — vacuous assertions, untraceable tests, premature happy-path
+# stubs, hidden test skips.
+#
+# Designed to layer on top of any language profile.
+
+_profile_name: quality-gates
+_profile_description: "Test-quality + traceability forbidden patterns — language-agnostic capability profile (v4.5)"
+_profile_axis: capability
+
+code_quality:
+  forbidden_patterns:
+    # ── Vacuous assertions ────────────────────────────────────────────────────
+    - "Test whose only assertion is a non-null / non-empty / defined check on the SUT result (e.g. assertNotNull(result), expect(x).toBeDefined(), assertThat(list).isNotEmpty()) — any test covering a Critical or High corner case must assert against the row's 'To be' outcome, not just that something came back"
+    - "Test that asserts only that no exception was thrown (empty catch block, comment 'no throw = pass') — assert observable behavior, not absence of crash"
+    - "Test whose assertion compares a value to itself or to a constant returned by the SUT without independent observation (assertTrue(result.success), assertEquals(x, x)) — tautology"
+    - "Test method body containing `// TODO: add assertion` or equivalent — tests without assertions are not coverage"
+
+    # ── Untraceable tests / weak linkage ─────────────────────────────────────
+    - "Test method name that does not name the scenario being tested (test1, foo, doStuff, sample) — name must describe scenario per spec-to-code-trace skill so traceability can link it"
+    - "Test that does not exercise any branch of the SUT (mocks return defaults; no input variation) — appears to cover something but exercises nothing"
+    - "Test that asserts on a mock return value the test itself just configured (mock.return = X; assert(x == X)) — tests the test framework, not the SUT"
+
+    # ── Hidden / silent skips ────────────────────────────────────────────────
+    - "Test annotated @Disabled / @Ignore / @Skip / it.skip / xit / @pytest.mark.skip without a tracked reason (issue link, ticket, or DECISIONS.md entry) — silent test loss"
+    - "Test guarded by a runtime if-return or `return` early-exit that never runs assertions in the common path — equivalent to disabled, but invisible to test runners"
+    - "Test commented out without an explanatory line above it linking to the reason for removal"
+
+    # ── Untestable / un-traceable production code ────────────────────────────
+    - "Production code branch handling a Critical or High corner case that has no corresponding test (`if (qty <= 0) reject` with no test driving qty <= 0) — branch is unverified by construction"
+    - "Public function with no test in any test file referencing it (orphan handler / orphan symbol) — fails @TraceabilityChecker handler-orphan check"
+    - "Spec-defined endpoint (HTTP method + path) with no matching route handler in code — fails @TraceabilityChecker endpoint-orphan check"
+
+    # ── TDD discipline ───────────────────────────────────────────────────────
+    - "Production code committed in the same change as its first test where the test passes immediately (no failing-test step) — TDD discipline requires the test fail first; if it passes immediately, the assertion is too weak or the test is tautological"
+    - "Test that calls the SUT with hardcoded inputs that always satisfy a pre-condition — the test never drives the corner case it claims to cover"
+
+    # ── Determinism / flakiness ──────────────────────────────────────────────
+    - "Test that depends on Thread.sleep / setTimeout / time.sleep without a deterministic alternative (test clock, virtual time, manual scheduler) — flakes under load"
+    - "Test that hits the real network / real DNS / real filesystem at a path outside the project tmpdir — non-hermetic"
+    - "Test that depends on the system clock without an injected clock abstraction — fails around DST, leap seconds, year boundaries"
+    - "Test that depends on iteration order of a HashMap / dict without sorting — flakes across JVM / interpreter versions"
+
+    # ── Test data smells ─────────────────────────────────────────────────────
+    - "Test that copy-pastes the same fixture in 3+ test methods instead of a shared builder / factory — drift between fixtures hides regressions"
+    - "Test that imports production constants (`MAX_RETRIES`) and asserts against them — tautological if the constant changes"
+
+    # ── Coverage blind spots ─────────────────────────────────────────────────
+    - "Catch-block whose only effect is to log and continue — error path is silently absorbed; either re-throw, transform, or document 'cannot fail here' with proof"
+    - "`if (false)` / dead branch left in code — coverage tools mark it covered when it isn't"
+
+    # ── Definition-of-Done bypass attempts ───────────────────────────────────
+    - "PR description asserting 'manual testing only' for a feature with non-trivial logic without a `dod_waiver` line in the active task file naming the specific waived check"
+    - "Stage marked complete in the plan file while one or more of its TODO rows are still unchecked"
+    - "TC row in test-cases.md with Status = PASS but no `(impl: <path>)` reference in Description — passes DoD on text but not on traceability"

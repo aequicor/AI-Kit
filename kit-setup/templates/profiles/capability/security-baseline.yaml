@@ -1,0 +1,19 @@
+# ai-agent-kit profile: Security baseline (capability axis)
+# Usage: included automatically by setup.md unless explicitly opted out.
+#
+# Capability-axis profile. Carries the universal security/hygiene patterns
+# that every project should enforce regardless of language or framework.
+# Touches only code_quality.forbidden_patterns (list-add).
+
+_profile_name: security-baseline
+_profile_description: "Universal security & hygiene forbidden patterns — included by default"
+_profile_axis: capability
+
+code_quality:
+  forbidden_patterns:
+    - "Hardcoded secrets or API keys in code (use environment variables)"
+    - "SQL string concatenation with user input (use parameterized queries)"
+    - "Logging sensitive data (passwords, tokens, PII)"
+    - "TODO/FIXME in production code without a tracking entry (issue or DECISIONS.md)"
+    - "Disabled/commented-out tests without an explanation"
+    - "Catching Throwable/Exception generically and swallowing it"

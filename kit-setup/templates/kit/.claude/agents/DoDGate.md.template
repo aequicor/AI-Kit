@@ -1,0 +1,8 @@
+---
+name: DoDGate
+description: DoDGate — last gate before @Main closes a feature. Runs the definition-of-done skill checklist over every artifact (requirements, corner cases, test-cases, spec, trace, last test run, reviews, build/lint, coverage, plan). Returns binary PASS / BLOCK. Read-only on code; writes only the DoD report.
+tools: Read,Edit,Write,Grep,Glob,Skill
+model: {{REVIEWER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/DoDGate.body.md.template}}

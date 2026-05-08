@@ -1,0 +1,33 @@
+# ai-agent-kit profile: Make-based generic (language axis)
+# Usage: add make-generic to stack.profiles in your manifest
+#
+# Language-axis profile. Minimal language-agnostic baseline — assumes a
+# Makefile drives build/lint/test. No LSP, no serena, no formatter.
+# Override the commands interactively during setup if your project uses
+# something other than make.
+
+_profile_name: make-generic
+_profile_description: "Language-agnostic baseline driven by Make — no LSP, no serena, no formatter"
+_profile_axis: language
+
+stack:
+  language: generic
+  build_command: "make"
+  compile_command: "make check"
+  lint_command: "make lint"
+  test_command: "make test"
+
+lsp:
+  enabled: false
+  command: ""
+  extensions: []
+
+formatter:
+  enabled: false
+  name: "default-fmt"
+  command: ["make", "format"]
+  extensions: []
+
+mcp:
+  serena:
+    enabled: false

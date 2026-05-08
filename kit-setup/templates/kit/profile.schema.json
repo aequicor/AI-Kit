@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aequicor/ai-agent-kit/profile.schema.json",
+  "title": "AI Agent Kit Profile",
+  "description": "Schema for profile YAML files in profiles/. Each profile belongs to exactly one axis and is allowed to populate only fields owned by that axis. This guarantees that merging profiles from different axes cannot overwrite each other.",
+  "type": "object",
+  "required": ["_profile_name", "_profile_description", "_profile_axis"],
+  "properties": {
+    "_profile_name": {
+      "type": "string",
+      "description": "Filename-safe name (must match the YAML basename without .yaml).",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "_profile_description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "_profile_axis": {
+      "type": "string",
+      "enum": ["language", "framework", "provider", "capability", "host"],
+      "description": "Which axis this profile belongs to. Determines which top-level keys it may set."
+    }
+  },
+  "oneOf": [
+    {
+      "title": "language axis",
+      "description": "Owns stack commands, lsp, formatter, and mcp.serena. Cardinality: exactly 1 per manifest.",
+      "properties": {
+        "_profile_axis": {"const": "language"},
+        "_profile_name": {"type": "string"},
+        "_profile_description": {"type": "string"},
+        "stack": {"type": "object"},
+        "lsp": {"type": "object"},
+        "formatter": {"type": "object"},
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "serena": {"type": "object"}
+          },
+          "additionalProperties": false
+        },
+        "code_quality": {
+          "type": "object",
+          "description": "Language-level forbidden patterns (list-add). Avoid framework/security patterns here — those belong to framework or capability profiles.",
+          "properties": {
+            "forbidden_patterns": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "framework axis",
+      "description": "Owns ui and code_quality.forbidden_patterns. Cardinality: 0..N per manifest. Touching stack/lsp/formatter/provider/models/mcp is forbidden — those belong to other axes.",
+      "properties": {
+        "_profile_axis": {"const": "framework"},
+        "_profile_name": {"type": "string"},
+        "_profile_description": {"type": "string"},
+        "ui": {"type": "object"},
+        "code_quality": {
+          "type": "object",
+          "properties": {
+            "forbidden_patterns": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "provider axis",
+      "description": "Owns provider and models. Cardinality: exactly 1 per manifest. Must not touch any other field — the bug where ollama-cloud silently disabled kotlin-lsp came from violating this rule.",
+      "properties": {
+        "_profile_axis": {"const": "provider"},
+        "_profile_name": {"type": "string"},
+        "_profile_description": {"type": "string"},
+        "provider": {"type": "object"},
+        "models": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "capability axis",
+      "description": "Owns code_quality.forbidden_patterns (list-add). May also wire agent skills via the kit pipeline. Cardinality: 0..N per manifest.",
+      "properties": {
+        "_profile_axis": {"const": "capability"},
+        "_profile_name": {"type": "string"},
+        "_profile_description": {"type": "string"},
+        "code_quality": {
+          "type": "object",
+          "properties": {
+            "forbidden_patterns": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "host axis",
+      "description": "Owns runtime/host platform settings (which template tree to render, which top-level config file to write, which agent frontmatter format to emit). Cardinality: 1..N per manifest — a project may run on OpenCode, Claude Code, or both simultaneously.",
+      "properties": {
+        "_profile_axis": {"const": "host"},
+        "_profile_name": {"type": "string"},
+        "_profile_description": {"type": "string"},
+        "host": {
+          "type": "object",
+          "required": ["template_dir", "config_file", "agent_format", "instruction_file"],
+          "properties": {
+            "template_dir": {
+              "type": "string",
+              "description": "Relative directory inside the kit repo whose contents are rendered into the target. Examples: '.opencode', '.claude'.",
+              "pattern": "^\\."
+            },
+            "config_file": {
+              "type": "string",
+              "description": "Path (relative to target root) of the top-level host config file rendered for this host. Examples: 'opencode.json', '.claude/settings.json'."
+            },
+            "agent_format": {
+              "type": "string",
+              "enum": ["opencode", "claude-code"],
+              "description": "Which frontmatter convention agent files in this host's template_dir use. Drives how INCLUDE-based bodies are wrapped."
+            },
+            "instruction_file": {
+              "type": "string",
+              "description": "Top-level project instruction file rendered for this host. OpenCode reads AGENTS.md; Claude Code reads CLAUDE.md (and treats it as the main-session orchestrator context).",
+              "enum": ["AGENTS.md", "CLAUDE.md"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

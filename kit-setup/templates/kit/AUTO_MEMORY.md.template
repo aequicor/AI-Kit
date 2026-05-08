@@ -1,0 +1,45 @@
+# AUTO_MEMORY.md — {{PROJECT_NAME}}
+
+> Auto-memory: agents write learnings here across sessions.
+> Loaded by all agents. Never manually edit — agents maintain this file.
+
+---
+
+## Learned Build Commands
+
+<!-- Agents: append build commands you discover here. Format: "command — what it does — date" -->
+
+| Command | Purpose | Discovered |
+|---------|---------|------------|
+| `{{COMPILE_COMMAND}}` | Quick compile | {{ISO_TIMESTAMP_PLACEHOLDER}} |
+| `{{TEST_COMMAND_TEMPLATE}}` | Run tests | {{ISO_TIMESTAMP_PLACEHOLDER}} |
+| `{{LINT_COMMAND}}` | Lint check | {{ISO_TIMESTAMP_PLACEHOLDER}} |
+
+---
+
+## Debugging Insights
+
+<!-- Agents: append debugging learnings here. Format: "## problem — root_cause: file:line — fix: summary — date" -->
+
+---
+
+## API Pitfalls
+
+<!-- Agents: append library API surprises here. -->
+<!-- Format: "library version: api_that_did_not_work → correct_api — date" -->
+
+---
+
+## Useful Patterns
+
+<!-- Agents: append reusable code patterns discovered during work. -->
+
+---
+
+## Session Continuity
+
+<!-- Agents: write the last active task here before completing a session. -->
+
+- Last task: (none yet)
+- Last checkpoint: {{ISO_TIMESTAMP_PLACEHOLDER}}
+- Active plan: (none yet)

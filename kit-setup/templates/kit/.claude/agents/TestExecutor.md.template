@@ -1,0 +1,8 @@
+---
+name: TestExecutor
+description: TestExecutor — independent run of the full module test suite (build + unit + integration) after @CodeWriter, before @CodeReviewer. Maps in-scope TCs to PASS / FAIL / NOT_RUN and writes a run report. Does NOT edit src/ or test-cases.md.
+tools: Read,Edit,Write,Bash,Grep,Glob,Skill
+model: {{REVIEWER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/TestExecutor.body.md.template}}

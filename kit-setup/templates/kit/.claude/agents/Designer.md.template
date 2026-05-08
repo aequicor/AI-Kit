@@ -1,0 +1,8 @@
+---
+name: Designer
+description: Designer — UI/UX design for {{UI_FRAMEWORK}} ({{PLATFORMS}}). Clarifies context, thinks step by step, produces screen/component/flow descriptions. Read-only, outputs design docs in the response.
+tools: Read,Grep,Glob,WebFetch
+model: {{DESIGNER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/Designer.body.md.template}}

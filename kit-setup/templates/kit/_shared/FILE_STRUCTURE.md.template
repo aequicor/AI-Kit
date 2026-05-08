@@ -1,0 +1,117 @@
+﻿# File Structure — {{PROJECT_NAME}} Agent Reference
+
+> Central path reference. Before creating any new file — check this table.
+> All agents read this file instead of guessing paths.
+
+---
+
+## Planning (.planning/)
+
+| Path | Owner | Purpose |
+|------|-------|---------|
+| `.planning/CURRENT.md` | @Main | **Local session pointer (gitignored).** Holds `active_task: <slug>`. Each developer has their own. |
+| `.planning/tasks/<slug>.md` | @Main | **Per-task state (committed).** Type, Module, Description, Timeline (DONE/NEXT/BLOCKED). One file per active task — no merge conflicts between team members. |
+| `.planning/tasks/done/<slug>.md` | @Main | Archived task files after CLOSE. |
+| `.planning/DECISIONS.md` | @Main, humans | ADR — architectural decisions |
+| `.planning/bugs/BUG-NNN.md` | @Debugger | Bug investigation report (root cause + failing test) |
+
+---
+
+## Knowledge Vault ({{VAULT_PATH}}/)
+
+> Indexed by [KnowledgeOS](https://github.com/aequicor/KnowledgeOS).
+> Structure follows [Diátaxis](https://diataxis.fr/).
+
+### Per-module structure
+
+```
+{{VAULT_PATH}}/
+  _INDEX.md                          ← vault map — entry point for agents
+  _templates/                        ← document templates (bug-report, spec, test-plan, requirements)
+
+  concepts/<module>/                 ← WHY and HOW it's structured (@Main)
+    requirements/<feature>.md
+    plans/<feature>-plan.md
+    plans/<feature>-corner-cases.md   ← corner case register (@Main, corner-case-refinement)
+
+   reference/<module>/                ← WHAT EXISTS — specs, schemas, test plans, test cases
+     spec/<feature>.md
+     spec/<feature>-test-plan.md      ← Draft/Final (@QA)
+     spec/<feature>-trace.md          ← traceability matrix AC/CC/endpoint → TC → test → source (@TraceabilityChecker)
+     spec/<feature>-dod.md            ← Definition-of-Done verdict report (@DoDGate)
+     test-cases/<feature>-test-cases.md ← Test cases with defect tracking (@TestRunner)
+
+  how-to/<module>/                   ← HOW TO implement
+    plans/<feature>-stage-NN.md      ← stage files (@Main → @CodeWriter)
+
+  tutorials/<module>/                ← HOW TO LEARN
+    documentation/*.md
+
+  guidelines/<module>/               ← RULES — accumulated by agents
+    <topic>.md
+    reports/<bug-name>.md            ← bug fix reports (@BugFixer)
+    reports/test-runs/<ISO>-stage-NN.md ← independent test-run reports (@TestExecutor)
+
+  guidelines/libs/                   ← external library API documentation cache
+    <lib>-<version>.md               ← (@CodeWriter, @BugFixer)
+
+  tech-debt/<module>/                ← deferred non-critical findings (@CodeWriter, @BugFixer, @CodeReviewer, @SecurityReviewer, @TestExecutor)
+    <slug>.md                        ← open / in-progress entries
+    done/<slug>.md                   ← archived after `/kit-techdebt` closes them
+```
+
+### Modules
+
+{{MODULE_SOURCE_TABLE}}
+
+### System paths
+
+| Path | Owner | Purpose |
+|------|-------|---------|
+| `{{VAULT_PATH}}/guidelines/libs/<lib>-<version>.md` | @CodeWriter, @BugFixer | External library documentation cache |
+| `{{VAULT_PATH}}/_templates/test-plan.md` | (template) | Template for @QA |
+| `{{VAULT_PATH}}/_templates/test-cases.md` | (template) | Template for @TestRunner |
+| `{{VAULT_PATH}}/_templates/bug-report.md` | (template) | Template for @BugFixer |
+| `{{VAULT_PATH}}/_templates/spec.md` | (template) | Template for @Main |
+| `{{VAULT_PATH}}/_templates/requirements.md` | (template) | Template for @Main |
+| `{{VAULT_PATH}}/_templates/tech-debt.md` | (template) | Template for `tech-debt-record` skill |
+| `{{VAULT_PATH}}/tech-debt/<module>/<slug>.md` | @CodeWriter, @BugFixer, @CodeReviewer, @SecurityReviewer, @TestExecutor | Open tech-debt entries (status: open\|in-progress) |
+| `{{VAULT_PATH}}/tech-debt/<module>/done/<slug>.md` | @Main (via `/kit-techdebt`) | Closed entries (status: fixed\|wont-fix) |
+| `{{VAULT_PATH}}/reference/<module>/spec/<feature>-trace.md` | @TraceabilityChecker | Traceability matrix per feature (AC/CC/endpoint → TC → test file → source) |
+| `{{VAULT_PATH}}/reference/<module>/spec/<feature>-dod.md` | @DoDGate | Definition-of-Done verdict report — last gate before CLOSE |
+| `{{VAULT_PATH}}/guidelines/<module>/reports/test-runs/<ISO>-stage-NN.md` | @TestExecutor | Independent run report per stage (build + unit + integration + TC mapping) |
+
+---
+
+## Agent Configuration ({{HOST_DIR}}/)
+
+| Path | Owner | Purpose |
+|------|-------|---------|
+| `{{HOST_DIR}}/_shared.md` | @PromptEngineer | Shared context for all agents |
+| `{{HOST_DIR}}/FILE_STRUCTURE.md` | @PromptEngineer | This file — path reference |
+| `{{HOST_DIR}}/agents/[Name].md` | @PromptEngineer | Individual agent prompt |
+| `{{HOST_DIR}}/skills/[name]/SKILL.md` | @PromptEngineer | Skill definition |
+| `{{HOST_CONFIG_FILE}}` | human (PO) | Runtime config for this host ({{HOST_NAME}}) |
+
+---
+
+## Source Code
+
+### Modules
+
+{{MODULE_SOURCE_TABLE}}
+
+### Test roots
+
+{{MODULE_TEST_TABLE}}
+
+---
+
+## Build and Verification
+
+| Command | What it does |
+|---------|-------------|
+| `{{BUILD_COMMAND}} [module]:build` | Full module build |
+| `{{COMPILE_COMMAND}}` | Quick compile check |
+| `{{TEST_COMMAND_TEMPLATE}}` | Module tests |
+| `{{LINT_COMMAND}}` | Lint + code style |

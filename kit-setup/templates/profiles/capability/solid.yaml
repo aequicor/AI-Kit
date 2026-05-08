@@ -1,0 +1,76 @@
+# ai-agent-kit profile: SOLID & Clean Architecture
+# Usage: add solid to stack.profiles in your manifest
+# Language-agnostic capability profile — combine with any stack profile.
+#
+# Enforces SOLID principles and modern architectural rules:
+#   S — Single Responsibility Principle
+#   O — Open/Closed Principle
+#   L — Liskov Substitution Principle
+#   I — Interface Segregation Principle
+#   D — Dependency Inversion Principle
+#
+# Also covers:
+#   - Clean Architecture layer boundaries (domain ↔ application ↔ infrastructure ↔ presentation)
+#   - DRY / YAGNI / KISS
+#   - Immutability and side-effect control
+#   - Law of Demeter / tell-don't-ask
+#   - Composition over inheritance
+#
+# Designed to layer on top of any language profile (kotlin-gradle, make-generic, ...).
+
+_profile_name: solid
+_profile_description: "SOLID principles and clean architecture rules — language-agnostic capability profile"
+_profile_axis: capability
+
+code_quality:
+  forbidden_patterns:
+    # ── S: Single Responsibility ──────────────────────────────────────────────
+    - "Class with more than one reason to change (god class / service class doing persistence + business logic + formatting simultaneously)"
+    - "Method longer than 30 lines that mixes abstraction levels (orchestration + low-level detail in same function)"
+    - "Repository class containing business rules or validation logic"
+    - "Use case / interactor class containing more than one business operation"
+
+    # ── O: Open / Closed ─────────────────────────────────────────────────────
+    - "Switch/when on type tags or string type discriminators instead of polymorphism (adding a new type requires editing existing code)"
+    - "Feature flag inside domain logic instead of strategy/decorator injection"
+    - "Hardcoded algorithm selection inside a class that should delegate to a strategy"
+
+    # ── L: Liskov Substitution ────────────────────────────────────────────────
+    - "Subclass that throws UnsupportedOperationException / NotImplementedError for inherited methods"
+    - "Subclass that weakens preconditions or strengthens postconditions of the parent contract"
+    - "Type-checking with instanceof/is inside a method that accepts a base type (violates substitutability)"
+
+    # ── I: Interface Segregation ─────────────────────────────────────────────
+    - "Interface with more than 5–7 methods that clients only partially implement (fat interface)"
+    - "Passing a full service/repository interface to a consumer that uses only one method"
+    - "Marker method implemented as a no-op (empty body) because the interface forced it"
+
+    # ── D: Dependency Inversion ───────────────────────────────────────────────
+    - "Concrete class instantiated with 'new' / constructor call inside business logic (use DI / factory)"
+    - "Domain or use-case class importing from infrastructure layer (DB, HTTP, filesystem packages)"
+    - "Static/global access to shared mutable state from domain logic (singletons as hidden dependencies)"
+    - "Test that cannot run without a real database/network because a dependency was not inverted"
+
+    # ── Clean Architecture layer boundaries ───────────────────────────────────
+    - "Presentation layer (controller, ViewModel, screen) containing business rules"
+    - "Domain entity importing framework annotations (ORM, serialization, DI) — keep entities pure"
+    - "Infrastructure class (repository impl, API client) containing business decisions"
+    - "Cross-layer import in wrong direction: inner layer importing outer layer package"
+
+    # ── DRY / YAGNI / KISS ───────────────────────────────────────────────────
+    - "Duplicate business logic in two or more use cases instead of extracting a shared domain service"
+    - "Abstract base class or interface created speculatively with only one concrete implementation and no planned extension"
+    - "Over-engineered abstraction for a one-time operation (factory-of-factories, generic pipeline for a single fixed flow)"
+
+    # ── Immutability & side-effect control ───────────────────────────────────
+    - "Mutable public field on a domain entity or value object (use val / readonly / private setter)"
+    - "Method that mutates its argument instead of returning a new value (unexpected side effect)"
+    - "Shared mutable state accessed without synchronisation in concurrent context"
+
+    # ── Law of Demeter / tell-don't-ask ──────────────────────────────────────
+    - "Long method chain on a foreign object reaching 3+ levels deep (a.b().c().doSomething()) — violates LoD"
+    - "Caller extracting data from an object and making decisions on its behalf instead of telling the object to act"
+
+    # ── Composition over inheritance ─────────────────────────────────────────
+    - "Deep inheritance hierarchy (3+ levels) for code reuse — prefer composition or delegation"
+    - "Inheriting from a concrete class solely to reuse implementation (not to extend the contract)"

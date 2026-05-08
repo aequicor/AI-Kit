@@ -1,0 +1,8 @@
+# AGENTS.md — {{PROJECT_NAME}}
+
+> Universal coding-agent rules for this project (OpenCode host).
+> Supported by: OpenCode, Cursor, GitHub Copilot, Windsurf, Devin, Google Jules,
+> and all tools following the [AAIF AGENTS.md standard](https://agents.md).
+> For Claude Code, the equivalent file is `CLAUDE.md` at this same root.
+
+{{INCLUDE: _shared/PROJECT_RULES.body.md.template}}

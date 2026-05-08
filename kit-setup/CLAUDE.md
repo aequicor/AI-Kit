@@ -1,28 +1,62 @@
 # kit-setup — engineering guide
 
 This file layers on top of the repo-level `CLAUDE.md`. It documents what's
-inside `kit-setup/` specifically — module structure, contracts, slots —
-and the conventions to follow when adding code here. For repo-wide release
-plumbing and the docs-site sync checklist, see the parent `CLAUDE.md`.
+inside `kit-setup/` specifically — module structure, contracts, conventions —
+and how to extend it. For repo-wide release plumbing and the docs-site sync
+checklist, see the parent `CLAUDE.md`.
 
 ## What this binary is
 
-A Kotlin/Native CLI that orchestrates the agent-driven kit setup flow:
+A Kotlin/Native CLI that takes a manifest written by an orchestrating LLM
+agent and renders the entire ai-agent-kit into the target project — no
+external scripts, no clones, no runtime template fetch. The full kit
+template tree (under `kit-setup/templates/`) is **embedded into the
+binary at compile time** via a Gradle codegen task, so a single executable
+file carries everything it needs.
 
-1. The orchestrating LLM agent studies a target project and writes a
-   manifest at `<target>/.aikit/manifest.yaml`.
-2. The agent runs `kit-setup verify <path>` — the binary parses, validates,
-   and reports machine-readable JSON. The agent loops on errors.
-3. The agent runs `kit-setup generate <path>` — the binary writes the kit
-   files (provider configs, sub-agents, slash commands, hooks, MCP servers,
-   etc.) under the target project, **overwriting** any existing files.
+The flow:
 
-Discovery and manifest authoring are the agent's job, not the binary's. The
-binary only validates and generates.
+1. The orchestrating agent studies a target project and writes a manifest
+   at `<target>/.aikit/manifest.yaml` (schema: `templates/kit/manifest.schema.json`).
+2. The agent runs `kit-setup verify <path>` — the binary parses, validates
+   against the schema-derived rule set, and reports machine-readable JSON.
+   The agent loops on errors.
+3. The agent runs `kit-setup generate <path>` — the binary renders all
+   `kit-setup/templates/kit/*` templates (with `{{INCLUDE: …}}` resolution
+   and `{{VAR}}` substitution) and writes them under the target project,
+   **overwriting** any existing files.
 
-The manifest schema itself is **TBD**. The current code carries placeholder
-types so the wiring is in place; concrete fields and validation rules land
-once the schema is finalized.
+Discovery and manifest authoring stay the agent's job; the binary only
+validates and generates.
+
+## Where templates live
+
+```
+kit-setup/templates/
+├── kit/                 # everything rendered into the target project
+│   ├── _index.txt       # canonical file list — drives the generator's loop
+│   ├── manifest.schema.json
+│   ├── profile.schema.json
+│   ├── AGENTS.md.template            (rendered if opencode ∈ hosts)
+│   ├── CLAUDE.md.template            (rendered if claude-code ∈ hosts)
+│   ├── opencode.json.template        (opencode host)
+│   ├── .mcp.json.template            (claude-code host)
+│   ├── AUTO_MEMORY.md.template       (universal scaffold)
+│   ├── _shared/                      (INCLUDE-only bodies + per-host commands/skills/i18n)
+│   ├── .opencode/                    (OpenCode tree)
+│   ├── .claude/                      (Claude Code tree)
+│   ├── .planning/                    (host-agnostic scaffold)
+│   ├── .vault/                       (rewritten to <vault_path>/ at render time)
+│   └── nested/MODULE.body.md.template (per-module instruction file)
+└── profiles/                        (axis-bucketed YAMLs — host axis carries
+                                       structural metadata the generator needs)
+```
+
+The Gradle task `generateEmbeddedTemplates` walks `templates/` on every
+build and emits `build/generated/embeddedTemplates/.../EmbeddedTemplates.kt`,
+a `Map<String, String>` keyed by repo-relative path. **Editing
+`templates/` is the only way to change what the binary writes** — the
+generated Kotlin file is regenerated automatically.
 
 ## Module layout (`src/commonMain/kotlin/com/aikit/setup/`)
 
@@ -40,33 +74,54 @@ io/
   FileSystem.kt          combined interface (per-platform NativeFileSystem implements this)
 
 manifest/
-  Manifest.kt            top-level type — currently wraps RawNode; schema TBD
-  RawNode.kt             untyped YAML tree (Mapping | Sequence | Scalar | Null)
-  YamlParser.kt          interface — the seam to a Kotlin/Native YAML library
-  StubYamlParser.kt      placeholder; throws NotImplementedError
-  ManifestLoader.kt      interface
-  DefaultManifestLoader.kt  reads via FileReader, parses via YamlParser
-  LoadResult.kt          sealed Success/Failure + LoadErrorCode enum
+  Manifest.kt              raw + typed view of a parsed manifest
+  RawNode.kt               untyped YAML tree (Mapping | Sequence | Scalar | Null)
+  YamlParser.kt            parser interface
+  DefaultYamlParser.kt     hand-rolled parser for the YAML subset the kit uses
+  ManifestLoader.kt        loader interface
+  DefaultManifestLoader.kt reads via FileReader, parses via YamlParser, decodes typed view
+  LoadResult.kt            sealed Success/Failure + LoadErrorCode enum
+  TypedManifest.kt         typed data classes mirroring manifest.schema.json
+  TypedManifestDecoder.kt  RawNode → TypedManifest (lenient: defaults instead of throws)
 
 validation/
-  ValidationError.kt     {path, code, message, hint?}
-  ValidationResult.kt    list of errors + valid: Boolean
-  ValidationRule.kt      interface — one schema constraint
-  Validator.kt           interface
-  RuleBasedValidator.kt  runs a List<ValidationRule>
-  Rules.kt               defaultRules() — empty for now, fill as schema lands
+  ValidationError.kt        {path, code, message, hint?}
+  ValidationResult.kt       list of errors + valid: Boolean
+  ValidationRule.kt         interface — one schema constraint
+  Validator.kt              interface
+  RuleBasedValidator.kt     runs a List<ValidationRule>
+  Rules.kt                  defaultRules() — registers every rule below
+  RawAccess.kt              shared helpers for navigating Manifest.raw
+  RootStructureRules.kt, HostRules.kt, StackRules.kt, ModuleRules.kt,
+  ProviderAndModelsRules.kt, SecurityRules.kt, FormatRules.kt
+                            one constraint per class — emit stable codes
+
+profile/
+  Profile.kt              decoded profile + axis enum + host metadata
+  ProfileLoader.kt        loads profile YAMLs from EmbeddedTemplates,
+                          validates _profile_axis matches directory
+
+render/
+  TemplateRenderer.kt     two-pass engine:
+                            pass 1 → recursive {{INCLUDE: …}} resolution
+                            pass 2 → {{VAR}} substitution
+                          tracks unresolved placeholders for the caller
 
 generation/
   GenerationError.kt
   GenerationResult.kt
-  KitGenerator.kt        interface
-  DefaultKitGenerator.kt slot — per-provider emitters dispatch from here
+  KitGenerator.kt              interface
+  DefaultKitGenerator.kt       orchestrates loader+classifier+renderer+writer
+  TemplateClassifier.kt        kit/_index.txt entry → per-host actions
+  TemplateAction.kt            (data class for a single render+write step)
+  HostContext.kt               per-host substitution map + metadata
+  SubstitutionContextBuilder.kt builds the {{VAR}} maps for a host
 
 output/
-  Json.kt                hand-rolled minimal JSON encoder (no deps)
-  Console.kt             interface — single-line sink, used everywhere instead of println
-  StdConsole.kt          println-backed default
-  VerifyResultRenderer.kt  interface + JsonVerifyResultRenderer
+  Json.kt                  hand-rolled minimal JSON encoder (no deps)
+  Console.kt               interface — single-line sink, used everywhere instead of println
+  StdConsole.kt            println-backed default
+  VerifyResultRenderer.kt    interface + JsonVerifyResultRenderer
   GenerateResultRenderer.kt  interface + JsonGenerateResultRenderer
 
 command/
@@ -76,12 +131,15 @@ command/
   GenerateService.kt     use case — loads + validates + generates
   VerifyCommand.kt       CLI adapter — outcome → render → exit code
   GenerateCommand.kt     CLI adapter — same shape
+
+embedded/
+  EmbeddedTemplates.kt   GENERATED — do not edit. Contains every file under
+                         templates/ as a Map<String, String>.
 ```
 
 Per-platform `NativeFileSystem` implementations live in
 `src/{macosArm64Main,macosX64Main,linuxX64Main,mingwX64Main}/kotlin/com/aikit/setup/Platform.kt`.
-Each is a `FileSystem` impl that uses POSIX `fopen`/`fread`/`fputs` (or
-Win32 `CreateDirectoryA`/`GetFileAttributesA`). The four files are
+Each is a `FileSystem` impl over POSIX/Win32 primitives. The four files are
 near-duplicates by design; if you change one, change all four.
 
 ## SOLID conventions to keep
@@ -90,18 +148,17 @@ The code is structured around the five principles — please preserve them:
 
 - **SRP**: A subcommand has three roles, kept separate. The *service*
   (`Verify/GenerateService`) runs the use case and returns a typed
-  outcome, no I/O beyond the loader. The *renderer* turns outcome into
+  outcome, no I/O beyond the loader. The *renderer* turns the outcome into
   output bytes. The *command* (`Verify/GenerateCommand`) wires service +
-  renderer + console and maps the outcome to an exit code. Don't merge
-  these — adding logic to a command that "just" formats output should
-  live in a renderer; adding "just one I/O call" inside a service should
-  live in the loader/generator instead.
-- **OCP**: Validation rules live in `Rules.defaultRules()`. To add a
-  rule, write a `ValidationRule` and append it. The runner
-  (`RuleBasedValidator`) doesn't change. Same pattern is intended for
-  per-provider emitters once `DefaultKitGenerator` is fleshed out —
-  dispatch by manifest content, don't grow a `when` ladder inside the
-  generator.
+  renderer + console and maps the outcome to an exit code. The
+  generator follows the same pattern internally:
+  `TemplateClassifier` decides what to write, `TemplateRenderer` produces
+  bytes, `DefaultKitGenerator` is the only thing that calls `FileWriter`.
+- **OCP**: Validation rules live in `Rules.defaultRules()`. Adding a rule
+  = writing a `ValidationRule` and appending it to the list. The runner
+  (`RuleBasedValidator`) doesn't change. Same for new template scopes —
+  add a branch in `TemplateClassifier`, don't push host-specific logic
+  into the generator.
 - **LSP**: Use sealed types for closed sets (`Command`, `RawNode`,
   `LoadResult`, `Verify/GenerateOutcome`) so `when` is exhaustive. Don't
   add an `Other` / catch-all branch — that defeats the type checker.
@@ -141,7 +198,7 @@ kit-setup --version | -v
 
 **JSON shapes** (stdout, single line, compact):
 
-- `verify` and `generate`-load-failure / `generate`-invalid all use the
+- `verify` and `generate`-load-failure / `generate`-invalid use the
   verify shape:
   ```json
   {"valid": bool, "errors": [{"path": "...", "code": "...", "message": "...", "hint": "..."?}, ...]}
@@ -153,21 +210,24 @@ kit-setup --version | -v
 
 `code` values are `snake_case` and **stable** — agents pattern-match on
 them. Renaming a code is a breaking change to the agent integration.
-Known load codes: `manifest_not_found`, `read_failed`, `parse_failed`.
 
-## How to plug new code into the slots
+## How to extend
 
-- **Wire a real YAML parser**: implement `YamlParser` for Kotlin/Native,
-  drop the impl class next to `StubYamlParser`, then change the default
-  in `KitSetupApp`'s convenience constructor (`yamlParser: YamlParser =
-  StubYamlParser()` → your impl). Nothing else needs to change.
-- **Add a validation rule**: create a `ValidationRule` (one schema
+- **Add a validation rule**: write a `ValidationRule` (one schema
   constraint per class), give it a stable `code`, append it to the list
-  returned by `Rules.defaultRules()`. Don't call rules from inside
-  other rules — keep them independent.
-- **Add a provider emitter**: introduce a per-provider emitter type,
-  inject it into `DefaultKitGenerator`, and dispatch by manifest content.
-  Keep emitters `FileWriter`-only (no reads).
+  returned by `Rules.defaultRules()`. Don't call rules from inside other
+  rules — keep them independent.
+- **Add a kit file**: drop the file under `templates/kit/`, append its
+  path to `templates/kit/_index.txt`, and (if the classification rules
+  need it) extend `TemplateClassifier`. The codegen task picks the new
+  file up automatically on the next build.
+- **Add a profile**: drop the YAML under `templates/profiles/<axis>/`.
+  Host-axis profiles must declare a complete `host:` block; other axes
+  are read-but-not-applied (the manifest already carries merged values).
+- **Add a substitution variable**: extend
+  `SubstitutionContextBuilder.baseVariables` (host-agnostic) or
+  `hostOverlay` (host-specific) and reference the new `{{NAME}}` from
+  the templates that need it.
 - **Add a subcommand**: extend the `Command` sealed class, add a parsing
   branch in `Args.parse`, build a service + renderer + adapter triple,
   wire it in `KitSetupApp`. Update help text in `Help.kt`.
@@ -186,6 +246,11 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 The Gradle wrapper script ships without the executable bit in some
 checkouts — `chmod +x ./gradlew` once if needed.
 
+A `generateEmbeddedTemplates` task runs before every Kotlin compile and
+re-bakes `templates/` into the binary. To force-refresh the embedded
+content (e.g. after manually editing the generated file by mistake),
+delete `build/generated/embeddedTemplates/` and rebuild.
+
 There is **no test source set yet**. Interfaces are designed to be
 mockable; when tests land, wire them per Kotlin Multiplatform conventions
 (`commonTest` for shared, per-target source sets for native-specific).
@@ -194,7 +259,8 @@ mockable; when tests land, wire them per Kotlin Multiplatform conventions
 
 - **The binary is Kotlin/Native, not JVM**. Don't suggest `application`
   plugin, `installDist`, or `java -jar`. Linking is via
-  `linkReleaseExecutable<Target>`.
+  `linkReleaseExecutable<Target>`. Resources don't exist on Kotlin/Native
+  — that's why we bake `templates/` into a generated Kotlin source.
 - **`println` is forbidden in services and renderers**. They must write
   to a `Console` passed in by the constructor — otherwise tests can't
   capture output and the command-vs-service boundary leaks.
@@ -213,10 +279,22 @@ mockable; when tests land, wire them per Kotlin Multiplatform conventions
   with a backslash and a `u`, followed by `000c`) — never paste a raw
   form-feed byte into source.
 - **Generation overwrites unconditionally**. There is no "skip if
-  exists" mode and no merge. Tests / agents that depend on existing
-  state must read it before invoking `generate`.
+  exists" mode and no merge. Anything the agent needs to preserve
+  (existing `.gitignore`, custom CLAUDE.md edits) must be read by the
+  agent before invoking `generate`.
 - **Manifest path conventions**: `GenerateService` infers the target
   root from the manifest path (`<root>/.aikit/manifest.yaml` → root is
   the grandparent). If a manifest is moved out of `.aikit/`, the target
-  root falls back to the manifest's parent directory. The agent should
-  keep manifests under `.aikit/` to avoid surprises.
+  root falls back to the manifest's parent directory. Keep manifests
+  under `.aikit/` to avoid surprises.
+- **`{{TASK_SLUG}}` in `.planning/tasks/TASK.md.template` is intentional**.
+  That file is copied verbatim with the `.template` suffix preserved —
+  agents instantiate it per-task at runtime. Don't add resolution logic
+  for `TASK_SLUG`; the classifier flags this single path with
+  `verbatim = true` so the renderer skips it.
+- **YAML support is a strict subset**. Block mappings, block sequences,
+  inline `[..]` / `{..}`, quoted scalars, and `null`/`~` are honoured.
+  Block scalars (`|`, `>`), anchors/aliases, and multi-document streams
+  are NOT — `DefaultYamlParser` raises a clear error if it sees them.
+  When in doubt, look at `templates/manifest.example.yaml` for what's
+  expected.

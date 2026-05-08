@@ -1,0 +1,22 @@
+# ai-agent-kit profile: Compose Multiplatform (framework axis)
+# Usage: add compose-multiplatform to stack.profiles together with kotlin-gradle
+#
+# Framework-axis profile. Adds Compose/KMP-specific forbidden patterns and
+# UI defaults. Touches only code_quality.forbidden_patterns (list-add) and ui.
+
+_profile_name: compose-multiplatform
+_profile_description: "Compose Multiplatform — Compose Desktop + Android + iOS + Ktor backend conventions"
+_profile_axis: framework
+
+ui:
+  framework: "Compose Multiplatform"
+  platforms: ["Desktop", "Android", "iOS"]
+
+code_quality:
+  forbidden_patterns:
+    - "Recomposition-unsafe state read inside @Composable (read mutableStateOf via .value or by remember)"
+    - "Side effects in @Composable body without LaunchedEffect / DisposableEffect"
+    - "Hard-coded sizes in dp without referencing the design system tokens"
+    - "Platform-specific API in commonMain (move to expect/actual or platform sourceSet)"
+    - "Blocking I/O on the Compose UI dispatcher (use Dispatchers.IO via withContext)"
+    - "Direct Android Context retention in commonMain (leak risk — use platform sourceSet)"

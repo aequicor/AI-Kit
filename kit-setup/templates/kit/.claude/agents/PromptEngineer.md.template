@@ -1,0 +1,8 @@
+---
+name: PromptEngineer
+description: Prompt Engineer — maintains and optimizes prompts in {{HOST_DIR}}/agents/ and SKILL files; monitors context efficiency
+tools: Read,Edit,Write,Grep,Glob,WebFetch,Skill
+model: {{REVIEWER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/PromptEngineer.body.md.template}}

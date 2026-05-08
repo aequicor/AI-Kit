@@ -1,0 +1,48 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+> Project-level instructions for Claude Code. The main session reads this file
+> automatically and acts as the **Orchestrator** (the "@Main" role) — see the
+> "Orchestrator" section at the bottom.
+> For OpenCode, the equivalent file is `AGENTS.md` at this same root.
+
+@{{HOST_DIR}}/i18n/{{KIT_LANG}}.md
+
+{{INCLUDE: _shared/PROJECT_RULES.body.md.template}}
+
+---
+
+## Shared Agent Context
+
+For shared rules used by every subagent (instruction hierarchy, language, file-access
+matrix, MCP/skills, anti-loop, dispatch convention) — read `{{HOST_DIR}}/_shared.md`.
+That file is also injected into every subagent under `{{HOST_DIR}}/agents/`.
+
+Subagents available in this project (each has its own file under `{{HOST_DIR}}/agents/`):
+
+- **@AutoApprover** — automated plan approver (used in AUTO_APPROVE mode)
+- **@BugFixer** — defect analysis, fix, regression test, report
+- **@BusinessAnalyst** — drafts business requirements
+- **@CodeReviewer** — read-only review of changesets
+- **@CodeWriter** — implements one stage of the plan, writes tests, builds
+- **@ConsistencyChecker** — verifies spec ↔ requirements ↔ test cases consistency
+- **@CornerCaseReviewer** — attacks requirements/spec, returns open questions
+- **@CoverageChecker** — verifies every requirement has a test case
+- **@Designer** — UI/UX design (read-only)
+- **@PromptEngineer** — maintains agent prompts and skills
+- **@QA** — owns the living test-cases file (REQUIREMENTS / IMPLEMENTATION phases)
+- **@SystemAnalyst** — generates technical spec + Mermaid UML diagrams
+- **@TestRunner** — operates on test-cases.md (PEND/FAIL/RERUN/APPEND)
+- **@Debugger** — reproduces bugs, isolates root cause, writes failing test
+
+---
+
+## Orchestrator (this session)
+
+In Claude Code, **the main session is the Orchestrator** — there is no separate "Main"
+subagent. Whenever this guide refers to "@Main", "Orchestrator", or "main agent" — that
+is **you, in this session**. Subagent dispatching uses the **Agent tool** with
+`subagent_type=<AgentName>`.
+
+The orchestrator's full operating procedure follows.
+
+{{INCLUDE: _shared/agents/Main.body.md.template}}

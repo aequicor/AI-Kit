@@ -1,0 +1,144 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "{{PROVIDER_ID}}/{{DEFAULT_MODEL}}",
+  "small_model": "{{PROVIDER_ID}}/{{SMALL_MODEL}}",
+  "instructions": [
+    "AGENTS.md",
+    ".opencode/_shared.md",
+    ".opencode/i18n/{{KIT_LANG}}.md",
+    ".planning/CURRENT.md",
+    ".planning/DECISIONS.md",
+    "AUTO_MEMORY.md"
+  ],
+  "plugin": [
+    "opencode-pty",
+    "opencode-shell-strategy",
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  },
+  {{FORMATTER_BLOCK}}
+  "provider": {
+    "{{PROVIDER_ID}}": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "{{PROVIDER_NAME}}",
+      "options": {
+        "baseURL": "{{PROVIDER_BASE_URL}}",
+        "apiKey": "{env:{{PROVIDER_API_KEY_ENV}}}"
+      },
+      "models": {
+        "{{DEFAULT_MODEL}}": {
+          "name": "{{DEFAULT_MODEL}}"
+        },
+        "{{CODER_MODEL}}": {
+          "name": "{{CODER_MODEL}}"
+        },
+        "{{REVIEWER_MODEL}}": {
+          "name": "{{REVIEWER_MODEL}}"
+        },
+        "{{DESIGNER_MODEL}}": {
+          "name": "{{DESIGNER_MODEL}}"
+        }
+      }
+    }
+  },
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:{{CONTEXT7_API_KEY_ENV}}}"
+      },
+      "enabled": {{CONTEXT7_ENABLED}}
+    },
+    "serena": {
+      "type": "local",
+      "command": [
+        "serena",
+        "start-mcp-server"
+      ],
+      "enabled": {{SERENA_ENABLED}}
+    },
+    "knowledge-my-app": {
+      "type": "remote",
+      "url": "{{KNOWLEDGE_URL}}",
+      "enabled": {{KNOWLEDGE_ENABLED}}
+    }
+  },
+  {{LSP_BLOCK}}
+  "permission": {
+    "edit": "allow",
+    "external_directory": "ask",
+    "doom_loop": "ask",
+    "bash": {
+      "{{BUILD_COMMAND}}": "allow",
+      "{{BUILD_COMMAND}} *": "allow",
+      "{{BUILD_COMMAND}} * publish*": "ask",
+      "{{BUILD_COMMAND}} * release*": "ask",
+      "git status": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git checkout -- *": "deny",
+      "git checkout .": "deny",
+      "git checkout *": "ask",
+      "git add *": "allow",
+      "git commit *": "allow",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git push --force-with-lease*": "ask",
+      "git push*": "ask",
+      "git reset --hard*": "deny",
+      "git reset*": "ask",
+      "git rebase --abort": "allow",
+      "git rebase*": "ask",
+      "git merge --abort": "allow",
+      "git merge*": "ask",
+      "git clean -f*": "deny",
+      "git clean*": "ask",
+      "git branch -D*": "deny",
+      "git branch -d*": "ask",
+      "git worktree remove*": "ask",
+      "git worktree *": "allow",
+      "ls *": "allow",
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "grep *": "allow",
+      "rg *": "allow",
+      "find *": "allow",
+      "echo *": "allow",
+      "pwd": "allow",
+      "wc *": "allow",
+      "jq *": "allow",
+      "mkdir *": "allow",
+      "rm -rf*": "deny",
+      "rm -fr*": "deny",
+      "rm -r*": "ask",
+      "rm *": "ask",
+      "sudo *": "deny",
+      "curl *": "ask",
+      "wget *": "ask",
+      "npm install*": "ask",
+      "npm publish*": "deny",
+      "pip install*": "ask",
+      "pip uninstall*": "ask",
+      "docker push*": "deny",
+      "docker run -d*": "ask",
+      "docker run*": "ask",
+      "docker compose up -d*": "ask",
+      "docker compose down*": "deny",
+      "docker rm*": "deny",
+      "kubectl delete*": "deny",
+      "kubectl apply*": "ask",
+      "terraform destroy*": "deny",
+      "terraform apply*": "ask",
+      "helm upgrade*": "ask",
+      "helm delete*": "deny"
+    }
+  }
+}

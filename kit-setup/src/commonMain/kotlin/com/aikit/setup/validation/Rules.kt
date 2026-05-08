@@ -1,11 +1,27 @@
 package com.aikit.setup.validation
 
 /**
- * Returns the default rule set applied by both `verify` and the pre-flight
- * step of `generate`.
- *
- * Empty for now — rules are added incrementally as the manifest schema firms
- * up. Each rule keeps its own error codes so agents can rely on stable
- * identifiers across releases.
+ * Default rule set applied by both `verify` and the pre-flight step of
+ * `generate`. Each rule encodes one schema constraint with its own stable
+ * `code`. Add new rules by appending to the list — the runner is closed
+ * for modification (OCP).
  */
-fun defaultRules(): List<ValidationRule> = emptyList()
+fun defaultRules(): List<ValidationRule> = listOf(
+    RootIsMappingRule(),
+    KitVersionRule(),
+    LanguageCodeRule(),
+    ProjectNameRule(),
+    HostsListRule(),
+    OpencodeRequiresProviderAndModelsRule(),
+    ClaudeCodeRequiresModelsRule(),
+    StackLanguageRule(),
+    StackCommandsRule(),
+    StackProfilesRule(),
+    ModuleRequiredFieldsRule(),
+    ProviderRequiredFieldsRule(),
+    ModelsRequiredFieldsRule(),
+    ClaudeCodeModelsRequiredFieldsRule(),
+    ApiKeyEnvLooksLikeLiteralRule(),
+    ColorHexRule(),
+    ExtensionFormatRule(),
+)

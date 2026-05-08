@@ -1,0 +1,18 @@
+# ai-agent-kit profile: Minecraft Paper plugin (framework axis)
+# Usage: add paper-plugin to stack.profiles together with kotlin-gradle
+#
+# Framework-axis profile. Adds Paper/Bukkit-specific forbidden patterns.
+# Touches only code_quality.forbidden_patterns (list-add).
+
+_profile_name: paper-plugin
+_profile_description: "Minecraft Paper plugin (Bukkit/Paper API) — server-side conventions"
+_profile_axis: framework
+
+code_quality:
+  forbidden_patterns:
+    - "Hardcoded Bukkit ChatColor strings — use MiniMessage or component API"
+    - "Using deprecated Bukkit API (use Paper-adventure components, not legacy ChatColors)"
+    - "Blocking the main server thread — schedule async with Bukkit schedulers or coroutines"
+    - "Storing Player references past event scope (causes memory leaks)"
+    - "Calling Bukkit API from non-main thread without scheduler bouncing back to main"
+    - "Long-running task in event handler (offload to BukkitScheduler.runTaskAsynchronously)"

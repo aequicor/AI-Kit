@@ -1,0 +1,8 @@
+---
+name: QA
+description: QA — owns the living test-cases file. Two phases. REQUIREMENTS (called from requirements-pipeline) creates the file from requirements + corner cases. IMPLEMENTATION (called by main session after spec / after final stage) appends impl-level cases. Single source of truth for /kit-fix.
+tools: Read,Edit,Write,Grep,Glob
+model: {{CODER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/QA.body.md.template}}

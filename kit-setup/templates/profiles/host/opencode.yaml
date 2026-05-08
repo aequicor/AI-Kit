@@ -1,0 +1,9 @@
+_profile_name: opencode
+_profile_description: "OpenCode runtime — orchestration via @Main subagent (mode: primary), opencode.json config, .opencode/ tree, AGENTS.md as project instruction file."
+_profile_axis: host
+
+host:
+  template_dir: ".opencode"
+  config_file: "opencode.json"
+  agent_format: opencode
+  instruction_file: "AGENTS.md"

@@ -1,0 +1,140 @@
+---
+
+## Project Overview
+
+{{PROJECT_DESCRIPTION}}
+
+**Stack:** {{STACK_DESCRIPTION}}
+
+---
+
+## Modules
+
+{{MODULE_TABLE}}
+
+---
+
+## Build and Test Commands
+
+| Command | Purpose |
+|---------|---------|
+| `{{BUILD_COMMAND}}` | Full project build |
+| `{{COMPILE_COMMAND}}` | Quick compile check |
+| `{{TEST_COMMAND_TEMPLATE}}` | Run tests (replace `[module]` with module name) |
+| `{{LINT_COMMAND}}` | Lint + code-style check |
+
+**Always compile and run tests before marking a task complete.**
+
+---
+
+## Code Style — Hard Rules
+
+### Forbidden Patterns
+
+{{FORBIDDEN_PATTERNS_LIST}}
+
+### Style
+
+- Run `{{LINT_COMMAND}}` after every implementation block.
+- Match the style of surrounding code, not personal preference.
+- All public API must be documented.
+
+---
+
+## Conventions
+
+### Planning Files
+
+- `.planning/CURRENT.md` — local session pointer (gitignored). Holds `active_task: <slug>`. **Read before starting work.**
+- `.planning/tasks/<slug>.md` — full state per task (committed, one file per task). @Main writes checkpoints here. **Read the file pointed to by `active_task` for full context.**
+- `.planning/tasks/done/` — archived task files after CLOSE.
+- `.planning/DECISIONS.md` — architectural decision log (ADR). Check before proposing structural changes. **Append-only — never delete entries.**
+
+### Knowledge Vault ({{VAULT_PATH}}/)
+
+Documentation lives in `{{VAULT_PATH}}/` indexed by [KnowledgeOS](https://github.com/aequicor/KnowledgeOS).
+Structure follows [Diátaxis](https://diataxis.fr/) genre layout:
+
+| Genre | Question | Module Content |
+|-------|----------|---------------|
+| `concepts/<module>/` | **Why?** How is it structured? | requirements/, plans/ |
+| `reference/<module>/` | **What exists?** | spec/ (incl. test plans) |
+| `how-to/<module>/` | **How to do X?** | Implementation stage files |
+| `tutorials/<module>/` | **How to learn?** | Getting started, module docs |
+| `guidelines/<module>/` | **What rules to follow?** | Conventions, patterns, reports/ |
+| `guidelines/libs/` | **How to use library?** | External API cache per library+version |
+
+Each module's docs follow: `{{VAULT_PATH}}/<genre>/<module>/{subdir}/`
+
+### External Libraries
+
+Before using any external library API:
+1. Search `{{VAULT_PATH}}/guidelines/libs/` for cached documentation via KnowledgeOS `search_docs`.
+2. If not found — look up the library from its canonical, authoritative source via `context7` or `webfetch`.
+3. After resolving — write guideline to `{{VAULT_PATH}}/guidelines/libs/<lib>-<version>.md` via `write_guideline`.
+4. **Never invent** method names, builder DSL methods, or annotation parameters.
+5. If no documentation is available, state that clearly — do not guess.
+
+---
+
+## Boundaries
+
+Do NOT modify without explicit instruction:
+- `{{HOST_DIR}}/` — AI agent configuration (use `@PromptEngineer` or edit manually)
+- `.planning/DECISIONS.md` — append-only
+- `{{HOST_CONFIG_FILE}}` — runtime configuration
+- Any credential file: `.env*`, `~/.ssh/`, `~/.aws/`
+
+---
+
+## Corner Cases
+
+- Corner cases MUST be identified during planning, not discovered during implementation.
+- Every feature has a corner case register at `{{VAULT_PATH}}/concepts/<module>/plans/<feature>-corner-cases.md`. Read it before implementing.
+- Critical corner cases (data loss, security, system crash) require a test task in the implementation plan.
+- Use the `corner-case-refinement` skill to systematically scan: input boundaries, state lifecycles, concurrency, error paths, scale limits, domain invariants.
+
+## Testing
+
+- Write a failing test before implementing when feasible (TDD preferred).
+- Every Critical corner case from the corner case register MUST have a test.
+- All existing tests must continue to pass after your change.
+- Network calls in tests → use mocks or test doubles, **never real endpoints**.
+- SQL only via parameterized queries — never concatenate user input into queries.
+
+---
+
+## Security
+
+- **Never** write API keys, tokens, passwords, or secrets into code or commit messages.
+- **Never** read credential files (`~/.ssh/`, `~/.aws/`, `.env*`) unless the user explicitly requests it.
+- Flag any code handling auth, crypto, payments, or PII for review before commit.
+- SQL: parameterized queries only. No string concatenation with user input. Ever.
+
+---
+
+## Commit Guidelines
+
+One logical change per commit. Format: `<type>: <short description>`
+
+**Types:** `feat` · `fix` · `refactor` · `test` · `docs` · `chore`
+
+**Examples:**
+- `feat: add JWT refresh token endpoint`
+- `fix: null pointer in user login flow`
+- `refactor: extract payment validation to service`
+- `test: unit tests for auth token expiry`
+
+Do not commit `TODO` or `FIXME` without a corresponding entry in `.planning/DECISIONS.md`.
+
+---
+
+## Definition of Done
+
+A task is **complete** only when ALL of the following are true:
+
+- [ ] Code compiles: `{{COMPILE_COMMAND}}`
+- [ ] All tests pass (including new tests for any changed behaviour)
+- [ ] Lint passes: `{{LINT_COMMAND}}`
+- [ ] No unexplained `TODO` or `FIXME` remains
+- [ ] Changes committed to git with a descriptive message

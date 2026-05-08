@@ -1,0 +1,43 @@
+# ai-agent-kit profile: Requirements Pipeline
+# Usage: add requirements-pipeline to stack.profiles in your manifest
+# Extends generic baseline with the AI-driven requirements pipeline:
+# BA → CornerCaseReviewer → QA(REQUIREMENTS) → CoverageChecker → SA → CornerCaseReviewer (tech) → ConsistencyChecker
+#
+# Use this profile if your team wants to:
+# - Minimize manual BA/QA/SA effort on requirements
+# - Catch corner cases before spec is written
+# - Produce a consistent requirements package (business reqs + living test-cases + tech spec)
+#   ready for development with only PO sign-off required
+#
+# Agents added by this profile (beyond the 10-agent baseline):
+#   @BusinessAnalyst       — drafts and updates business requirements
+#   @CornerCaseReviewer    — attacks requirements and tech spec for gaps
+#   @CoverageChecker       — verifies all requirements have test cases
+#   @SystemAnalyst         — generates technical spec from requirements + test cases
+#   @ConsistencyChecker    — verifies spec does not contradict requirements
+#
+# Note: ai-agent-kit merges the former @RequirementsQA into @QA — the QA agent runs in
+# Phase=REQUIREMENTS during this pipeline (creates the living <feature>-test-cases.md)
+# and Phase=IMPLEMENTATION during the FEATURE pipeline (appends impl-level TCs).
+#
+# The pipeline is orchestrated by @Main via the requirements-pipeline skill.
+# Entry point: /kit-requirements-pipeline or /kit-new-feature (auto-triggers the pipeline)
+#
+# Workflow:
+#   PO: /kit-requirements-pipeline "description of the feature"
+#   ... automated pipeline runs ...
+#   PO: /kit-approve  (or "reject: [what to redo]")
+#   PO: /kit-diagram  (optional — generates Mermaid UML diagrams from the approved spec)
+#   PO: /kit-new-feature "description" (hands artifacts to @Main for dev planning)
+#
+# Optional commands provided by this profile:
+#   /kit-diagram [feature] — @SystemAnalyst (DIAGRAM mode) reads the approved spec +
+#                        test cases and writes one <feature>-diagrams.md with
+#                        structural (class/component) and behavioral (sequence/
+#                        state) Mermaid diagrams. Read-only with respect to the
+#                        spec; outputs only the file path to keep the parent
+#                        context window clean.
+
+_profile_name: requirements-pipeline
+_profile_description: "AI-driven requirements pipeline: BA → CCR → QA → Coverage → SA → CCR(tech) → Consistency"
+_profile_axis: capability

@@ -1,0 +1,9 @@
+_profile_name: claude-code
+_profile_description: "Claude Code runtime — orchestration in the main session (Main body inlined into CLAUDE.md), subagents in .claude/agents/, .claude/settings.json config. Uses Anthropic native models (opus/sonnet/haiku)."
+_profile_axis: host
+
+host:
+  template_dir: ".claude"
+  config_file: ".claude/settings.json"
+  agent_format: claude-code
+  instruction_file: "CLAUDE.md"

@@ -1,0 +1,44 @@
+# AGENTS.md — {{MODULE_NAME}} / {{PROJECT_NAME}}
+
+> Nested module-level agent instructions for `{{MODULE_NAME}}`.
+> This file is closest to `{{MODULE_SOURCE_ROOT}}` — it takes precedence over the root `AGENTS.md`.
+
+---
+
+## Module: {{MODULE_NAME}}
+
+**Responsibility:** {{MODULE_RESPONSIBILITY}}
+**Source root:** `{{MODULE_SOURCE_ROOT}}`
+**Test root:** `{{MODULE_TEST_ROOT}}`
+{{MODULE_GRADLE_LINE}}
+
+---
+
+## Module Build & Test Commands
+
+| Command | Purpose |
+|---------|---------|
+{{MODULE_BUILD_TABLE}}
+
+---
+
+## Module-Specific Conventions
+
+{{MODULE_CONVENTIONS}}
+
+---
+
+## Module Dependencies
+
+{{MODULE_DEPENDENCIES}}
+
+---
+
+## Module Docs
+
+Docs path: `{{MODULE_DOCS_PATH}}`
+- `requirements/` — business requirements
+- `spec/` — technical specifications
+- `guidelines/` — patterns and rules
+- `plans/` — implementation plans
+- `reports/` — bug fix reports

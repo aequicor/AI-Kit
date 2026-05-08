@@ -1,0 +1,9 @@
+# CURRENT.md — {{PROJECT_NAME}}
+
+> Local session pointer. **Gitignored — not committed.**
+> @Main reads this at startup to know which task is active, then reads the task file.
+> Edit via /kit-resume or directly when switching tasks.
+
+active_task: (none)
+started:
+summary:

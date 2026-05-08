@@ -1,0 +1,8 @@
+---
+name: BugFixer
+description: Bug Fixer — defect analysis (stacktrace / description), fix, regression test, report in {{VAULT_PATH}}/guidelines/[module]/reports
+tools: Read,Edit,Write,Bash,Grep,Glob,WebFetch,Skill,Task
+model: {{CODER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/BugFixer.body.md.template}}

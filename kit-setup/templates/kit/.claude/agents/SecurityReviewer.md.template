@@ -1,0 +1,8 @@
+---
+name: SecurityReviewer
+description: SecurityReviewer — adversarial security pass after @CodeReviewer for stages whose changeset touches auth, sessions, tokens, PII, payments, file uploads, deserialization, SQL/ORM, external HTTP, or RBAC. OWASP-aligned axes; classifies findings CRITICAL / HIGH / MEDIUM / LOW. Read-only on src/.
+tools: Read,Edit,Write,Grep,Glob,Skill
+model: {{REVIEWER_MODEL}}
+---
+
+{{INCLUDE: _shared/agents/SecurityReviewer.body.md.template}}

@@ -1,0 +1,21 @@
+# ai-agent-kit profile: Ollama Cloud (provider axis)
+# Usage: add ollama-cloud to stack.profiles in your manifest
+#
+# Provider-axis profile. Owns provider + models only — does NOT touch
+# stack/lsp/formatter/code_quality (those belong to the language axis).
+
+_profile_name: ollama-cloud
+_profile_description: "Ollama cloud-hosted LLMs via OpenAI-compatible API"
+_profile_axis: provider
+
+provider:
+  name: ollama-cloud
+  base_url: https://ollama.com/v1
+  api_key_env: OLLAMA_API_KEY
+
+models:
+  default: kimi-k2.6:cloud
+  coder: deepseek-v4-flash:cloud
+  reviewer: deepseek-v4-pro:cloud
+  designer: glm-5.1:cloud
+  small: deepseek-v4-flash:cloud

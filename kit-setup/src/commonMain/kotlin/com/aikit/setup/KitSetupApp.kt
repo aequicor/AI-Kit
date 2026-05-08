@@ -12,8 +12,8 @@ import com.aikit.setup.generation.DefaultKitGenerator
 import com.aikit.setup.generation.KitGenerator
 import com.aikit.setup.io.FileSystem
 import com.aikit.setup.manifest.DefaultManifestLoader
+import com.aikit.setup.manifest.DefaultYamlParser
 import com.aikit.setup.manifest.ManifestLoader
-import com.aikit.setup.manifest.StubYamlParser
 import com.aikit.setup.manifest.YamlParser
 import com.aikit.setup.output.Console
 import com.aikit.setup.output.GenerateResultRenderer
@@ -50,7 +50,7 @@ class KitSetupApp(
     constructor(
         files: FileSystem,
         console: Console,
-        yamlParser: YamlParser = StubYamlParser(),
+        yamlParser: YamlParser = DefaultYamlParser(),
         manifestLoader: ManifestLoader = DefaultManifestLoader(files, yamlParser),
         validator: Validator = RuleBasedValidator(defaultRules()),
         kitGenerator: KitGenerator = DefaultKitGenerator(files),

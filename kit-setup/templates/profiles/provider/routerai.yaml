@@ -1,0 +1,20 @@
+# ai-agent-kit profile: RouterAI (provider axis, default)
+# Usage: add routerai to stack.profiles — selected by default during setup.
+#
+# Provider-axis profile. Owns provider + models only.
+
+_profile_name: routerai
+_profile_description: "RouterAI proxy — multi-vendor models behind one OpenAI-compatible endpoint"
+_profile_axis: provider
+
+provider:
+  name: routerai
+  base_url: https://routerai.ru/api/v1
+  api_key_env: ROUTERAI_OPENCODE
+
+models:
+  default: moonshotai/kimi-k2.6
+  coder: qwen/qwen3-coder-next
+  reviewer: deepseek/deepseek-v4-pro
+  designer: openai/gpt-5.4
+  small: qwen/qwen3-coder-next

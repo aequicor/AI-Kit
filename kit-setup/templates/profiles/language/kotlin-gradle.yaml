@@ -1,0 +1,43 @@
+# ai-agent-kit profile: Kotlin + Gradle (language axis)
+# Usage: add kotlin-gradle to stack.profiles in your manifest
+#
+# Language-axis profile. Owns: stack commands, lsp, formatter, mcp.serena,
+# and a small set of language-level forbidden patterns.
+# Combine with a framework profile (compose-multiplatform, paper-plugin, ...)
+# for ecosystem-specific rules.
+
+_profile_name: kotlin-gradle
+_profile_description: "Kotlin + Gradle (KTS) baseline — kotlin-lsp, detekt, ktlint, serena"
+_profile_axis: language
+
+stack:
+  language: kotlin
+  build_command: "./gradlew"
+  compile_command: "./gradlew compileKotlin"
+  lint_command: "./gradlew detekt ktlintCheck"
+  test_command: "./gradlew :[module]:test"
+
+lsp:
+  enabled: true
+  command: kotlin-lsp
+  extensions: [".kt", ".kts"]
+
+formatter:
+  enabled: true
+  name: "gradle-detekt-format"
+  command: ["./gradlew", "detekt", "--auto-correct"]
+  extensions: [".kt", ".kts"]
+
+mcp:
+  serena:
+    enabled: true
+
+code_quality:
+  forbidden_patterns:
+    - "!! operator (use requireNotNull/checkNotNull with message)"
+    - "GlobalScope.launch (always use a scoped coroutine)"
+    - "Thread.sleep in suspend code (use delay())"
+    - "Empty catch blocks"
+    - "Bare Exception/Throwable catch (catch specific types)"
+    - "lateinit outside DI containers, fragments, and tests"
+    - "runBlocking outside main and tests"

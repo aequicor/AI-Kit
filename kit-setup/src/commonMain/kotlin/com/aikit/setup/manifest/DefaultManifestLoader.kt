@@ -37,7 +37,7 @@ class DefaultManifestLoader(
                 message = "Failed to parse YAML at $path: ${describe(e)}",
             )
         }
-        return LoadResult.Success(Manifest(root))
+        return LoadResult.Success(Manifest(raw = root, typed = TypedManifestDecoder.decode(root)))
     }
 
     private fun describe(t: Throwable): String = t.message ?: t::class.simpleName ?: "unknown error"
