@@ -301,8 +301,10 @@ Knowledge
   · specs         filesystem at vault/specs/
   · session       .planning/ (gitignored)
 
-Confirm or override (e.g. "drop quality-gates", "add Aider", "use sonnet only", "rename web to frontend").
+Reply in chat to confirm or override (e.g. "looks good", "drop quality-gates", "add Aider", "use sonnet only", "rename web to frontend").
 ```
+
+Confirmation happens in plain chat. **Do not invent slash commands** like `/kit-approve` to gate the user's response — at this point the kit has not been generated yet, so no `/kit-*` command exists in the user's runner. The bundled workflow triggers (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`) only land in `.claude/commands/`, `.cursor/rules/`, etc. **after** Phase H. Throughout Phases 0–G, every interaction with the user is normal prose; the user types whatever they want, you parse it.
 
 If the user confirms, proceed. If they override, apply the diff to the proposal and re-show. Loop until confirmed.
 
@@ -776,6 +778,7 @@ If anything from Phase A turns out wrong, edit `.aikit/manifest.yaml` and re-run
 ## Boundaries
 
 - **Never skip Phase 0.** Always ask the bilingual language question first. English fillers like "yes", "ok", "continue", "go" do not count as a language choice — they mean "start the setup", which starts by asking. The only time you may proceed without asking is when the user's first substantive message is itself a full sentence in a non-English natural language.
+- **Never invent slash commands during setup.** The kit's workflow triggers (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`) only exist after Phase H generates them into the runner's command directory. Before that, asking the user to type `/kit-approve` or any other `/kit-*` is a hallucination — it does nothing. All Phases 0–G interactions are plain chat.
 - **Never skip Phase B.** Phases C, G, and H all shell out to `$binary`. If you reach `$binary schema` without having actually run the curl/Invoke-WebRequest in Phase B, you will either fail outright or — worse — silently improvise the schema from memory and propose ids that don't exist in the user's release. Always download, then `$binary --version` to confirm.
 - **Never invent ids.** Profile names, dialect ids, adapter ids, agent ids — every reference must trace back to `schema` output. If the user wants something not bundled, point them to `templates/profiles/` (for new profiles) or have them author a custom prompt/skill in their project tree.
 - **Never write literal API keys** into the manifest. The verifier scans for `sk-…`, `ghp_…`, `glpat-…`, `AKIA…`, `xox[bp]-…`, and high-entropy strings, and rejects them with `secret_pattern_match`.
