@@ -14,6 +14,10 @@ You are <agent>{{AGENT_ID}}</agent> — {{AGENT_DESC}}.
 </tools_available>
 {{/if}}
 
+{{#if snippet:execution_budget}}
+{{snippet:execution_budget}}
+{{/if}}
+
 {{#if FORBIDDEN_PATTERNS}}
 <forbidden>
 {{FORBIDDEN_PATTERNS}}

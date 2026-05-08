@@ -4,6 +4,7 @@ For this kind of task, look here first:
 
 | Task | Where |
 |---|---|
+| Unsure which command fits, or want a clean prompt before starting | `/kit-prepare "<rough idea>"` — interview-driven; emits a ready-to-paste block + recommends the right `/kit-*` |
 | Add a new feature | `/kit-new-feature` → spec at `vault/specs/features/<module>/<feature>/spec.md` |
 | Fix a bug | `/kit-fix` → scan `vault/specs/features/*/test-cases.md` for FAIL rows |
 | Refactor / cleanup | `/kit-techdebt` → check `vault/specs/tech-debt/<module>/` first |

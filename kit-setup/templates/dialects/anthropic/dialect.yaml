@@ -1,7 +1,9 @@
 # dialects/anthropic/dialect.yaml
-# Wrapper package for Anthropic Claude family.
+# Wrapper package for the Anthropic Claude family.
+# Tuned for Opus 4.7, Sonnet 4.6, and Haiku 4.5 (the 4.5+ generation that
+# ships with native extended thinking and aggressive parallel tool use).
 
-dialect_version: "1.0.0"
+dialect_version: "1.1.0"
 id: anthropic
 display_name: "Anthropic Claude"
 
@@ -48,13 +50,32 @@ snippets_dir: snippets
 style:
   prefer_xml_tags: true
   prefer_markdown_headings: false
-  use_thinking_blocks: true      # Claude likes <thinking>…</thinking>
+  # Claude 4.5+ exposes extended thinking through the runner; visible
+  # `<thinking>` tags compete with that and produce the long-pause
+  # "frozen" symptom on Opus 4.7 in particular. Off by default; opt in
+  # only when you genuinely want the trace in the rendered output.
+  use_thinking_blocks: false
   max_directive_lines: 200
   forbidden_constructs:
     - "ALL CAPS DIRECTIVES"      # Claude reacts emotionally rather than precisely
     - "redundant step 1, step 2 enumerations"
     - "ты должен / ты обязан / you MUST repeated more than twice"
     - "marketing speak (revolutionary, world-class, …)"
+    - "narrating internal deliberation outside of <thinking>"
+
+# Informational matrix — does not bind the resolver, but keeps the
+# kit-author's mental model aligned with current Anthropic behaviour.
+# The actual binding lives in `models[]` / `task_types[]` of the manifest.
+model_guidance:
+  opus-4-7:
+    role: "architecture, code review, long-horizon agentic loops"
+    notes: "xhigh effort by default; lower effort for routine work to avoid latency."
+  sonnet-4-6:
+    role: "default executor — most coding, refactors, debugging"
+    notes: "near-Opus quality at a fraction of the cost; aggressive parallel tool use."
+  haiku-4-5:
+    role: "routing, classification, short-form generation, simple edits"
+    notes: "fast and cheap under 200k context; degrades on multi-file refactors."
 
 # Auto-transforms applied to the wrapped output by the renderer.
 auto_transform:
