@@ -114,30 +114,44 @@ render_targets: [claude-code, cursor]
 # ═══════════════════════════════════════════════════════════════════════════
 # Where the tokens come from. API keys are referenced by env-var name only;
 # never written into any rendered file.
+#
+# auth — how the provider authenticates at runtime:
+#   api_key       → reads `api_key_env`. Default when `auth` is omitted.
+#   subscription  → the runner itself is signed in (Claude Code / Cursor /
+#                   Qwen Code with an active plan). No env var needed —
+#                   omit `api_key_env`.
+#   none          → no auth (local Ollama, self-hosted endpoints).
 
 providers:
+  # Subscription example: the user runs Claude Code / Cursor logged in to
+  # an Anthropic plan. No ANTHROPIC_API_KEY required. Switch to `auth: api_key`
+  # + `api_key_env: ANTHROPIC_API_KEY` if you'd rather drive it from a key.
   - id: anthropic
     kind: anthropic
-    api_key_env: ANTHROPIC_API_KEY
+    auth: subscription
     timeout_seconds: 120
     max_retries: 2
 
   - id: openai
     kind: openai
+    auth: api_key
     api_key_env: OPENAI_API_KEY
 
   - id: openrouter
     kind: openai-compatible
+    auth: api_key
     base_url: "https://openrouter.ai/api/v1"
     api_key_env: OPENROUTER_API_KEY
 
   - id: alibaba
     kind: openai-compatible          # DashScope / ModelStudio expose OpenAI-compatible API
+    auth: api_key
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
     api_key_env: DASHSCOPE_API_KEY
 
   - id: local
     kind: ollama
+    auth: none
     base_url: "http://localhost:11434"
 
 # ═══════════════════════════════════════════════════════════════════════════

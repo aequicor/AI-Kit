@@ -12,4 +12,3 @@
 
 ## Constraints
 - Forbidden patterns: {{FORBIDDEN_PATTERNS}}
-- Output language: {{LANGUAGE_CODE}}

@@ -110,7 +110,16 @@ object ManifestModel {
         apiKeyEnv = node.field("api_key_env")?.stringOrNull(),
         timeoutSeconds = node.field("timeout_seconds")?.intOrNull(),
         maxRetries = node.field("max_retries")?.intOrNull(),
+        auth = parseProviderAuth(node.field("auth")?.stringOrNull()) ?: ProviderAuth.API_KEY,
     )
+
+    private fun parseProviderAuth(s: String?): ProviderAuth? = when (s?.lowercase()) {
+        null -> null
+        "api_key", "api-key", "apikey" -> ProviderAuth.API_KEY
+        "subscription", "runner", "runner_managed", "runner-managed" -> ProviderAuth.SUBSCRIPTION
+        "none" -> ProviderAuth.NONE
+        else -> ProviderAuth.UNKNOWN
+    }
 
     private fun readModelEntry(node: RawNode): Model = Model(
         id = node.field("id").stringOr(""),

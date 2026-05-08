@@ -8,6 +8,23 @@ Do not skip phases. Do not improvise field names — `kit-setup schema` is the s
 
 ---
 
+## Phase 0 — Pick the conversation language
+
+Before doing anything else, ask the user which language they want to use for this setup conversation. Phrase it bilingually so the question is understandable regardless of the user's language:
+
+> **What language should I use for this setup? / На каком языке вести настройку?**
+> (e.g. English, Русский, Español, 中文, …)
+
+Wait for the answer, then:
+
+- Conduct **all** subsequent prose with the user (questions in Phase A, the proposal in Phase E, error explanations in Phase G, the hand-off summary in Phase I) in the chosen language.
+- Set `language_code` in the manifest (Phase F) to the matching ISO 639-1 code (`en`, `ru`, `es`, `zh`, …). When in doubt, default to `en`.
+- Keep code, commands, file paths, manifest keys, profile names, error codes, and other technical identifiers verbatim — only the explanatory text around them gets translated.
+
+If the user's first message already makes the language obvious (e.g. they wrote to you in Russian), you may skip the question and proceed in that language, but still record the corresponding `language_code`.
+
+---
+
 ## Phase A — Discover the project
 
 Read the repo before talking to the user. The goal of this phase is to walk into the conversation already knowing answers to most questions.
@@ -74,9 +91,21 @@ Look for already-installed runner configs to bias the render-targets question:
 
 If the user has `.claude/` only, default Phase E proposal to `render_targets: [claude-code]`. If multiple, propose all of them.
 
-### A.6 API-key inventory
+### A.6 Provider auth inventory
 
-Probe environment for known keys (do **not** dereference values, only check presence):
+A provider can be reached two ways, and the manifest expresses both via the
+`auth` field on `providers[]`:
+
+- `auth: subscription` — the **runner** is signed in to the provider account
+  (Claude Code / Cursor / Qwen Code with an active plan). No env var needed.
+  This is the common case when the user is *already running you inside* a
+  signed-in IDE/CLI.
+- `auth: api_key` — reads a key from `api_key_env`. Used when the runner
+  itself can't bring auth (Aider, OpenCode talking to OpenRouter, scripts).
+- `auth: none` — local backends with no auth (Ollama, self-hosted).
+
+Probe environment for known keys (do **not** dereference values, only check
+presence):
 
 ```bash
 [ -n "$ANTHROPIC_API_KEY" ] && echo "anthropic ok"
@@ -86,7 +115,21 @@ Probe environment for known keys (do **not** dereference values, only check pres
 [ -n "$GOOGLE_API_KEY" ] && echo "google ok"
 ```
 
-Whatever's set narrows the providers / models you can reasonably propose. If nothing is set, propose Anthropic + ask the user to populate `ANTHROPIC_API_KEY` before generating.
+Decision matrix for the providers to propose in Phase E:
+
+| Render target in Phase A.5 | Default `auth` for native_provider | Why |
+|---|---|---|
+| `claude-code` | `subscription` (anthropic) | If you're talking to the user *through* Claude Code, they're already signed in. **Do not ask for `ANTHROPIC_API_KEY`.** |
+| `cursor`      | `subscription` (anthropic) when Cursor Pro is the obvious context | Same reasoning. Fall back to `api_key` if the user says they want a BYO-key setup. |
+| `qwen-code`   | `subscription` (alibaba) when used with the Alibaba Coding Plan | Otherwise `api_key` + `DASHSCOPE_API_KEY`. |
+| `opencode` / `aider` | `api_key` | These runners don't bundle a signed-in account. |
+| Local Ollama | `none` | No auth. |
+
+Env-var detection only matters for `auth: api_key`. If the active render
+target is `claude-code` (or any subscription-capable runner) **do not** block
+on a missing `ANTHROPIC_API_KEY`. If the active render target is non-subscription
+*and* nothing is set, propose the matching provider and ask the user to populate
+its `api_key_env` before generating.
 
 ---
 
@@ -216,7 +259,8 @@ Render targets: claude-code, cursor
   · Detected `.cursor/` — Cursor too. Both will be rendered.
 
 Providers
-  · anthropic (env: ANTHROPIC_API_KEY)  ← detected in environment
+  · anthropic (auth: subscription)  ← Claude Code is signed in; no env var needed
+  # Use `auth: api_key, env: ANTHROPIC_API_KEY` instead if the user wants to drive it from a key.
 
 Models (resolved per agent at render time by tier + needs)
   · opus     (anthropic, reasoner) — Architect, Verifier, security-audit task type
@@ -252,7 +296,7 @@ Confirm or override (e.g. "drop quality-gates", "add Aider", "use sonnet only", 
 
 If the user confirms, proceed. If they override, apply the diff to the proposal and re-show. Loop until confirmed.
 
-If a critical signal is ambiguous (e.g. user has both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` and didn't say which they prefer), ask one targeted question instead of guessing.
+If a critical signal is ambiguous (e.g. user has both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` and didn't say which they prefer, or runs Claude Code logged in *and* has an `ANTHROPIC_API_KEY` in env — `auth: subscription` is the safer default but ask), ask one targeted question instead of guessing.
 
 ---
 
@@ -300,14 +344,25 @@ targets:
 
 render_targets: [<subset of targets[].id, from Phase E>]
 
-# ── PROVIDERS (only the ones with API keys present in env) ──────────────────
+# ── PROVIDERS ───────────────────────────────────────────────────────────────
+# auth: subscription → runner is signed in (Claude Code / Cursor / Qwen Code).
+#                      No env var; **omit api_key_env**.
+# auth: api_key      → reads `api_key_env`. Use only when the user actually
+#                      has the key in env (Phase A.6 detection).
+# auth: none         → local backends (Ollama).
 providers:
   - id: anthropic
     kind: anthropic
-    api_key_env: ANTHROPIC_API_KEY
+    auth: subscription          # Claude Code / Cursor signed in; no env var needed.
     timeout_seconds: 120
     max_retries: 2
-  # Add openai / openrouter / etc. only if user has keys.
+  # Add openai / openrouter / etc. only when their keys are actually in env,
+  # or when the user explicitly opted into BYO-key for that provider.
+  # Example BYO-key form:
+  #   - id: openai
+  #     kind: openai
+  #     auth: api_key
+  #     api_key_env: OPENAI_API_KEY
 
 # ── MODELS (capability/tier metadata; resolver picks per agent at render) ───
 # Always include at least one reasoner + one balanced + one fast for the
@@ -611,11 +666,11 @@ extends: []
 - **Modules:** mirror Phase A.3 verbatim. Single-package repo gets one synthetic module named after the project slug.
 - **Profiles:** use the list confirmed in Phase E. Names must come from `schema.profiles`.
 - **Render targets and adapters:** every `id` in `render_targets[]` must exist in `targets[]` and `target_adapters[]`. Don't include adapters you don't render.
-- **Providers + models:** include only providers whose `api_key_env` resolves to a present env var. For each provider, include enough models to cover all three tiers (`reasoner`, `balanced`, `fast`) so agents can route by `prefers`.
+- **Providers + models:** include providers either as `auth: subscription` (when the active runner is signed in — Claude Code / Cursor / Qwen Code) or as `auth: api_key` (only if the matching `api_key_env` is actually present in env). Don't add a provider with `auth: api_key` if its env var is missing — generation will pass but the runner will fail at first call. For each provider, include enough models to cover all three tiers (`reasoner`, `balanced`, `fast`) so agents can route by `prefers`.
 - **Prompt dialects:** include one per `family` value in your `models[]` list, plus `generic` as a fallback.
 - **Per-family prompts:** for each agent, include `<family>: { include: prompts/<Agent>.<family>.md }` only if `schema.agent_dialect_variants[<Agent>]` contains that family. Otherwise omit and rely on `default`.
 - **Tools:** `serena` and the language LSP are typically delivered by the language profile — they appear after profile resolution. You do not need to copy them into the manifest. Add `context7`, `web-search`, or knowledge MCP servers here explicitly.
-- **api_key_env:** environment variable **names**, never literal keys. The verifier rejects literal-looking secrets.
+- **api_key_env:** environment variable **names**, never literal keys. The verifier rejects literal-looking secrets. Required only when `auth: api_key`; omit it for `auth: subscription` and `auth: none`. The verifier emits `missing_api_key_env` if `auth: api_key` is set without `api_key_env`.
 
 ---
 
@@ -635,7 +690,7 @@ Outcomes:
   - `profile_cardinality_violation` — you listed two `language` profiles (or another `exactly_one` axis duplicated). Drop one.
   - `profile_duplicate` — same name twice in `stack.profiles[]`. Dedupe.
   Other common codes:
-  - `missing_required_key`, `invalid_project_slug`, `unknown_render_target`, `unknown_provider`, `unresolvable_model` (no model in `models[]` satisfies an agent's `needs[]` for the active target's allowed providers — loosen needs, add a model, or change `target.native_provider` / `target.can_use_via`), `target_output_collision` (e.g. opencode + qwen-code both write `AGENTS.md` — drop one).
+  - `missing_required_key`, `invalid_project_slug`, `unknown_render_target`, `unknown_provider`, `unknown_provider_auth` (`auth` value not in `api_key` | `subscription` | `none`), `missing_api_key_env` (provider declared `auth: api_key` but no `api_key_env` set — switch to `auth: subscription` if the runner is signed in, or add the env-var name), `unresolvable_model` (no model in `models[]` satisfies an agent's `needs[]` for the active target's allowed providers — loosen needs, add a model, or change `target.native_provider` / `target.can_use_via`), `target_output_collision` (e.g. opencode + qwen-code both write `AGENTS.md` — drop one).
 - **Exit 2** — load failure (file missing, YAML parse error, I/O). Read `message`, fix file.
 
 Do not run generate while verify still reports errors.
@@ -669,7 +724,7 @@ If `errors` is non-empty (`secret_pattern_match`, `constitution_overflow`, etc.)
 Show the user:
 
 - Final list of generated files.
-- Reminder: ensure the `api_key_env` env vars are exported in their shell (`echo $ANTHROPIC_API_KEY` should print non-empty).
+- For each provider with `auth: api_key`, remind the user to export the matching `api_key_env` in their shell (`echo $ANTHROPIC_API_KEY` should print non-empty). Skip this for `auth: subscription` (the runner's own login is what authenticates) and `auth: none`.
 - Recommendation to commit `.aikit/manifest.yaml` together with the generated files so the kit is reproducible.
 - Quick-start for their runner of choice — e.g. for Claude Code: "Open the project in Claude Code; the rendered `CLAUDE.md` is loaded automatically. Try `/kit-new-feature 'add health endpoint'` to start the standard pipeline."
 

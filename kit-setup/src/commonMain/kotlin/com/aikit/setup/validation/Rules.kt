@@ -5,6 +5,7 @@ import com.aikit.setup.validation.rules.AgentPromptPresentRule
 import com.aikit.setup.validation.rules.ManifestVersionRule
 import com.aikit.setup.validation.rules.ModelProviderExistsRule
 import com.aikit.setup.validation.rules.ProjectSlugRule
+import com.aikit.setup.validation.rules.ProviderAuthRule
 import com.aikit.setup.validation.rules.RenderTargetsExistRule
 import com.aikit.setup.validation.rules.RequiredTopLevelKeysRule
 import com.aikit.setup.validation.rules.ResolvableModelsRule
@@ -28,6 +29,7 @@ fun defaultRules(packages: PackageLoader): List<ValidationRule> = listOf(
     UniqueIdsRule(),
     RenderTargetsExistRule(),
     ModelProviderExistsRule(),
+    ProviderAuthRule(),
     AgentPromptPresentRule(),
     ResolvableModelsRule(packages),
     TargetCollisionRule(packages),

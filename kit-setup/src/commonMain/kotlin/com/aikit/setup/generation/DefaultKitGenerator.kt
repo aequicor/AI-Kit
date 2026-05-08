@@ -626,6 +626,7 @@ class DefaultKitGenerator(
             "PROJECT_SLUG" to manifest.project.slug,
             "STACK_SUMMARY" to stackSummary(manifest),
             "LANGUAGE_CODE" to manifest.languageCode,
+            "LANGUAGE_NAME" to languageNameFor(manifest.languageCode),
             "FORBIDDEN_PATTERNS" to manifest.policies.forbiddenPatterns.joinToString("\n") { "- $it" },
             "BUILD_COMMAND" to (manifest.stack.buildCommand ?: ""),
             "TEST_COMMAND" to (manifest.stack.testCommand ?: ""),
@@ -657,6 +658,50 @@ class DefaultKitGenerator(
         if (manifest.stack.languages.isNotEmpty()) parts += manifest.stack.languages.joinToString(", ")
         if (manifest.stack.frameworks.isNotEmpty()) parts += manifest.stack.frameworks.joinToString(", ")
         return parts.joinToString(" / ")
+    }
+
+    /**
+     * Map an ISO 639-1 (or BCP-47) code to an English name agents will reliably
+     * understand. Falls back to the raw code for unknown values so the prompt
+     * still carries *some* signal.
+     *
+     * Why English names: model instruction-following on language is much
+     * stronger when the prompt says "Russian" than when it says "ru". The ISO
+     * code alone forces the model to first translate "ru" → "Russian" — that
+     * implicit step is where drift to English happens.
+     */
+    private fun languageNameFor(code: String): String {
+        val base = code.trim().lowercase().substringBefore('-').substringBefore('_')
+        return when (base) {
+            "en" -> "English"
+            "ru" -> "Russian"
+            "uk" -> "Ukrainian"
+            "es" -> "Spanish"
+            "fr" -> "French"
+            "de" -> "German"
+            "it" -> "Italian"
+            "pt" -> "Portuguese"
+            "nl" -> "Dutch"
+            "pl" -> "Polish"
+            "tr" -> "Turkish"
+            "cs" -> "Czech"
+            "sv" -> "Swedish"
+            "no", "nb" -> "Norwegian"
+            "da" -> "Danish"
+            "fi" -> "Finnish"
+            "el" -> "Greek"
+            "he" -> "Hebrew"
+            "ar" -> "Arabic"
+            "fa" -> "Persian"
+            "hi" -> "Hindi"
+            "id" -> "Indonesian"
+            "vi" -> "Vietnamese"
+            "th" -> "Thai"
+            "zh" -> "Chinese"
+            "ja" -> "Japanese"
+            "ko" -> "Korean"
+            else -> code.trim().ifEmpty { "English" }
+        }
     }
 
     private fun writeArtifact(

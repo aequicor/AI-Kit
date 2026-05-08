@@ -2,8 +2,7 @@
 {{AGENT_DESC}}
 
 ## Context
-Project: {{PROJECT_NAME}}
-Stack: {{STACK_SUMMARY}}
+{{snippet:project_context}}
 
 ## Task
 {{BODY}}

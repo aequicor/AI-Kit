@@ -9,6 +9,24 @@ data class Target(
     val adapter: String?,
 )
 
+/** How a provider authenticates at runtime. */
+enum class ProviderAuth {
+    /** API key supplied via env var (`api_key_env`). The default. */
+    API_KEY,
+
+    /**
+     * Auth handled by the runner itself (subscription / OAuth login). Used when
+     * Claude Code, Cursor, Qwen Code, etc. are signed in to the provider account
+     * and no `api_key_env` is needed.
+     */
+    SUBSCRIPTION,
+
+    /** No auth — local backends like Ollama or self-hosted endpoints. */
+    NONE,
+
+    UNKNOWN,
+}
+
 /** Provider entry declared in `providers:`. */
 data class Provider(
     val id: String,
@@ -17,6 +35,8 @@ data class Provider(
     val apiKeyEnv: String?,
     val timeoutSeconds: Int?,
     val maxRetries: Int?,
+    /** Auth mode. When omitted, defaults to [ProviderAuth.API_KEY]. */
+    val auth: ProviderAuth = ProviderAuth.API_KEY,
 )
 
 /** Tier classification for [Model]. */

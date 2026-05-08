@@ -24,7 +24,7 @@ The agent reads your project, calls `kit-setup schema` to learn what's bundled, 
 
 Profiles are reusable manifest fragments grouped along three orthogonal axes. Listed in `stack.profiles: [...]`, they're merged into the manifest before validation, so a one-line opt-in fills `forbidden_patterns`, language tooling, framework UI hints, and policy defaults.
 
-| Axis | Cardinality | Bundled (v2.1) |
+| Axis | Cardinality | Bundled (v2.2) |
 |---|---|---|
 | `language` | exactly 1 | `kotlin-gradle`, `make-generic`, `python-poetry`, `typescript-pnpm` |
 | `framework` | 0..N | `compose-multiplatform`, `nextjs`, `paper-plugin`, `react-spa` |

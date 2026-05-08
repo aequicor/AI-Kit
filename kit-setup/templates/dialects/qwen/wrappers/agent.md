@@ -1,5 +1,6 @@
 ROLE: {{AGENT_ID}} — {{AGENT_DESC}}
-PROJECT: {{PROJECT_NAME}} ({{STACK_SUMMARY}})
+
+{{snippet:project_context}}
 
 DO:
 {{BODY}}

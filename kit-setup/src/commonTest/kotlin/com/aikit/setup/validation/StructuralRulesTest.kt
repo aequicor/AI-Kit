@@ -6,6 +6,7 @@ import com.aikit.setup.validation.rules.AgentPromptPresentRule
 import com.aikit.setup.validation.rules.ManifestVersionRule
 import com.aikit.setup.validation.rules.ModelProviderExistsRule
 import com.aikit.setup.validation.rules.ProjectSlugRule
+import com.aikit.setup.validation.rules.ProviderAuthRule
 import com.aikit.setup.validation.rules.RenderTargetsExistRule
 import com.aikit.setup.validation.rules.RequiredTopLevelKeysRule
 import com.aikit.setup.validation.rules.UniqueIdsRule
@@ -136,6 +137,71 @@ class StructuralRulesTest {
             ),
         )
         assertEquals(listOf("missing_default_prompt_body"), errors.map { it.code })
+    }
+
+    @Test
+    fun providerAuthRuleAcceptsSubscription() {
+        val errors = ProviderAuthRule().check(
+            parse(
+                """
+                providers:
+                  - { id: anthropic, kind: anthropic, auth: subscription }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun providerAuthRuleRequiresApiKeyEnvForApiKeyAuth() {
+        val errors = ProviderAuthRule().check(
+            parse(
+                """
+                providers:
+                  - { id: openai, kind: openai, auth: api_key }
+                """,
+            ),
+        )
+        assertEquals(listOf("missing_api_key_env"), errors.map { it.code })
+    }
+
+    @Test
+    fun providerAuthRuleDefaultsToApiKey() {
+        val errors = ProviderAuthRule().check(
+            parse(
+                """
+                providers:
+                  - { id: openai, kind: openai }
+                """,
+            ),
+        )
+        assertEquals(listOf("missing_api_key_env"), errors.map { it.code })
+    }
+
+    @Test
+    fun providerAuthRuleRejectsUnknownAuth() {
+        val errors = ProviderAuthRule().check(
+            parse(
+                """
+                providers:
+                  - { id: anthropic, kind: anthropic, auth: bearer }
+                """,
+            ),
+        )
+        assertEquals(listOf("unknown_provider_auth"), errors.map { it.code })
+    }
+
+    @Test
+    fun providerAuthRuleAcceptsNoneForLocalBackend() {
+        val errors = ProviderAuthRule().check(
+            parse(
+                """
+                providers:
+                  - { id: local, kind: ollama, auth: none }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
     }
 
     @Test

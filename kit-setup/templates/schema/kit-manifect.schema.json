@@ -37,7 +37,29 @@
       }
     },
     "render_targets":   { "type": "array", "items": { "type": "string" } },
-    "providers":        { "type": "array", "minItems": 1 },
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id":               { "type": "string" },
+          "kind":             { "type": "string" },
+          "auth":             {
+            "type": "string",
+            "enum": ["api_key", "subscription", "none"],
+            "description": "How the provider authenticates: api_key (env var), subscription (runner-managed login such as Claude Code or Cursor), or none (local backend)."
+          },
+          "base_url":         { "type": "string" },
+          "api_key_env":      { "type": "string" },
+          "timeout_seconds":  { "type": "integer", "minimum": 0 },
+          "max_retries":      { "type": "integer", "minimum": 0 }
+        },
+        "if":   { "properties": { "auth": { "const": "api_key" } }, "required": ["auth"] },
+        "then": { "required": ["api_key_env"] }
+      }
+    },
     "models":           { "type": "array", "minItems": 1 },
     "task_types":       { "type": "array" },
     "prompt_dialects": {

@@ -13,5 +13,3 @@ You are <agent>{{AGENT_ID}}</agent> — {{AGENT_DESC}}.
 <forbidden>
 {{FORBIDDEN_PATTERNS}}
 </forbidden>
-
-<output_language>{{LANGUAGE_CODE}}</output_language>
