@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build
+        working-directory: kit-setup
+        run: .\gradlew.bat linkReleaseExecutableMingwX64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: kit-setup/build/bin/mingwX64/releaseExecutable/kit-setup.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build
+        working-directory: kit-setup
+        run: ./gradlew linkReleaseExecutableLinuxX64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: kit-setup/build/bin/linuxX64/releaseExecutable/kit-setup.kexe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build
+        working-directory: kit-setup
+        run: |
+          ./gradlew linkReleaseExecutableMacosArm64
+          ./gradlew linkReleaseExecutableMacosX64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: kit-setup/build/bin/macosArm64/releaseExecutable/kit-setup.kexe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64
+          path: kit-setup/build/bin/macosX64/releaseExecutable/kit-setup.kexe
+
+  release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Rename artifacts
+        run: |
+          cp artifacts/windows/kit-setup.exe      kit-setup-windows-x64.exe
+          cp artifacts/linux/kit-setup.kexe       kit-setup-linux-x64
+          cp artifacts/macos-arm64/kit-setup.kexe kit-setup-macos-arm64
+          cp artifacts/macos-x64/kit-setup.kexe   kit-setup-macos-x64
+          chmod +x kit-setup-linux-x64 kit-setup-macos-arm64 kit-setup-macos-x64
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            kit-setup-windows-x64.exe
+            kit-setup-linux-x64
+            kit-setup-macos-arm64
+            kit-setup-macos-x64
