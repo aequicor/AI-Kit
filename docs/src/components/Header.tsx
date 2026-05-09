@@ -9,6 +9,7 @@ const NAV = [
   { hash: '#problems', key: 'problems' },
   { hash: '#how', key: 'how' },
   { hash: '#scenarios', key: 'scenarios' },
+  { hash: '#flows', key: 'flows' },
   { hash: '#commands', key: 'commands' },
   { hash: '#targets', key: 'targets' },
   { hash: '#faq', key: 'faq' },

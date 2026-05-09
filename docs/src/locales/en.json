@@ -18,13 +18,14 @@
     "problems": "Why",
     "how": "How it works",
     "scenarios": "Scenarios",
+    "flows": "Workflows",
     "commands": "Commands",
     "targets": "Tools",
     "faq": "FAQ",
     "start": "Get started"
   },
   "home": {
-    "badge": "Documentation · v2.5.0",
+    "badge": "Documentation · v2.6.0",
     "title": "One manifest — configs for every AI assistant you use",
     "lead": "Cursor, Claude Code, OpenCode and Aider work better when your project tells them the conventions, allowed paths, and commands. Usually you write those configs by hand, in a different format for each tool. AI Kit produces them from one YAML file — and keeps them in sync.",
     "ctaQuick": "Set up in a minute",
@@ -223,6 +224,59 @@
             "Generate."
           ],
           "watch": "Profiles cover the typical bits; everything specific is written on top. You don't have to keep someone else's rules in your head — the manifest in the client's repo always tells you."
+        }
+      ]
+    },
+    "flows": {
+      "eyebrow": "Workflows",
+      "title": "Day-to-day with the kit",
+      "lead": "How the slash commands compose into the developer's daily loop. The first one runs once at project start; the rest repeat per feature or fix.",
+      "items": [
+        {
+          "title": "1. Set up the kit (once per project)",
+          "open": true,
+          "steps": [
+            "Paste the setup prompt — the agent reads the project, drafts .aikit/manifest.yaml.",
+            "kit-setup verify .aikit/manifest.yaml — fix any errors the JSON reports.",
+            "kit-setup generate .aikit/manifest.yaml — render per-tool configs (CLAUDE.md, .claude/agents/*, .cursor/rules/*, AGENTS.md, etc., depending on render_targets)."
+          ],
+          "watch": "Re-run the setup prompt when the stack changes (new framework, new module, new model). Generate is idempotent — overwrites cleanly."
+        },
+        {
+          "title": "2. Develop a new feature",
+          "open": true,
+          "steps": [
+            "/kit-prepare <rough idea> — intake assistant turns it into a clean prompt and recommends the next /kit-* command.",
+            "/kit-new-feature <description> — risk-classified (trivial / standard / critical), drives the 6-stage pipeline.",
+            "@Architect drafts spec.md + plan.md → CONFIRM gate awaits /kit-approve.",
+            "EXECUTE step-by-step with per-step commits and ground-truth artefacts.",
+            "At each 5.6 CHECKPOINT — review the runbook + Context Snapshot Block; /kit-approve to advance, /kit-defect to re-open in-session, or use the defect-isolation flow below.",
+            "After the last step: RECONCILE → TRACE → DoD gate → DIFF-REVIEW → CLOSE."
+          ],
+          "watch": "Sleep mode (/kit-sleep) collapses CONFIRM and 5.6 user-forks for autonomous runs — use it when you're away from the screen and trust the lane."
+        },
+        {
+          "title": "3. Fix a known bug",
+          "open": true,
+          "steps": [
+            "/kit-fix — scans the active feature's test-cases.md for FAIL / PEND rows, asks which ones to fix.",
+            "/kit-fix TC-42 — direct mode for one test case ID.",
+            "/kit-fix Save button stays disabled — appends a new TC and runs the BUG pipeline (TRIAGE → DEBUG → FIX → RE-VERIFY → REPORT)."
+          ],
+          "watch": "Source of truth is vault/specs/features/<module>/<feature>/test-cases.md. Edit it directly to mark bugs as FAIL — /kit-fix picks them up next run."
+        },
+        {
+          "title": "4. Defect-isolation flow (keeps the main session's context clean)",
+          "open": false,
+          "steps": [
+            "Original session at 5.6 emits a Context Snapshot Block (copyable) alongside the verification request.",
+            "Open a NEW session in the same project directory.",
+            "/kit-fix <defect description> Контекст: <paste Snapshot Block> — the new session fixes the defect with only that context, never reading .planning/CURRENT.md.",
+            "When verified, /kit-approve in the new session — the agent emits a Decision Context Block and stops.",
+            "Return to the original session: /kit-fixed <paste Decision Block> — state syncs (step_commits[N] updated, TC marked PASS), 5.6 fork re-presents.",
+            "/kit-approve in the original session to advance."
+          ],
+          "watch": "Use this for non-trivial fixes where the back-and-forth would bloat the main pipeline session. For one-line typos, /kit-defect in-session is faster."
         }
       ]
     },

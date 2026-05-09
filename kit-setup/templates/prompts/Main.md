@@ -636,17 +636,49 @@ Six steps. Every step writes a checkpoint. Steps that ask the user are clearly m
 
                      <verbatim runbook block from @CodeWriter Step 8>
 
+                     ─── Context Snapshot Block (copyable) ──────────────────
+                     ```
+                     === KIT CONTEXT SNAPSHOT ===
+                     task: <active_task>
+                     step: <N> — <step.Goal first line>
+                     commit_sha: <step_commits[N].sha>
+                     files_changed:
+                       - <path1>
+                       - <path2>
+                     spec_refs:
+                       - <AC/EC ids from step.Owned, one per line>
+                     owned_tcs:
+                       - <TC-ids from step.Owned, one per line>
+                     decisions: |
+                       <verbatim "Decisions I made" section from runbook;
+                        if "(none)", emit "decisions: (none)">
+                     === END SNAPSHOT ===
+                     ```
+                     ────────────────────────────────────────────────────────
+
                      User action:
                        /kit-approve              — works, proceed to step <N+1>
                                                    (or /clear → /kit-step-resume in
                                                     session_isolation.mode == per_step,
                                                     auto-suggested by SessionStart hook).
-                       /kit-defect <description> — found a defect during manual check,
-                                                   re-open step <N> with this defect.
+                       /kit-defect <description> — found a defect, re-open step <N>
+                                                   IN THIS session (legacy in-session fix).
                        /kit-revert-step          — undo step <N> entirely (via
                                                    `git revert`, non-destructive).
 
-                   Wait for one of the three. If user sends anything else → repeat the prompt.
+                       Defect-isolation flow (recommended for non-trivial fixes —
+                       keeps this session's context window clean):
+                         1. Open a new session in the same project directory.
+                         2. Run: /kit-fix <defect description>
+                                 Context: <paste the Context Snapshot Block above>
+                         3. Iterate in the new session. On /kit-approve there,
+                            the agent emits a Decision Context Block.
+                         4. Return here with: /kit-fixed <paste Decision Context Block>
+                            — that updates step_commits[<N>], test-cases.md, and
+                            re-runs 5.6 fork for this step.
+
+                   Wait for one of: /kit-approve, /kit-defect, /kit-revert-step,
+                   /kit-fixed. If user sends anything else → repeat the prompt.
 
                 F. OVERFLOW HANDLING (interactive):
                    If overflow → STOP and ask user to confirm before proceeding.

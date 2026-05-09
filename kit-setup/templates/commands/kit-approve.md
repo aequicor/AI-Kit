@@ -17,6 +17,7 @@ You are @Main. You were waiting for user confirmation at a CONFIRM-class gate. A
    `<flags>` is `" --no-ground-truth"` if that flag was passed, empty otherwise.
 
 2. Determine which gate is unblocked:
+   - **Defect-isolation /kit-fix RE-VERIFY gate** (highest priority — check first): if the most recent `/kit-fix` dispatch in THIS session was in defect-isolation mode (i.e. it parsed a `=== KIT CONTEXT SNAPSHOT ===` block from $ISSUE) AND no Decision Context Block has been emitted yet for it → run kit-fix.md § E (emit Decision Context Block, update test-cases.md TC PASS / Defects log FIXED, STOP). Do NOT advance any other pipeline; this session has no `.planning/CURRENT.md` ownership.
    - At step 4 CONFIRM (FEATURE/TECH) → continue to step 5 EXECUTE.
    - At step 5.6 CHECKPOINT 3-way fork → continue to step 5.5 UPDATE for next step (or RECONCILE if last step).
    - At step 5.10 DIFF-REVIEW → continue to step 6 CLOSE.
