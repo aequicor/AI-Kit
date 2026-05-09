@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import InstallBox from '../components/InstallBox';
+import StatsRow from '../components/StatsRow';
+import WorkflowDiagram from '../components/WorkflowDiagram';
 
 const REPO = 'https://github.com/aequicor/AI-Kit';
 const PROMPT = 'Fetch https://raw.githubusercontent.com/aequicor/AI-Kit/master/SETUP_PROMPT.md and follow the instructions.';
@@ -8,8 +10,6 @@ type Stat = { num: string; unit?: string; label: string };
 type Card = { icon: string; title: string; body: string };
 type QA = { q: string; a: string };
 type Step = { title: string; body: string; hint?: string };
-type Scenario = { title: string; body: string };
-type Usecase = { title: string; open: boolean; steps: string[]; watch: string };
 type CmdRow = { command: string; body: string };
 type ExitRow = { code: string; body: string };
 type Axis = { name: string; body: string; list: string[] };
@@ -47,10 +47,7 @@ export default function Home() {
 
   const stats = t('home.stats', { returnObjects: true }) as Stat[];
   const whatCards = t('home.what.cards', { returnObjects: true }) as Card[];
-  const problems = t('home.problems.items', { returnObjects: true }) as QA[];
   const howSteps = t('home.how.steps', { returnObjects: true }) as Step[];
-  const scenarios = t('home.scenarios.items', { returnObjects: true }) as Scenario[];
-  const usecases = t('home.usecases.items', { returnObjects: true }) as Usecase[];
   const commands = t('home.commands.items', { returnObjects: true }) as CmdRow[];
   const exits = t('home.commands.exit', { returnObjects: true }) as ExitRow[];
   const axes = t('home.profiles.axes', { returnObjects: true }) as Axis[];
@@ -76,62 +73,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Stats with count-up animation */}
       <section className="stats-section">
         <div className="wrap-wide">
-          <div className="stats-row">
-            {stats.map((s, i) => (
-              <div className="stat" key={i}>
-                <div className="stat-num">
-                  {s.num}
-                  {s.unit ? <span className="stat-unit"> {s.unit}</span> : null}
-                </div>
-                <div className="stat-label">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* What it is */}
-      <section id="what">
-        <div className="wrap">
-          <div className="sec-eyebrow">{t('home.what.eyebrow')}</div>
-          <h2 className="sec-title">{t('home.what.title')}</h2>
-          <p className="sec-sub">{t('home.what.lead')}</p>
-
-          <div className="card-grid card-grid-3">
-            {whatCards.map((c, i) => (
-              <div className="card" key={i}>
-                <div className="card-emoji" aria-hidden>{c.icon}</div>
-                <h3>{c.title}</h3>
-                <p>{c.body}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="summary-line">{t('home.what.summary')}</p>
-        </div>
-      </section>
-
-      {/* Problems */}
-      <section id="problems">
-        <div className="wrap">
-          <div className="sec-eyebrow">{t('home.problems.eyebrow')}</div>
-          <h2 className="sec-title">{t('home.problems.title')}</h2>
-          <p className="sec-sub">{t('home.problems.lead')}</p>
-
-          <div className="problems-list">
-            {problems.map((p, i) => (
-              <details className="problem-item" key={i}>
-                <summary>
-                  <span className="problem-q">{p.q}</span>
-                  <span className="chev" aria-hidden>+</span>
-                </summary>
-                <p>{p.a}</p>
-              </details>
-            ))}
-          </div>
+          <StatsRow stats={stats} />
         </div>
       </section>
 
@@ -157,47 +102,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Short scenarios */}
+      {/* Scenarios banner — links to /scenarios.html */}
       <section id="scenarios">
         <div className="wrap">
-          <div className="sec-eyebrow">{t('home.scenarios.eyebrow')}</div>
-          <h2 className="sec-title">{t('home.scenarios.title')}</h2>
-          <p className="sec-sub">{t('home.scenarios.lead')}</p>
-
-          <div className="card-grid card-grid-3">
-            {scenarios.map((s, i) => (
-              <div className="card" key={i}>
-                <h3>{s.title}</h3>
-                <p>{s.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Detailed usecases */}
-      <section>
-        <div className="wrap">
-          <div className="sec-eyebrow">{t('home.usecases.eyebrow')}</div>
-          <h2 className="sec-title">{t('home.usecases.title')}</h2>
-          <p className="sec-sub">{t('home.usecases.lead')}</p>
-
-          <div className="usecases-list">
-            {usecases.map((u, i) => (
-              <details className="usecase" key={i} open={u.open}>
-                <summary>
-                  <span className="usecase-title">{u.title}</span>
-                  <span className="chev" aria-hidden>+</span>
-                </summary>
-                <ol className="usecase-steps">
-                  {u.steps.map((s, j) => (
-                    <li key={j}>{s}</li>
-                  ))}
-                </ol>
-                <p className="usecase-watch">{u.watch}</p>
-              </details>
-            ))}
-          </div>
+          <a href="./scenarios.html" className="scenarios-banner">
+            <div className="scenarios-banner-text">
+              <span className="sec-eyebrow">{t('home.scenariosBanner.eyebrow')}</span>
+              <h2>{t('home.scenariosBanner.title')}</h2>
+              <p>{t('home.scenariosBanner.body')}</p>
+              <span className="scenarios-banner-cta">
+                {t('home.scenariosBanner.cta')}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14" />
+                  <path d="M13 5l7 7-7 7" />
+                </svg>
+              </span>
+            </div>
+            <div className="scenarios-banner-grid" aria-hidden>
+              <div className="scenarios-tile">⚡<span>Next.js bootstrap</span></div>
+              <div className="scenarios-tile">🔁<span>Cursor → Claude Code</span></div>
+              <div className="scenarios-tile">🚧<span>Hide legacy/</span></div>
+              <div className="scenarios-tile">🤖<span>Models per role</span></div>
+              <div className="scenarios-tile">➕<span>+ a 4th tool, later</span></div>
+              <div className="scenarios-tile">💼<span>Freelancer · 10 clients</span></div>
+            </div>
+          </a>
         </div>
       </section>
 
@@ -326,7 +255,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ — Why and How merged */}
       <section id="faq">
         <div className="wrap">
           <div className="sec-eyebrow">{t('home.faq.eyebrow')}</div>
@@ -344,6 +273,29 @@ export default function Home() {
               </details>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* What it is — closing block, with workflow diagram */}
+      <section id="what" className="what-closing">
+        <div className="wrap">
+          <div className="sec-eyebrow">{t('home.what.eyebrow')}</div>
+          <h2 className="sec-title">{t('home.what.title')}</h2>
+          <p className="sec-sub">{t('home.what.lead')}</p>
+
+          <WorkflowDiagram />
+
+          <div className="card-grid card-grid-3">
+            {whatCards.map((c, i) => (
+              <div className="card" key={i}>
+                <div className="card-emoji" aria-hidden>{c.icon}</div>
+                <h3>{c.title}</h3>
+                <p>{c.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="summary-line">{t('home.what.summary')}</p>
         </div>
       </section>
 

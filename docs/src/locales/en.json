@@ -26,20 +26,20 @@
   },
   "home": {
     "badge": "Documentation · v2.6.0",
-    "title": "One manifest — configs for every AI assistant you use",
-    "lead": "Cursor, Claude Code, OpenCode and Aider work better when your project tells them the conventions, allowed paths, and commands. Usually you write those configs by hand, in a different format for each tool. AI Kit produces them from one YAML file — and keeps them in sync.",
+    "title": "One kit — a ready development process for any AI agent",
+    "lead": "AI Kit adds a development workflow on top of your AI agent. The same set of commands works in Claude Code, Cursor, OpenCode, Aider and Qwen Code: new features, bug fixes, review checkpoints, isolated sessions for messy fixes, autonomous runs.",
     "ctaQuick": "Set up in a minute",
     "ctaGithub": "View on GitHub",
     "stats": [
-      { "num": "≈1", "unit": "minute", "label": "from empty repo to configured" },
-      { "num": "0", "unit": "", "label": "accounts and subscriptions" },
-      { "num": "5", "unit": "", "label": "supported AI tools" },
-      { "num": "1", "unit": "", "label": "manifest per project — the source of truth" }
+      { "num": "≈1", "unit": "minute", "label": "from empty repo to a working dev process" },
+      { "num": "5", "unit": "agents", "label": "the workflow runs in each of them" },
+      { "num": "0", "unit": "", "label": "accounts, signups, lock-in" },
+      { "num": "100%", "unit": "local", "label": "your code stays on your machine" }
     ],
     "what": {
       "eyebrow": "What it is",
-      "title": "What AI Kit does",
-      "lead": "Cursor wants .mdc files. Claude Code wants CLAUDE.md and agent definitions. OpenCode wants AGENTS.md and opencode.json. Aider wants CONVENTIONS.md. Qwen Code wants its own settings.json. AI Kit describes your project once and emits the right shape for each.",
+      "title": "What you get with AI Kit",
+      "lead": "You get a development workflow that doesn't depend on which AI tool you happen to use today. A new hire runs one command and joins the same workflow as everyone else. If the team moves from Cursor to Claude Code, nothing about the workflow changes. Checkpoints stop the agent before risky steps; you can turn them off when you want it to run unattended.",
       "cards": [
         {
           "icon": "📄",
@@ -72,46 +72,11 @@
           "body": "Sections of project rules. They become the body of CLAUDE.md and the .mdc files for Cursor."
         }
       ],
-      "summary": "That's AI Kit. One YAML — and configs for every AI assistant you use show up in your repo."
-    },
-    "problems": {
-      "eyebrow": "Why",
-      "title": "Problems it solves",
-      "lead": "If you recognise yourself in even one of these, AI Kit usually pays off the first day.",
-      "items": [
-        {
-          "q": "I have two or three AI assistants, and the config for each is its own thing.",
-          "a": "One manifest is enough. AI Kit lays it out for Claude Code, Cursor, OpenCode, Aider, and Qwen Code: pick the targets you actually use, the rest are skipped. Change a rule once — it updates in every config."
-        },
-        {
-          "q": "Cursor keeps poking around in the legacy folder we shouldn't touch yet.",
-          "a": "Add legacy/ to forbidden_patterns in the manifest. The rule lands in every generated config — Cursor, Claude Code, Aider all stay out of that folder. No need to copy the same sentence into three different files."
-        },
-        {
-          "q": "The team wants shared rules, but everyone configures Cursor their own way.",
-          "a": "The manifest lives in the repo and travels with the project. A new teammate runs git pull and kit-setup generate — their AI works by the same rules as everyone else's. The config becomes part of the codebase, not a personal setup."
-        },
-        {
-          "q": "I don't want to create another account just for a utility.",
-          "a": "There isn't one. AI Kit is a single binary: reads YAML from disk, writes files next to it. Network is only needed once, when you download it from the Releases page."
-        },
-        {
-          "q": "I'm worried generate will break what I've already tweaked by hand.",
-          "a": "Generate only overwrites files it created itself: CLAUDE.md, .cursor/rules/*, AGENTS.md and the like. Your project's own source files are untouched. But edits made directly in the generated files will be lost on the next run — move those edits into the manifest or its templates."
-        },
-        {
-          "q": "I don't like YAML and don't want to learn it.",
-          "a": "Then don't. Open Claude Code or OpenCode in your project, paste the prompt from the home page — the agent surveys the project, drafts the manifest, and runs kit-setup itself. Your part is one paste in chat."
-        },
-        {
-          "q": "My stack isn't a standard one.",
-          "a": "Language and framework fields are free strings — write whatever fits. If there's a profile that matches, add one line to stack.profiles. If not, describe the specifics yourself; the manifest extends freely without a strict schema for values."
-        }
-      ]
+      "summary": "One workflow, set up once, runs on every AI agent your team uses."
     },
     "how": {
       "eyebrow": "How it works",
-      "title": "From an empty repo to a configured one in a minute",
+      "title": "From an empty repo to ready development workflows",
       "lead": "Everything runs locally. No accounts, no remote services, no signup.",
       "steps": [
         {
@@ -408,8 +373,36 @@
     "faq": {
       "eyebrow": "FAQ",
       "title": "Frequently asked",
-      "lead": "Short answers to what newcomers usually ask.",
+      "lead": "What newcomers ask, and what AI Kit does about it.",
       "items": [
+        {
+          "q": "Every AI agent works its own way, and there's no shared process across the team.",
+          "a": "In all five tools the workflow is the same: /kit-prepare, /kit-new-feature, /kit-fix, the same checkpoints, the same evidence checks. A developer can switch between Claude Code and Cursor mid-week without changing how they work."
+        },
+        {
+          "q": "Cursor keeps poking around in the legacy folder we shouldn't touch yet.",
+          "a": "Add legacy/ to forbidden_patterns in the manifest. The rule lands in every generated config — Cursor, Claude Code, Aider all stay out of that folder. No need to copy the same sentence into three different files."
+        },
+        {
+          "q": "The team wants shared rules, but everyone configures Cursor their own way.",
+          "a": "The manifest lives in the repo and travels with the project. A new teammate runs git pull and kit-setup generate — their AI works by the same rules as everyone else's. The config becomes part of the codebase, not a personal setup."
+        },
+        {
+          "q": "I don't want to create another account just for a utility.",
+          "a": "There isn't one. AI Kit is a single binary: reads YAML from disk, writes files next to it. Network is only needed once, when you download it from the Releases page."
+        },
+        {
+          "q": "I'm worried generate will break what I've already tweaked by hand.",
+          "a": "Generate only overwrites files it created itself: CLAUDE.md, .cursor/rules/*, AGENTS.md and the like. Your project's own source files are untouched. But edits made directly in the generated files will be lost on the next run — move those edits into the manifest or its templates."
+        },
+        {
+          "q": "I don't like YAML and don't want to learn it.",
+          "a": "Then don't. Open Claude Code or OpenCode in your project, paste the prompt from the home page — the agent surveys the project, drafts the manifest, and runs kit-setup itself. Your part is one paste in chat."
+        },
+        {
+          "q": "My stack isn't a standard one.",
+          "a": "Language and framework fields are free strings — write whatever fits. If there's a profile that matches, add one line to stack.profiles. If not, describe the specifics yourself; the manifest extends freely without a strict schema for values."
+        },
         {
           "q": "How much does it cost?",
           "a": "Nothing. AI Kit is open source under Apache 2.0. No subscriptions, no tiers. The AI assistants themselves (Cursor, Claude Code and so on) are billed separately by their vendors — AI Kit doesn't change that."
@@ -460,6 +453,12 @@
       "title": "Want to try it?",
       "body": "Open Claude Code or OpenCode in your project and paste this prompt. About a minute later you'll see a list of files it created.",
       "button": "Open GitHub"
+    },
+    "scenariosBanner": {
+      "eyebrow": "User scenarios",
+      "title": "How teams actually use AI Kit",
+      "body": "Six worked examples covering common situations: project bootstrap, migrating a team between AI tools, locking the agent out of legacy folders, picking different models per role, adding a new tool months later, and freelance work across multiple stacks.",
+      "cta": "Open user scenarios"
     }
   },
   "footer": {
@@ -468,6 +467,9 @@
     "license": "Apache License 2.0"
   },
   "flows": {
+    "backHome": "Back to home"
+  },
+  "scenariosPage": {
     "backHome": "Back to home"
   }
 }

@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         flows: resolve(__dirname, 'flows.html'),
+        scenarios: resolve(__dirname, 'scenarios.html'),
       },
     },
   },

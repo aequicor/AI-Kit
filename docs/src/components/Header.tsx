@@ -7,14 +7,13 @@ const REPO = 'https://github.com/aequicor/AI-Kit';
 type NavItem = { href: string; key: string };
 
 const NAV: readonly NavItem[] = [
-  { href: './#what', key: 'what' },
-  { href: './#problems', key: 'problems' },
   { href: './#how', key: 'how' },
-  { href: './#scenarios', key: 'scenarios' },
+  { href: './scenarios.html', key: 'scenarios' },
   { href: './flows.html', key: 'flows' },
   { href: './#commands', key: 'commands' },
   { href: './#targets', key: 'targets' },
   { href: './#faq', key: 'faq' },
+  { href: './#what', key: 'what' },
   { href: './#start', key: 'start' },
 ];
 
