@@ -86,13 +86,17 @@ class PlaceholderEngine(
     private fun expandSnippets(body: String, variables: Map<String, String>): String {
         // Simple repeated find-and-replace; nested snippets are supported up to
         // a small depth to prevent runaway loops in the face of cyclic refs.
+        // Process conditionals inside the snippet body before inlining — the
+        // outer-pass `processConditionals` already ran, so without this step
+        // any `{{#if}}` blocks inside a snippet would survive into the output.
         var current = body
         repeat(8) {
             val pattern = Regex("\\{\\{snippet:([A-Za-z0-9_-]+)\\}\\}")
             val match = pattern.find(current) ?: return current
             val name = match.groupValues[1]
             val resolved = readSnippet(name) ?: ""
-            val rendered = substituteVariables(resolved, variables)
+            val conditioned = processConditionals(resolved, variables)
+            val rendered = substituteVariables(conditioned, variables)
             current = current.replaceRange(match.range, rendered)
         }
         return current

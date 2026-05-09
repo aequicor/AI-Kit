@@ -24,6 +24,16 @@ Look up runner-specific values you will need in Step 4:
 
 Store the detected runner and these values — you will use them in Step 4. Do not surface the detection to the user.
 
+## Tools at your disposal
+
+{{#if AVAILABLE_TOOLS}}
+The following tools/MCPs are declared and enabled in this project's manifest. Treat this as the source of truth for what is callable in research below — if a row in the Step 2a table references a tool that is *not* listed here, skip it. If a tool listed here is not covered by the Step 2a table but is obviously useful for `$ROUGH_REQUEST` (e.g. a project-specific MCP for the relevant subsystem), use it within the same conservative caps as the closest analogous row.
+
+{{AVAILABLE_TOOLS}}
+{{/if}}
+
+{{snippet:memory_protocol}}
+
 ## Step 1 — Pre-classify
 
 If `$ROUGH_REQUEST` is empty → ask the user for a one-line summary of what they want. Otherwise read it as-is.
@@ -46,17 +56,23 @@ Three sub-steps in order: autonomous research → tiny user interview → show-a
 
 Gather context from the project and the web. Strict caps below — when you hit one, stop and move on. A short, evidenced list beats a long list of guesses.
 
+Before picking tools, re-read the **Tools at your disposal** list above and the memory protocol. Cross-check it against the table — only use rows whose tool actually exists for this project; for any project-specific MCP listed there, decide whether it helps with `$ROUGH_REQUEST` and add it to your plan with a conservative cap (≤ 3 calls).
+
 | Tool | Cap | Purpose |
 |---|---|---|
 | `Glob` | 3 | Locate candidate modules / files by pattern |
 | `Grep` | 5 | Find references to keywords from $ROUGH_REQUEST |
 | `Read` | 8 | Skim the most-relevant files |
-| `search_docs` | 3 | (KnowledgeOS only) Past features / decisions / tech-debt for the same module |
+{{#if KNOWLEDGE_OS_ENABLED}}
+| `search_docs` | 3 | KnowledgeOS — past features / decisions / tech-debt for the same module |
+{{/if}}
 | `look-up` skill | 3 | Unfamiliar libraries / APIs mentioned in the request |
 | `WebSearch` | 2 | External docs the project does not have indexed |
 | `WebFetch` | 3 | Read top WebSearch results |
 
-The memory protocol (above) tells you how to call `search_docs` when KnowledgeOS is enabled; when it is not, skip the `search_docs` row and grep `vault/specs/` instead, counted against the `Grep` cap.
+{{#if KNOWLEDGE_OS_DISABLED}}
+KnowledgeOS is not enabled for this project — there is no `search_docs`. Use `Grep` against `vault/specs/` instead (counted against the `Grep` cap) when you need historical context.
+{{/if}}
 
 Do not write anything. No `Edit`, no `Write`, no `.planning/` touches, no `vault/` writes. The `look-up` skill is allowed to persist its findings — that is its role, not a side-effect of intake.
 
@@ -95,8 +111,10 @@ Methods:
 Documentation:
 - <path or URL> — <internal | external>
 
+{{#if KNOWLEDGE_OS_ENABLED}}
 Past context (KnowledgeOS):
 - <vault path> — <one-line summary>
+{{/if}}
 
 Confirm? (reply "yes" or correct any line)
 ```

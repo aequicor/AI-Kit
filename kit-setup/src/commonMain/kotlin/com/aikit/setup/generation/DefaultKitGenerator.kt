@@ -146,6 +146,12 @@ class DefaultKitGenerator(
         if (manifest.knowledge?.constitution?.sections.isNullOrEmpty() && manifest.policies.forbiddenPatterns.isEmpty()) {
             return
         }
+        val baseVars = baseVariables(manifest)
+        val defaultFamily = manifest.models.maxByOrNull { it.priority }?.family
+            ?: manifest.promptDialects.firstOrNull()?.id
+        val dialect = defaultFamily?.let { loadDialectFor(manifest, it) }
+        val engine = PlaceholderEngine(templates, dialect?.packagePath ?: "", manifest.sharedPath)
+
         val sb = StringBuilder()
         sb.append("# ").append(manifest.project.name).append(" — kit constitution\n\n")
         for (section in manifest.knowledge?.constitution?.sections.orEmpty()) {
@@ -159,7 +165,7 @@ class DefaultKitGenerator(
                 continue
             }
             sb.append("## ").append(section.name).append("\n\n")
-            sb.append(body.trimEnd()).append("\n\n")
+            sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
         }
         if (manifest.policies.forbiddenPatterns.isNotEmpty()) {
             sb.append("## forbidden_patterns\n\n")
@@ -173,7 +179,7 @@ class DefaultKitGenerator(
             for (rule in listRules()) {
                 val body = templates.read(rule.bodyPath) ?: continue
                 sb.append("## ").append(rule.id).append("\n\n")
-                sb.append(body.trimEnd()).append("\n\n")
+                sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
             }
         }
         val content = sb.toString().trimEnd() + "\n"
@@ -648,6 +654,13 @@ class DefaultKitGenerator(
         val osOn = isKnowledgeOsEnabled(manifest)
         out["KNOWLEDGE_OS_ENABLED"] = if (osOn) "1" else ""
         out["KNOWLEDGE_OS_DISABLED"] = if (osOn) "" else "1"
+        // Markdown-bullet inventory of every enabled tool/MCP from manifest.tools[].
+        // Commands and agent prompts use this to decide which capabilities apply
+        // to a task before they start research — without it the templates have to
+        // hard-code a tool table that drifts from reality.
+        out["AVAILABLE_TOOLS"] = manifest.tools
+            .filter { it.enabled }
+            .joinToString("\n") { "- ${it.id} (${it.kind})" }
         return out
     }
 
