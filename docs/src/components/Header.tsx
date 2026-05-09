@@ -4,17 +4,19 @@ import LanguageSwitcher from './LanguageSwitcher';
 
 const REPO = 'https://github.com/aequicor/AI-Kit';
 
-const NAV = [
-  { hash: '#what', key: 'what' },
-  { hash: '#problems', key: 'problems' },
-  { hash: '#how', key: 'how' },
-  { hash: '#scenarios', key: 'scenarios' },
-  { hash: '#flows', key: 'flows' },
-  { hash: '#commands', key: 'commands' },
-  { hash: '#targets', key: 'targets' },
-  { hash: '#faq', key: 'faq' },
-  { hash: '#start', key: 'start' },
-] as const;
+type NavItem = { href: string; key: string };
+
+const NAV: readonly NavItem[] = [
+  { href: './#what', key: 'what' },
+  { href: './#problems', key: 'problems' },
+  { href: './#how', key: 'how' },
+  { href: './#scenarios', key: 'scenarios' },
+  { href: './flows.html', key: 'flows' },
+  { href: './#commands', key: 'commands' },
+  { href: './#targets', key: 'targets' },
+  { href: './#faq', key: 'faq' },
+  { href: './#start', key: 'start' },
+];
 
 function Logo() {
   return (
@@ -37,14 +39,14 @@ export default function Header() {
   return (
     <nav className="topnav">
       <div className="nav-inner">
-        <a href="#top" className="nav-logo">
+        <a href="./" className="nav-logo">
           <Logo />
           <span>{t('brand')}</span>
         </a>
         <ul className="nav-links">
           {NAV.map((item) => (
-            <li key={item.hash}>
-              <a href={item.hash}>{t(`nav.${item.key}`)}</a>
+            <li key={item.href}>
+              <a href={item.href}>{t(`nav.${item.key}`)}</a>
             </li>
           ))}
         </ul>

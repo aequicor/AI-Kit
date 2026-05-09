@@ -466,5 +466,8 @@
     "repo": "Repository",
     "releases": "Releases",
     "license": "Apache License 2.0"
+  },
+  "flows": {
+    "backHome": "Back to home"
   }
 }

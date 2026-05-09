@@ -51,7 +51,6 @@ export default function Home() {
   const howSteps = t('home.how.steps', { returnObjects: true }) as Step[];
   const scenarios = t('home.scenarios.items', { returnObjects: true }) as Scenario[];
   const usecases = t('home.usecases.items', { returnObjects: true }) as Usecase[];
-  const flows = t('home.flows.items', { returnObjects: true }) as Usecase[];
   const commands = t('home.commands.items', { returnObjects: true }) as CmdRow[];
   const exits = t('home.commands.exit', { returnObjects: true }) as ExitRow[];
   const axes = t('home.profiles.axes', { returnObjects: true }) as Axis[];
@@ -185,32 +184,6 @@ export default function Home() {
 
           <div className="usecases-list">
             {usecases.map((u, i) => (
-              <details className="usecase" key={i} open={u.open}>
-                <summary>
-                  <span className="usecase-title">{u.title}</span>
-                  <span className="chev" aria-hidden>+</span>
-                </summary>
-                <ol className="usecase-steps">
-                  {u.steps.map((s, j) => (
-                    <li key={j}>{s}</li>
-                  ))}
-                </ol>
-                <p className="usecase-watch">{u.watch}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* User flows (slash-command workflows) */}
-      <section id="flows">
-        <div className="wrap">
-          <div className="sec-eyebrow">{t('home.flows.eyebrow')}</div>
-          <h2 className="sec-title">{t('home.flows.title')}</h2>
-          <p className="sec-sub">{t('home.flows.lead')}</p>
-
-          <div className="usecases-list">
-            {flows.map((u, i) => (
               <details className="usecase" key={i} open={u.open}>
                 <summary>
                   <span className="usecase-title">{u.title}</span>

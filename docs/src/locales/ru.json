@@ -466,5 +466,8 @@
     "repo": "Репозиторий",
     "releases": "Релизы",
     "license": "Лицензия Apache 2.0"
+  },
+  "flows": {
+    "backHome": "На главную"
   }
 }
