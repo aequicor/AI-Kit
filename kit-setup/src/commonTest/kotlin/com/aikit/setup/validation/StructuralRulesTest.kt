@@ -9,6 +9,7 @@ import com.aikit.setup.validation.rules.ProjectSlugRule
 import com.aikit.setup.validation.rules.ProviderAuthRule
 import com.aikit.setup.validation.rules.RenderTargetsExistRule
 import com.aikit.setup.validation.rules.RequiredTopLevelKeysRule
+import com.aikit.setup.validation.rules.TargetProviderExistsRule
 import com.aikit.setup.validation.rules.UniqueIdsRule
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -105,6 +106,55 @@ class StructuralRulesTest {
         )
         assertEquals(2, errors.size)
         assertTrue(errors.all { it.code == "unknown_render_target" })
+    }
+
+    @Test
+    fun targetProviderExistsRuleFlagsUnknownNativeProvider() {
+        val errors = TargetProviderExistsRule().check(
+            parse(
+                """
+                providers:
+                  - { id: anthropic, kind: anthropic }
+                targets:
+                  - { id: claude-code, native_provider: anthropc, adapter: claude-code }
+                """,
+            ),
+        )
+        assertEquals(listOf("unknown_native_provider"), errors.map { it.code })
+        assertEquals(listOf("/targets/0/native_provider"), errors.map { it.path })
+    }
+
+    @Test
+    fun targetProviderExistsRuleAcceptsAnySentinel() {
+        val errors = TargetProviderExistsRule().check(
+            parse(
+                """
+                providers:
+                  - { id: anthropic, kind: anthropic }
+                targets:
+                  - { id: aider, native_provider: any, adapter: aider }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun targetProviderExistsRuleFlagsUnknownCanUseVia() {
+        val errors = TargetProviderExistsRule().check(
+            parse(
+                """
+                providers:
+                  - { id: anthropic, kind: anthropic }
+                targets:
+                  - id: aider
+                    native_provider: any
+                    can_use_via: [openai, anthropic]
+                """,
+            ),
+        )
+        assertEquals(listOf("unknown_native_provider"), errors.map { it.code })
+        assertEquals(listOf("/targets/0/can_use_via/0"), errors.map { it.path })
     }
 
     @Test

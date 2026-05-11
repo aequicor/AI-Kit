@@ -83,28 +83,31 @@ After the last step → automatically enter Stage 4.
 
 ### Stage 4 — Ship
 
-1. **Run tests** using the project's configured test command. If tests fail → STOP. AWAIT decision: `fix` (offer `/kit-fix` for the failure), `push as-is` (record explicit override), or `abort`.
+1. **Run tests** using the project's configured test command. State the command verbatim before running it; for Gradle / Maven / Bazel and other first-run-heavy build systems, also state: `First run may download dependencies (multiple minutes) — this is expected, not a hang.` If tests fail → STOP. AWAIT decision: `fix` (offer `/kit-fix` for the failure), `push as-is` (record explicit override), or `abort`.
 2. **List commits** in this task: `git log <plan-commit>~1..HEAD --oneline`. Show the list to the user.
-3. **Propose squash**:
+3. **Probe squash base.** Before proposing the message, confirm `<plan-commit>~1` is a sensible reset target:
+   - Run `git rev-parse --verify <plan-commit>~1` — if it fails, the plan is the repo's root commit; STOP and output: `Plan commit <hash> has no parent (root commit). Cannot squash with --soft. Reply "keep" to ship as-is or "cancel" to abort.` Skip step 4–5 (squash branches); jump to step 6 on `keep` or end on `cancel`.
+   - Otherwise compute `BASE = <plan-commit>~1`. If `BASE` is reachable from `origin/<integration-branch>` (master / main, in that order if both exist), include a note in step 4 output: `Squash base is on <integration-branch>; the squashed commit will sit directly on top of it.` This is normal but tells the user the plan-commit was the first work on this branch.
+4. **Propose squash**:
    - Base: `<plan-commit>~1` (squash includes the plan file).
    - Suggested message: derive from the original task, e.g. `feat: <task title>` or `fix: <task title>` depending on intent.
-   - Output: `Reply "ok" to squash with this message, paste a new message to override it, "keep" to skip squash, or "cancel" to abort ship.`
+   - Output: `Reply "ok" to squash with this message, paste a new message to override it, "keep" to skip squash, or "cancel" to abort ship.` Append the integration-branch note from step 3 when applicable.
    - AWAIT.
-4. On `ok` or a new message:
+5. On `ok` or a new message:
    - `git reset --soft <plan-commit>~1`
    - `git commit -m "<message>"`
    - Set `last_known_hash = HEAD`.
    - Output: `Squashed into <new-hash>. Reply "push" to push, "local" to leave it.`
    - AWAIT.
-5. On `keep`:
+6. On `keep`:
    - Skip squash. Output: `Keeping <K> commits as-is. Reply "push" to push, "local" to leave them.`
    - AWAIT.
-6. On `push`:
+7. On `push`:
    - Check if branch was pushed before: `git rev-parse --verify origin/<branch> 2>/dev/null`.
    - If yes AND history was rewritten by squash → output warning verbatim: `Branch was previously pushed; squash rewrote history. Pushing with --force-with-lease.` Then `git push --force-with-lease`.
    - Otherwise → `git push -u origin <branch>` or plain `git push`.
    - END.
-7. On `local` → END without push.
+8. On `local` → END without push.
 
 The session ends after Stage 4. Do not start a new task in the same session.
 

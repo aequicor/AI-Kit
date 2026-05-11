@@ -221,13 +221,21 @@ What you got:
 - 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
 - 1 skill: summary-format — defines the bullet-only CONTEXT/PLAN/STEP/FIX block shapes.
 - 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
-- User-prompts under .claude/prompts/ — optional helpers (e.g. explore-module).
+- User-prompts under .claude/prompts/ — manual helpers you can paste into a chat
+  when needed (e.g. explore-module). The Main agent does NOT invoke them
+  automatically; treat them as a small library of ad-hoc prompts.
 - CLAUDE.md — project constitution with your forbidden_patterns folded in.
 
 To start your first task, in a NEW chat session:
 > /kit <one-sentence description of what you want to build>
 
 Then `/kit-do <plan-id>` in another new session, then `/kit-fix <hash> ...` per defect.
+
+One /kit per atomic deliverable, not per epic. If your task spans multiple
+milestones (e.g. "build a multiplatform editor with sync and projection"),
+run /kit for ONE milestone at a time. A plan should fit on two screens and
+ship in 3–10 committable steps; anything bigger is two plans, not one bigger
+plan. Re-run /kit for the next milestone once the previous one is shipped.
 
 Docs: https://aequicor.github.io/AI-Kit/
 ```

@@ -36,4 +36,15 @@ fun helpText(): String = """
         0   Success.
         1   Manifest is invalid (verify) or generation was refused due to invalid manifest.
         2   Usage error or runtime failure (missing file, parse error, I/O failure).
+
+    STDOUT FORMAT (for orchestrating agents):
+        'verify'   prints one compact JSON line:
+                     {"valid": <bool>, "errors": [{"path":"...","code":"...","message":"...","hint":"..."?}, ...]}
+        'generate' prints one compact JSON line; either the verify shape above
+                   (if load/validation failed before any file was written), or:
+                     {"ok": <bool>, "generated": ["path", ...], "errors": [...]?}
+        'schema'   defaults to JSON; pass --format human for a readable table.
+        '--help' / '--version' print plain text.
+        Diagnostics never go to stderr — read exit code and JSON 'errors[]' instead.
+        'code' values are snake_case and stable; agents may pattern-match on them.
 """.trimIndent()
