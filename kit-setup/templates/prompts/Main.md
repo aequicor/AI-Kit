@@ -43,18 +43,19 @@ When the user replies, parse:
    - **Independently committable** — no half-finished steps.
    - **Bounded** — one cohesive change, not a kitchen sink.
 2. For each step, capture: goal, definition-of-done (one line), assumptions.
-3. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
-4. Write `.aikit/plans/<id>.md` (format below).
-5. `git add .aikit/plans/<id>.md && git commit -m "kit: plan for <slug>"`.
-6. Output `PLAN SUMMARY` ending with: `Open a new session and run: /kit-do <id>`.
-7. END the session. Do not start executing.
+3. **Validate DoD commands against the current toolchain.** Before writing the plan, for each step whose DoD invokes a build / test tool, confirm the command actually exists in this project's build system and is not a known NO-OP. Use the build system's own task-listing or dry-run mode (e.g. list available tasks, parse the project's script manifest, run a `--help` / `-n` introspection). Consult the stack-specific traps surfaced via `policies.forbidden_patterns` in the manifest (the active language / framework profiles add stack-specific NO-OP aggregators and misleading task names there). If a DoD command cannot be validated (offline, unfamiliar build system), mark that step's DoD with `Assumption:` so the human can correct before `/kit-do`.
+4. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
+5. Write `.aikit/plans/<id>.md` (format below).
+6. `git add .aikit/plans/<id>.md && git commit -m "kit: plan for <slug>"`.
+7. Output `PLAN SUMMARY` ending with: `Open a new session and run: /kit-do <id>`.
+8. END the session. Do not start executing.
 
 ## Session 2 — Execute (`/kit-do <plan-id>` or `/kit-do <plan-id> --resume`)
 
 ### Initialization (every entry)
 
 1. Read `.aikit/plans/<plan-id>.md`. If not found → STOP. Output: `Plan <id> not found at .aikit/plans/<id>.md. Did Session 1 commit it? Check git log --grep="kit: plan".`
-2. Find plan-commit: `git log --all --grep="kit: plan for <slug>" --format="%H" -n 1`.
+2. Find plan-commit: `git log --all --grep="kit: plan for <slug>" --format="%H" -n 1`. If the search returns empty (file exists per step 1 but no commit is reachable), STOP. Output: `Plan file .aikit/plans/<id>.md exists on disk but no "kit: plan for <slug>" commit is reachable. Possible causes: the path is .gitignored in this project, Session 1's commit failed silently (pre-commit hook), or the commit was reset / dropped after Session 1. Recover with: git add .aikit/plans/<id>.md (add -f if .gitignored) && git commit -m "kit: plan for <slug>". Then re-enter /kit-do.`
 3. Walk the commits since the plan: `git log --oneline <plan-commit>..HEAD`.
 4. From those commits, identify last completed step number (highest `kit: step N/M` commit) and any external `kit: fix *` commits.
 5. Set `last_known_hash = HEAD`.
@@ -87,7 +88,7 @@ After the last step → automatically enter Stage 4.
 2. **List commits** in this task: `git log <plan-commit>~1..HEAD --oneline`. Show the list to the user.
 3. **Probe squash base.** Before proposing the message, confirm `<plan-commit>~1` is a sensible reset target:
    - Run `git rev-parse --verify <plan-commit>~1` — if it fails, the plan is the repo's root commit; STOP and output: `Plan commit <hash> has no parent (root commit). Cannot squash with --soft. Reply "keep" to ship as-is or "cancel" to abort.` Skip step 4–5 (squash branches); jump to step 6 on `keep` or end on `cancel`.
-   - Otherwise compute `BASE = <plan-commit>~1`. If `BASE` is reachable from `origin/<integration-branch>` (master / main, in that order if both exist), include a note in step 4 output: `Squash base is on <integration-branch>; the squashed commit will sit directly on top of it.` This is normal but tells the user the plan-commit was the first work on this branch.
+   - Otherwise compute `BASE = <plan-commit>~1`. Probe which integration-branch ref actually exists before testing reachability — run `git rev-parse --verify origin/master 2>/dev/null` and `git rev-parse --verify origin/main 2>/dev/null` (stderr silenced; either may legitimately not exist). For each ref that resolves, run `git merge-base --is-ancestor BASE <ref>`. If at least one returns ancestor (exit 0), include a note in step 4 output: `Squash base is on <integration-branch>; the squashed commit will sit directly on top of it.` Skip non-existent refs silently — never surface a raw `fatal: Not a valid object name` to the user. This note is normal but tells the user the plan-commit was the first work on this branch.
 4. **Propose squash**:
    - Base: `<plan-commit>~1` (squash includes the plan file).
    - Suggested message: derive from the original task, e.g. `feat: <task title>` or `fix: <task title>` depending on intent.
@@ -114,7 +115,7 @@ The session ends after Stage 4. Do not start a new task in the same session.
 ## Session 3 — Fix (`/kit-fix <commit-hash> <description>`)
 
 1. `git show <commit-hash>` — read the targeted commit's diff.
-2. Find the plan-commit by walking back from the target: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. Read `.aikit/plans/<id>.md`.
+2. Find the plan-commit by walking back from the target: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. If the search returns empty, STOP. Output: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do, which lays down a plan-commit upstream. If this is a manual commit, fix it through normal git workflow instead.` Otherwise, read the matching `.aikit/plans/<id>.md`.
 3. Read related source files to understand context.
 4. Make the fix.
 5. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`.
@@ -208,6 +209,9 @@ Open a new session and run:
 
 **NOT done (from plan):**
 - <with reason; "(none)" if everything in the step is done>
+
+**Plan deviations:**
+- <a planned signature or approach you intentionally changed during execution and why; "(none)" if you executed the plan as written>
 
 **Uncertain:**
 - <specific lines / decisions you suspect; "(none)" if confident>

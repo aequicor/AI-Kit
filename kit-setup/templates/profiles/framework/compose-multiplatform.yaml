@@ -20,3 +20,5 @@ policies:
     - "Platform-specific API в commonMain (выносите в expect/actual или платформенный sourceSet)"
     - "Blocking I/O на Compose UI dispatcher (используйте Dispatchers.IO через withContext)"
     - "Хранение Android Context в commonMain (риск утечки — используйте платформенный sourceSet)"
+    - "expect/actual класс без флага -Xexpect-actual-classes на Kotlin 2.x (KT-61573 даёт beta-warning на каждый класс) — включите kotlin { compilerOptions { freeCompilerArgs.add(\"-Xexpect-actual-classes\") } } в build.gradle.kts shared-модуля"
+    - "DoD-команда плана с `:shared:compileKotlinMetadata` на Kotlin 2.x (K2) — это NO-OP агрегатор, выдаёт SKIPPED и ничего не валидирует; используйте `:shared:compileCommonMainKotlinMetadata` либо target-specific (compileKotlinJvm / compileKotlinIosArm64 / ...) для реальной проверки common-кода"

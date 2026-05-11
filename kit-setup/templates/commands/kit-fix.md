@@ -9,7 +9,7 @@ Parse: the first whitespace-separated token is the target commit hash. The rest 
 Follow the Session 3 protocol from your project instructions:
 
 1. `git show <commit-hash>` — read the targeted commit's diff.
-2. Find the plan-commit by walking back: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. Read the matching `.aikit/plans/<id>.md`.
+2. Find the plan-commit by walking back: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. If the search returns empty, STOP. Output: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do, which lays down a plan-commit upstream. If this is a manual commit, fix it through normal git workflow instead.` Otherwise, read the matching `.aikit/plans/<id>.md`.
 3. Read related source files to understand context.
 4. Make the fix.
 5. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`.
