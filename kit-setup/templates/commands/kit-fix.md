@@ -1,12 +1,12 @@
 Run Session 3 (Fix) of the AI-Kit v3 pipeline. Arguments: $ARGUMENTS — the target commit hash followed by a description of what to fix.
 
-You are running Session 3 of the AI-Kit v3 pipeline as the Main agent.
+You are running Session 3 of the AI-Kit v3 pipeline.
 
 **Args:** $ARGUMENTS
 
 Parse: the first whitespace-separated token is the target commit hash. The rest is the description of what's wrong with that commit.
 
-Follow the Session 3 protocol from your project's Main agent instructions:
+Follow the Session 3 protocol from your project instructions:
 
 1. `git show <commit-hash>` — read the targeted commit's diff.
 2. Find the plan-commit by walking back: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. Read the matching `.aikit/plans/<id>.md`.

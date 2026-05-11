@@ -1,10 +1,10 @@
 Start Session 1 (Plan) of the AI-Kit v3 pipeline. Argument: $ARGUMENTS — the user's task description.
 
-You are running Session 1 of the AI-Kit v3 pipeline as the Main agent.
+You are running Session 1 of the AI-Kit v3 pipeline.
 
 **Task:** $ARGUMENTS
 
-Follow the Session 1 protocol from your project's Main agent instructions:
+Follow the Session 1 protocol from your project instructions:
 
 1. **Stage 1 — Context.** Identify what needs to be understood. If a Researcher subagent is available, dispatch it for heavy reads with a focused brief. Otherwise read selectively yourself. Output a CONTEXT SUMMARY. AWAIT user reply.
 

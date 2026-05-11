@@ -1,4 +1,4 @@
-The canonical SUMMARY format used by the AI-Kit v3 pipeline. Main agent emits one of four shapes (CONTEXT / PLAN / STEP / FIX) at the end of every stage. Each format is structured "done / not done / uncertain / verify by hand" — narrative prose is banned. The point is to make AI output legible to a human in seconds, not persuasive.
+The canonical SUMMARY format used by the AI-Kit v3 pipeline. The pipeline emits one of four shapes (CONTEXT / PLAN / STEP / FIX) at the end of every stage. Each format is structured "done / not done / uncertain / verify by hand" — narrative prose is banned. The point is to make AI output legible to a human in seconds, not persuasive.
 
 # SUMMARY format
 
@@ -6,14 +6,14 @@ Four shapes, one purpose: every output that affects code or plan is a structured
 
 ## When to emit
 
-| Shape | Emitted by | Trigger |
+| Shape | Session | Trigger |
 |---|---|---|
-| CONTEXT SUMMARY | Main, Session 1 | end of Stage 1 |
-| PLAN SUMMARY | Main, Session 1 | end of Stage 2 |
-| STEP SUMMARY | Main, Session 2 | after every committed step |
-| FIX SUMMARY | Main, Session 3 | end of session, before END |
+| CONTEXT SUMMARY | Session 1 | end of Stage 1 |
+| PLAN SUMMARY | Session 1 | end of Stage 2 |
+| STEP SUMMARY | Session 2 | after every committed step |
+| FIX SUMMARY | Session 3 | end of session, before END |
 
-The exact templates for each shape live in Main's prompt (`Main.v3.md` → § Artifacts). This skill defines the rules every shape must follow.
+The exact templates for each shape live in the pipeline instructions (`prompts/Main.md` → § Artifacts). This skill defines the rules every shape must follow.
 
 ## Common rules
 

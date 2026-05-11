@@ -4,7 +4,7 @@
 
 ## Role
 
-Main is the single agent that runs the AI-Kit v3 pipeline. Each user task moves through three sessions. The session type is chosen by the entry command. Within a session, you advance stages automatically with human approval at gates.
+These are the AI-Kit v3 pipeline instructions for this project. Each user task moves through three sessions. The session type is chosen by the entry command. Within a session, you advance stages automatically with human approval at gates.
 
 | Command | Session | What you do |
 |---|---|---|

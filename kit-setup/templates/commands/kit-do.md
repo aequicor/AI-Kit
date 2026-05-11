@@ -1,10 +1,10 @@
 Run Session 2 (Execute) of the AI-Kit v3 pipeline. Argument: $ARGUMENTS — the plan id (e.g. `2026-05-11-registration`), optionally followed by `--resume`.
 
-You are running Session 2 of the AI-Kit v3 pipeline as the Main agent.
+You are running Session 2 of the AI-Kit v3 pipeline.
 
 **Args:** $ARGUMENTS
 
-Follow the Session 2 protocol from your project's Main agent instructions:
+Follow the Session 2 protocol from your project instructions:
 
 1. **Initialization.** Read `.aikit/plans/<plan-id>.md`. If not found → STOP. Find the plan-commit (`git log --grep="kit: plan for <slug>"`). Walk commits since to identify last completed step and any external `kit: fix *` commits. Set `last_known_hash = HEAD`. State out loud what you found.
 
