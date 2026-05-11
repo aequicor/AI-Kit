@@ -57,21 +57,84 @@ AWAIT the user reply. Do not proceed without it.
 
 ### 2.1 Compose the proposed manifest
 
-Build a draft `.aikit/manifest.yaml` with:
+Build a draft `.aikit/manifest.yaml` exactly in the shape below. Every field shown is required for the verifier; deviations from this shape are what break setup for new users.
 
-- `manifest_version: 3`
-- `project:` — name (from directory or package metadata), description (1 line from README if present, else empty)
-- `stack:` — derived from Phase 1.2: language, framework, tools, build/test/lint/format/run commands
-- `modules:` — up to 10, if detected
-- `targets:` — single entry for the chosen runner
-- `providers:`, `models:` — single model entry for the chosen family
-- `agents: [Main, Researcher]`
-- `commands: [kit, kit-do, kit-fix]`
-- `skills: [summary-format]`
-- `prompt_dialects:` — single entry matching the chosen family (`anthropic` or `generic`)
-- `target_adapters:` — single entry matching the chosen runner
-- `policies:` — minimal defaults (auto_commit_per_step is implicit in v3 and not a policy knob)
-- `knowledge:` — empty by default; user can add later
+```yaml
+manifest_version: "3.0.0"          # quoted; verifier requires MAJOR.MINOR.PATCH
+language_code: <ru | en | …>       # the language detected in Phase 1.1
+
+project:
+  name: "<human name>"
+  slug: "<lowercase-kebab-slug>"
+  description: "<1 line from README, optional>"
+
+stack:                              # derived from Phase 1.2; commands matter for /kit-do
+  languages: [<primary>]
+  frameworks: [<framework>, …]
+  build_command:   "<…>"
+  test_command:    "<…>"
+  lint_command:    "<…>"
+  format_command:  "<…>"
+  run_command:     "<…>"
+
+modules:                            # up to 10, omit the array if none detected
+  - name: <module-name>
+    source_root: <path>
+    test_root:   <path>
+    responsibility: "<one-line summary>"
+
+targets:                            # exactly one entry for v3 default flow
+  - id: <runner-id>                 # claude-code | cursor | opencode | aider | qwen-code
+    native_provider: <family>       # anthropic | generic
+    adapter: <runner-id>            # same as id; resolves to target_adapters[].id below
+
+render_targets: [<runner-id>]       # mirror targets[].id
+
+providers:
+  - id: <family>                    # anthropic | generic
+    kind: <family>                  # same as id for v3 default
+    auth: subscription              # claude-code / cursor login; use api_key only when you have one to wire
+
+models:
+  - id: <pin-id>                    # any string, used internally
+    provider: <family>              # matches providers[].id
+    family: <family>                # matches providers[].kind
+    model: <model-name>             # e.g. claude-sonnet-4-6
+    tier: balanced
+    priority: 100
+
+prompt_dialects:
+  - id: <family>                    # anthropic | generic
+    path: dialects/<family>         # dialects/anthropic or dialects/generic
+
+target_adapters:
+  - id: <runner-id>
+    path: target_adapters/<runner-id>
+
+agents:
+  - id: Main
+    description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
+    prompt: { include: prompts/Main.md }
+    tools: [Read, Edit, Write, Glob, Grep, Bash]
+  - id: Researcher
+    description: "Session 1 Stage 1 helper — returns one focused digest, never writes code"
+    prompt: { include: prompts/Researcher.md }
+    tools: [Read, Glob, Grep, WebFetch]
+
+policies:
+  forbidden_patterns:                # optional but recommended; goes into CLAUDE.md
+    - "<convention violation 1>"
+    - "<convention violation 2>"
+
+knowledge: {}                        # empty for default flow; user can attach docs later
+```
+
+Notes for the orchestrator (do NOT include in the manifest itself):
+
+- `commands` and `skills` are NOT top-level manifest fields. The generator scans `templates/commands/` and `templates/skills/` and emits everything found — there is no filter. Don't try to add `commands: [kit, kit-do, kit-fix]` or `skills: [summary-format]` to the manifest; the verifier will accept them silently but they have no effect.
+- `agents` MUST be a list of objects with `id`, `description`, `prompt.include`, `tools`. A bare list of strings (`agents: [Main, Researcher]`) fails with `missing_agent_prompt`.
+- `prompt_dialects` and `target_adapters` MUST have both `id` and `path`.
+- For Claude Code: `providers[].auth: subscription` (the runner handles login). Use `api_key` only if you have an `api_key_env` variable to wire.
 
 Keep the YAML under 100 lines. The point is one screen of YAML the user can read and approve.
 
@@ -106,7 +169,13 @@ Check if `kit-setup` is on PATH (`which kit-setup` or `where.exe kit-setup`). If
 | Linux x64 | `kit-setup-linux-x64` |
 | Windows x64 | `kit-setup-windows-x64.exe` |
 
-Place it at `.aikit/bin/kit-setup` (or `.exe` on Windows). Make executable on POSIX. Verify with `kit-setup --version`. Add `.aikit/bin/` to `.gitignore` if not already.
+Place it at `.aikit/bin/kit-setup` (or `.exe` on Windows). Make executable on POSIX. Verify with `kit-setup --version`.
+
+Then ensure `.aikit/bin/` is in `.gitignore`. This is NOT optional — the binary is ~2-4 MB and platform-specific; committing it pollutes the repo and breaks cross-platform contributors. Concretely:
+
+1. Read `.gitignore` (create one if missing).
+2. If it does not already contain a line matching `.aikit/bin/` or `.aikit/bin/*`, append `.aikit/bin/` on its own line.
+3. Re-read to confirm.
 
 If the binary download fails (network, auth, missing release asset), STOP and tell the user the exact failure. Do not fall back to a stale local binary without telling them.
 
@@ -148,6 +217,13 @@ Setup complete. Generated <N> files for <runner>:
 - <file 2>
 - ...
 
+What you got:
+- 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
+- 1 skill: summary-format — defines the bullet-only CONTEXT/PLAN/STEP/FIX block shapes.
+- 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
+- User-prompts under .claude/prompts/ — optional helpers (e.g. explore-module).
+- CLAUDE.md — project constitution with your forbidden_patterns folded in.
+
 To start your first task, in a NEW chat session:
 > /kit <one-sentence description of what you want to build>
 
@@ -167,5 +243,5 @@ DONE. End the session.
 - NEVER write `kit-setup verify` errors as paraphrased prose — they're machine output. Quote the JSON; translate only the underlying problem when needed.
 - NEVER write API keys, tokens, or secrets into the manifest. The verifier scans for them; if found, it'll fail with `secret_pattern_match`.
 - NEVER touch files outside `.aikit/` and the binary location during setup.
-- The manifest MUST declare exactly what v3 supports: `agents: [Main, Researcher]`, `commands: [kit, kit-do, kit-fix]`, `skills: [summary-format]`. Do NOT add v2 IDs (BugFixer, Architect, mutation-sample, etc.) — they no longer exist in v3 and the verifier will reject them.
+- The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and skill (`summary-format`) are auto-emitted from the templates tree; do NOT add them as manifest fields.
 - NEVER promise the user "no more setup needed" — the v3 pipeline is per-task, not autonomous. The kit files are scaffolding; the human-in-the-loop is the design, not a workaround.

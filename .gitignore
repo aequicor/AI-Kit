@@ -23,6 +23,16 @@ gradle-app.setting
 # OpenCode
 .opencode/
 
+# AI-Kit per-project setup
+# The kit-setup binary is platform-specific and downloaded fresh per project;
+# never check it in. Generated kit artifacts inside test fixtures
+# (sample-* projects) follow the same rule.
+.aikit/bin/
+sample-*/.aikit/manifest.yaml
+sample-*/.aikit/plans/
+sample-*/.claude/
+sample-*/CLAUDE.md
+
 # OS
 .DS_Store
 Thumbs.db
