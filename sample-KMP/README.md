@@ -1,3 +1,11 @@
+> **AI-Kit v3 testing sandbox.** This subdirectory is a Compose Multiplatform
+> template that lives inside the AI-Kit repository so the kit can be regenerated
+> and exercised end-to-end without a second repo. It is **not** an independent
+> git repository — `kit-setup generate` writes here, and `/kit-do` git commits
+> originating from this directory land in the parent AI-Kit history.
+> Generated kit artifacts (`CLAUDE.md`, `.claude/`, `.aikit/manifest.yaml`,
+> `.aikit/plans/`) are gitignored to keep the sandbox state opt-in.
+
 This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM), Server.
 
 * [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
