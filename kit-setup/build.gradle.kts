@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.aikit"
-version = "2.6.0"
+version = "3.0.0-rc.1"
 
 repositories {
     mavenCentral()
