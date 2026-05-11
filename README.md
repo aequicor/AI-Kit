@@ -4,7 +4,7 @@ Generates AI agent configuration files for [Claude Code](https://claude.ai/code)
 
 The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits the per-runner files (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc. — depending on which targets you enable).
 
-The bundle ships a complete v7 agent pipeline: 5-agent roster (Main / Architect / CodeWriter / Verifier / BugFixer), 21 slash commands (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`, `/kit-revert-step`, ...), 10 skills (mutation-sample, gate-telemetry, definition-of-done, replan-on-discovery, ...), 12 stack profiles, and the policy machinery for risk-based lanes, ground-truth gates, and per-step commits.
+The bundle ships the v3 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → single-shot Fix targeting one commit — one `summary-format` skill defining the bullet-only CONTEXT / PLAN / STEP / FIX block shapes, and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
 
 ---
 
@@ -24,7 +24,7 @@ The agent reads your project, calls `kit-setup schema` to learn what's bundled, 
 
 Profiles are reusable manifest fragments grouped along three orthogonal axes. Listed in `stack.profiles: [...]`, they're merged into the manifest before validation, so a one-line opt-in fills `forbidden_patterns`, language tooling, framework UI hints, and policy defaults.
 
-| Axis | Cardinality | Bundled (v2.2) |
+| Axis | Cardinality | Bundled |
 |---|---|---|
 | `language` | exactly 1 | `kotlin-gradle`, `make-generic`, `python-poetry`, `typescript-pnpm` |
 | `framework` | 0..N | `compose-multiplatform`, `nextjs`, `paper-plugin`, `react-spa` |
