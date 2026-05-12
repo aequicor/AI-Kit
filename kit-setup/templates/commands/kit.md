@@ -6,7 +6,14 @@ You are running Session 1 of the AI-Kit v3 pipeline.
 
 Follow the Session 1 protocol from your project instructions:
 
-1. **Stage 1 — Context.** Identify what needs to be understood. If a Researcher subagent is available, dispatch it for heavy reads with a focused brief. Otherwise read selectively yourself. Output a CONTEXT SUMMARY. AWAIT user reply.
+1. **Stage 1 — Context.** Identify what needs to be understood.
+{{#if cap.subagents}}
+   Dispatch a Researcher subagent for heavy reads with a focused brief.
+{{/if}}
+{{#unless cap.subagents}}
+   Read selectively yourself.
+{{/unless}}
+   Output a CONTEXT SUMMARY. AWAIT user reply.
 
 2. **Stage 2 — Plan.** Compose 3–10 MVP-style steps (each runnable, independently committable, bounded). Write `.aikit/plans/<id>.md` (id = `<YYYY-MM-DD>-<slug>`). Commit with `kit: plan for <slug>`. Output PLAN SUMMARY pointing the user at `/kit-do <id>`. END the session.
 

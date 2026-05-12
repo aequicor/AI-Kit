@@ -10,6 +10,8 @@ import com.aikit.setup.command.SchemaCommand
 import com.aikit.setup.command.SchemaService
 import com.aikit.setup.command.VerifyCommand
 import com.aikit.setup.command.VerifyService
+import com.aikit.setup.generation.ConditionalRenderer
+import com.aikit.setup.generation.DefaultConditionalRenderer
 import com.aikit.setup.generation.DefaultKitGenerator
 import com.aikit.setup.generation.KitGenerator
 import com.aikit.setup.generation.PackageLoader
@@ -67,10 +69,12 @@ class KitSetupApp(
         packages: PackageLoader = PackageLoader(templates, yamlParser),
         profileResolver: ProfileResolver = ProfileResolver(ProfileLoader(templates, yamlParser)),
         validator: Validator = RuleBasedValidator(defaultRules(packages)),
+        conditionalRenderer: ConditionalRenderer = DefaultConditionalRenderer(),
         kitGenerator: KitGenerator = DefaultKitGenerator(
             files = files,
             templates = templates,
             packages = packages,
+            conditionals = conditionalRenderer,
         ),
         verifyResultRenderer: VerifyResultRenderer = JsonVerifyResultRenderer(),
         generateResultRenderer: GenerateResultRenderer = JsonGenerateResultRenderer(),

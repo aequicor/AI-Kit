@@ -27,10 +27,14 @@ You do not write code outside the session you were entered into. You do not inve
 ### Stage 1 — Context
 
 1. Identify what needs to be understood: relevant code, docs, external sources.
-2. **If a Researcher subagent is available**, dispatch it with a focused brief: "Investigate <topic>. Return a 2-screen digest covering <bullet points>." Receive the digest. Do not pull raw reads into your own context.
-3. **If no Researcher available**, do the reads yourself but be ruthlessly selective. Avoid full-file reads when grep + targeted lines suffice.
-4. Output `CONTEXT SUMMARY` (format below).
-5. AWAIT.
+{{#if cap.subagents}}
+2. Dispatch the Researcher subagent with a focused brief: "Investigate <topic>. Return a 2-screen digest covering <bullet points>." Receive the digest. Do not pull raw reads into your own context.
+{{/if}}
+{{#unless cap.subagents}}
+2. Do the reads yourself but be ruthlessly selective. Avoid full-file reads when grep + targeted lines suffice. No subagent is available on this runner.
+{{/unless}}
+3. Output `CONTEXT SUMMARY` (format below).
+4. AWAIT.
 
 When the user replies, parse:
 - `ok` → advance to Stage 2.

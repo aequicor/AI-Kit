@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v3.2 · Apache 2.0",
+      "badge": "v3.3 · Apache 2.0",
       "title": "Everything your AI agent needs",
       "lead": "A toolkit for different AI agents that build development pipelines for quality products.",
       "ctaStart": "Set up in a minute",

@@ -28,6 +28,7 @@ class DefaultKitGenerator(
     private val files: FileWriter,
     private val templates: TemplateRegistry,
     private val packages: PackageLoader,
+    private val conditionals: ConditionalRenderer,
 ) : KitGenerator {
 
     /**
@@ -127,7 +128,7 @@ class DefaultKitGenerator(
 
         // User-prompts (`user-prompts/*.md`). Always file-style.
         if (adapter.artifactPaths["user_prompt"] != null) {
-            renderUserPrompts(manifest, adapter, targetRoot, written, errors)
+            renderUserPrompts(manifest, target, adapter, resolver, targetRoot, written, errors)
         }
 
         // Settings file.
@@ -162,6 +163,8 @@ class DefaultKitGenerator(
             ?: manifest.promptDialects.firstOrNull()?.id
         val dialect = defaultFamily?.let { loadDialectFor(manifest, it) }
         val engine = PlaceholderEngine(templates, dialect?.packagePath ?: "", manifest.sharedPath)
+        val ctxFamily = orchestratorFamily(manifest, target, resolver) ?: defaultFamily.orEmpty()
+        val renderCtx = RenderContext(adapter.capabilities, target.id, ctxFamily)
 
         val sb = StringBuilder()
         sb.append("# ").append(manifest.project.name).append(" — kit constitution\n\n")
@@ -175,8 +178,9 @@ class DefaultKitGenerator(
                 )
                 continue
             }
+            val conditioned = preprocessOrFail(body, renderCtx, section.includePath, errors) ?: continue
             sb.append("## ").append(section.name).append("\n\n")
-            sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
+            sb.append(engine.render(conditioned, baseVars).trimEnd()).append("\n\n")
         }
         if (manifest.policies.forbiddenPatterns.isNotEmpty()) {
             sb.append("## forbidden_patterns\n\n")
@@ -189,15 +193,16 @@ class DefaultKitGenerator(
         if (isSectionStyleRule(adapter, instructionFileTarget = out)) {
             for (rule in listRules(manifest.stack.languages)) {
                 val body = templates.read(rule.bodyPath) ?: continue
+                val conditioned = preprocessOrFail(body, renderCtx, rule.bodyPath, errors) ?: continue
                 sb.append("## ").append(rule.id).append("\n\n")
-                sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
+                sb.append(engine.render(conditioned, baseVars).trimEnd()).append("\n\n")
             }
         }
         // Orchestrator agent — inline its rendered body (dialect-wrapped, no
         // frontmatter) so the runner's main loop carries the pipeline prompt
         // directly. Subagents on this target still get their own files.
         if (orchestrator != null) {
-            val body = renderAgentBodyOrNull(manifest, target, orchestrator, resolver, errors)
+            val body = renderAgentBodyOrNull(manifest, target, adapter, orchestrator, resolver, errors)
             if (body != null) {
                 sb.append("## ").append(orchestrator.id).append(" — orchestrator\n\n")
                 sb.append(body.trimEnd()).append("\n\n")
@@ -262,17 +267,21 @@ class DefaultKitGenerator(
 
         val baseVars = baseVariables(manifest)
         val engine = PlaceholderEngine(templates, dialect.packagePath, manifest.sharedPath)
+        val ctxFamily = orchestratorFamily(manifest, target, resolver) ?: defaultFamily
+        val renderCtx = RenderContext(adapter.capabilities, target.id, ctxFamily)
 
         // 1. constitution sections → per-section rule files (alwaysApply: true).
         for (section in manifest.knowledge?.constitution?.sections.orEmpty()) {
             val body = templates.read(section.includePath) ?: continue
-            emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, section.name, body, alwaysApply = true, targetRoot, written, errors)
+            val conditioned = preprocessOrFail(body, renderCtx, section.includePath, errors) ?: continue
+            emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, section.name, conditioned, alwaysApply = true, targetRoot, written, errors)
         }
 
         // 2. explicit `rules/*.md` bodies — filtered by manifest.stack.languages.
         for (rule in listRules(manifest.stack.languages)) {
             val body = templates.read(rule.bodyPath) ?: continue
-            emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, rule.id, body, alwaysApply = false, targetRoot, written, errors)
+            val conditioned = preprocessOrFail(body, renderCtx, rule.bodyPath, errors) ?: continue
+            emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, rule.id, conditioned, alwaysApply = false, targetRoot, written, errors)
         }
 
         // 3. orchestrator agent body → alwaysApply rule file. File-style
@@ -282,7 +291,7 @@ class DefaultKitGenerator(
         // wrapping already resolved by renderWrappedAgent.
         val orchestrator = orchestratorAgentFor(manifest, target)
         if (orchestrator != null) {
-            val rendered = renderAgentBodyOrNull(manifest, target, orchestrator, resolver, errors)
+            val rendered = renderAgentBodyOrNull(manifest, target, adapter, orchestrator, resolver, errors)
             if (rendered != null) {
                 emitRuleFile(adapter, outTemplate, dialect, wrapper = null, engine, baseVars, orchestrator.id, rendered, alwaysApply = true, targetRoot, written, errors)
             }
@@ -325,7 +334,9 @@ class DefaultKitGenerator(
 
     private fun renderUserPrompts(
         manifest: TypedManifest,
+        target: Target,
         adapter: Adapter,
+        resolver: ModelResolver,
         targetRoot: String,
         written: MutableList<String>,
         errors: MutableList<GenerationError>,
@@ -343,10 +354,13 @@ class DefaultKitGenerator(
 
         val baseVars = baseVariables(manifest)
         val engine = PlaceholderEngine(templates, dialect.packagePath, manifest.sharedPath)
+        val ctxFamily = orchestratorFamily(manifest, target, resolver) ?: defaultFamily
+        val renderCtx = RenderContext(adapter.capabilities, target.id, ctxFamily)
 
         for (path in files) {
             val id = path.removePrefix("user-prompts/").removeSuffix(".md")
-            val body = templates.read(path) ?: continue
+            val rawBody = templates.read(path) ?: continue
+            val body = preprocessOrFail(rawBody, renderCtx, path, errors) ?: continue
             val description = describeBody(body)
             val resolvedBody = engine.render(body, baseVars).trimEnd()
             val variables = baseVars + mapOf(
@@ -428,7 +442,7 @@ class DefaultKitGenerator(
         errors: MutableList<GenerationError>,
     ) {
         val outTemplate = adapter.artifactPaths["agent"] ?: return
-        val rendered = renderWrappedAgent(manifest, target, agent, resolver, errors) ?: return
+        val rendered = renderWrappedAgent(manifest, target, adapter, agent, resolver, errors) ?: return
 
         val fmTemplatePath = adapter.artifactFrontmatter["agent"]
             ?.let { "${adapter.packagePath}/$it" }
@@ -456,6 +470,7 @@ class DefaultKitGenerator(
     private fun renderWrappedAgent(
         manifest: TypedManifest,
         target: Target,
+        adapter: Adapter,
         agent: Agent,
         resolver: ModelResolver,
         errors: MutableList<GenerationError>,
@@ -481,7 +496,7 @@ class DefaultKitGenerator(
         }
 
         val bodyPath = agent.prompt.perFamily[resolved.family] ?: agent.prompt.defaultPath
-        val body = templates.read(bodyPath) ?: run {
+        val rawBody = templates.read(bodyPath) ?: run {
             errors += GenerationError(
                 path = bodyPath,
                 code = "missing_prompt_body",
@@ -489,6 +504,12 @@ class DefaultKitGenerator(
             )
             return null
         }
+        val renderCtx = RenderContext(
+            capabilities = adapter.capabilities,
+            targetId = target.id,
+            family = resolved.family,
+        )
+        val body = preprocessOrFail(rawBody, renderCtx, bodyPath, errors) ?: return null
 
         val wrapper = templates.read("${dialect.packagePath}/${dialect.wrappers["agent"]}") ?: run {
             errors += GenerationError(
@@ -526,10 +547,11 @@ class DefaultKitGenerator(
     private fun renderAgentBodyOrNull(
         manifest: TypedManifest,
         target: Target,
+        adapter: Adapter,
         agent: Agent,
         resolver: ModelResolver,
         errors: MutableList<GenerationError>,
-    ): String? = renderWrappedAgent(manifest, target, agent, resolver, errors)?.body
+    ): String? = renderWrappedAgent(manifest, target, adapter, agent, resolver, errors)?.body
 
     /**
      * True for the agent that drives the runner's main loop. Two signals:
@@ -586,10 +608,13 @@ class DefaultKitGenerator(
 
         val baseVars = baseVariables(manifest)
         val engine = PlaceholderEngine(templates, dialect.packagePath, manifest.sharedPath)
+        val ctxFamily = orchestratorFamily(manifest, target, resolver) ?: defaultFamily
+        val renderCtx = RenderContext(adapter.capabilities, target.id, ctxFamily)
 
         for (id in ids) {
             val bodyPath = "skills/$id/SKILL.md"
-            val body = templates.read(bodyPath) ?: continue
+            val rawBody = templates.read(bodyPath) ?: continue
+            val body = preprocessOrFail(rawBody, renderCtx, bodyPath, errors) ?: continue
             val sections = parseSkillSections(body)
             val procedureText = sections.procedure.ifEmpty { body }
             val resolvedBody = engine.render(procedureText, baseVars).trimEnd()
@@ -639,10 +664,13 @@ class DefaultKitGenerator(
 
         val baseVars = baseVariables(manifest)
         val engine = PlaceholderEngine(templates, dialect.packagePath, manifest.sharedPath)
+        val ctxFamily = orchestratorFamily(manifest, target, resolver) ?: defaultFamily
+        val renderCtx = RenderContext(adapter.capabilities, target.id, ctxFamily)
 
         for (path in files) {
             val id = path.removePrefix("commands/").removeSuffix(".md")
-            val body = templates.read(path) ?: continue
+            val rawBody = templates.read(path) ?: continue
+            val body = preprocessOrFail(rawBody, renderCtx, path, errors) ?: continue
             val description = body.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
             val resolvedBody = engine.render(body, baseVars).trimEnd()
             val variables = baseVars + mapOf(
@@ -894,6 +922,47 @@ class DefaultKitGenerator(
         val r = root.trimEnd('/')
         val p = rel.trimStart('/')
         return if (r.isEmpty() || r == ".") p else "$r/$p"
+    }
+
+    /**
+     * Runs [body] through the [ConditionalRenderer] using [ctx]. Returns the
+     * preprocessed body, or `null` after recording a stable-coded
+     * [GenerationError] on failure — callers `?: continue` past the bad file
+     * so a single bad template doesn't kill the whole target. The renderer's
+     * exception carries the stable error code; we re-tag with [path] so the
+     * agent can pinpoint the offending file.
+     */
+    private fun preprocessOrFail(
+        body: String,
+        ctx: RenderContext,
+        path: String,
+        errors: MutableList<GenerationError>,
+    ): String? = try {
+        conditionals.render(body, ctx)
+    } catch (e: ConditionalRenderException) {
+        errors += GenerationError(
+            path = path,
+            code = e.code,
+            message = e.message ?: e::class.simpleName.orEmpty(),
+        )
+        null
+    }
+
+    /**
+     * Resolves the model family bound to the orchestrator agent for [target]
+     * — the family used by templates that ship with the runner's main-loop
+     * prompt (commands, file-style rules, skills, user-prompts). Returns
+     * `null` when no orchestrator is declared; callers fall back to the
+     * highest-priority model's family in that case.
+     */
+    private fun orchestratorFamily(
+        manifest: TypedManifest,
+        target: Target,
+        resolver: ModelResolver,
+    ): String? {
+        val orchestrator = orchestratorAgentFor(manifest, target) ?: return null
+        val primary = primaryTaskFor(manifest.workflows, orchestrator.id)
+        return resolver.resolve(target, orchestrator, taskType = primary)?.family
     }
 
 }

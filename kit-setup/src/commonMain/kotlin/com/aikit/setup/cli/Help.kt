@@ -5,7 +5,7 @@ package com.aikit.setup.cli
  * Kept in source rather than read from build metadata so the help text is
  * available without runtime resource lookup on Kotlin/Native.
  */
-const val KIT_SETUP_VERSION: String = "3.2.1"
+const val KIT_SETUP_VERSION: String = "3.3.0"
 
 /**
  * Returns the human-readable help text printed by `--help` and on usage
