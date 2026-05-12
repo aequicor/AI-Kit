@@ -55,6 +55,7 @@ kotlin {
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.pdfbox)
             implementation(libs.jai.imageio.jpeg2000)
+            implementation(libs.jbig2.imageio)
         }
     }
 }
