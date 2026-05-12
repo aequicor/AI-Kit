@@ -1,7 +1,7 @@
 [versions]
 agp = "8.11.2"
 android-compileSdk = "36"
-android-minSdk = "26"
+android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.7.1"
@@ -16,11 +16,6 @@ kotlin = "2.3.21"
 kotlinx-coroutines = "1.10.2"
 ktor = "3.4.3"
 logback = "1.5.32"
-koin = "4.1.0"
-kermit = "2.0.6"
-pdfbox = "3.0.7"
-jai-imageio-jpeg2000 = "1.4.0"
-jbig2-imageio = "3.0.4"
 material3 = "1.10.0-alpha05"
 
 [libraries]
@@ -42,14 +37,6 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMul
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
-koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
-koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
-kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
-pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
-jai-imageio-jpeg2000 = { module = "com.github.jai-imageio:jai-imageio-jpeg2000", version.ref = "jai-imageio-jpeg2000" }
-jbig2-imageio = { module = "org.apache.pdfbox:jbig2-imageio", version.ref = "jbig2-imageio" }
-kotlinx-coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 ktor-serverCore = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-serverNetty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }

@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -27,7 +28,18 @@ kotlin {
     }
     
     jvm()
-
+    
+    js {
+        browser()
+        binaries.executable()
+    }
+    
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+    
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
@@ -43,9 +55,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
-            implementation(libs.koin.compose)
-            implementation(libs.koin.compose.viewmodel)
-            implementation(libs.kermit)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -53,9 +62,6 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.pdfbox)
-            implementation(libs.jai.imageio.jpeg2000)
-            implementation(libs.jbig2.imageio)
         }
     }
 }
@@ -88,13 +94,6 @@ android {
 }
 
 dependencies {
-    constraints {
-        // koin-compose-viewmodel 4.1.0 requests org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0-beta01;
-        // explicit pin keeps the project version winning even if the direct dependency is later removed.
-        implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0") {
-            because("koin-compose-viewmodel 4.1.0 pulls 2.9.0-beta01 — pin to project version to prevent DuplicateClass on Android runtime")
-        }
-    }
     debugImplementation(libs.compose.uiTooling)
 }
 
