@@ -20,6 +20,20 @@ The agent reads your project, calls `kit-setup schema` to learn what's bundled, 
 
 ---
 
+## Workflow
+
+Once the kit is generated, the v3 pipeline gives you three slash commands for any task. They run in separate sessions so heavy context (file reads, debug iterations) stays scoped to where it's needed.
+
+1. **`/kit <task>`** — Plan session. The agent gathers context (Stage 1) and produces a 3–10 step plan committed as `.aikit/plans/<id>.md` with the message `kit: plan for <slug>`. Output: a PLAN SUMMARY pointing at the next command. The session ends.
+
+2. **`/kit-do <plan-id>`** — Execute session. Walks the plan step by step, auto-committing each (`kit: step N/M — <slug>`) and emitting a STEP SUMMARY for human review. After the last step it enters Stage 4 (Ship): runs tests, proposes a squash, and gates any push behind explicit human approval.
+
+3. **`/kit-fix <commit-hash> <description>`** — Single-step Fix session targeting one specific commit. Reads its diff, makes the fix, commits as `kit: fix <hash> — <slug>`, and emits a FIX SUMMARY block the Execute session pastes back to resume.
+
+Human validates every commit. Git is the source of truth — sessions can restart, machines can change, `git log` reconstructs the state.
+
+---
+
 ## Profiles — bundled presets you opt into
 
 Profiles are reusable manifest fragments grouped along three orthogonal axes. Listed in `stack.profiles: [...]`, they're merged into the manifest before validation, so a one-line opt-in fills `forbidden_patterns`, language tooling, framework UI hints, and policy defaults.

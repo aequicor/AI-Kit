@@ -279,6 +279,19 @@ class BlockYamlParser : YamlParser {
                     "Use a single-line quoted string instead.",
             )
         }
+        // YAML anchors (`&name`) and aliases (`*name`) are not supported by
+        // this parser either. Without explicit detection they survive as
+        // literal scalars whose `&`/`*` prefix no validation rule explains —
+        // confusing. Quoted values bypass this check (they go through
+        // unquote()), so users wanting a literal `&` or `*` just quote.
+        val first = s.first()
+        if (first == '&' || first == '*') {
+            val kind = if (first == '&') "anchor" else "alias"
+            throw YamlParseException(
+                "YAML $kind ($s) is not supported at line $lineNumber. " +
+                    "Quote the value (e.g. \"$s\") if it should be a literal string.",
+            )
+        }
         return when (s.first()) {
             '[' -> parseFlowSequence(s, lineNumber)
             '{' -> parseFlowMapping(s, lineNumber)

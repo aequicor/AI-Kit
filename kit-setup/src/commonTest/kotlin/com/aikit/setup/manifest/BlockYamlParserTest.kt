@@ -237,6 +237,54 @@ class BlockYamlParserTest {
     }
 
     @Test
+    fun yamlAnchorRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse("ref: &shared 42")
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("anchor"), "expected anchor hint, got: $msg")
+        assertTrue(msg.contains("Quote the value"), "expected quoting hint, got: $msg")
+    }
+
+    @Test
+    fun yamlAliasRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse("copy: *shared")
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("alias"), "expected alias hint, got: $msg")
+    }
+
+    @Test
+    fun anchorInSequenceItemRejected() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse(
+                """
+                items:
+                  - &first one
+                  - two
+                """.trimIndent(),
+            )
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("anchor"), "expected anchor hint, got: $msg")
+    }
+
+    @Test
+    fun quotedAmpersandIsAccepted() {
+        // Literal `&` at the start of a scalar is allowed inside quotes —
+        // the anchor check only fires on unquoted plain scalars.
+        val root = parser.parse("pattern: \"&literal\"")
+        assertEquals("&literal", root.field("pattern").stringOrNull())
+    }
+
+    @Test
+    fun quotedStarIsAccepted() {
+        val root = parser.parse("glob: \"*.kt\"")
+        assertEquals("*.kt", root.field("glob").stringOrNull())
+    }
+
+    @Test
     fun blockScalarChompingVariantsRejected() {
         for (indicator in listOf(">-", "|-", ">+", "|+")) {
             val ex = assertFailsWith<YamlParseException>("indicator $indicator should be rejected") {

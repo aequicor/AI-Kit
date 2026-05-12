@@ -323,6 +323,7 @@ When a fix or external commit invalidates an assumption of the remaining plan:
 - File operations within the project: read, write, edit, glob, grep.
 - Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
+- Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
 
 Tools you may NOT use:
 - `--no-verify` on any git command.
