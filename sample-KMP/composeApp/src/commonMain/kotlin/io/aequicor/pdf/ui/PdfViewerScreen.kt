@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,21 +42,14 @@ import io.aequicor.pdf.domain.PdfDocument
 import io.aequicor.pdf.domain.PdfDocumentId
 import io.aequicor.pdf.domain.PdfPage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import kotlin.math.max
 
-/**
- * Clamps pan offsets so the PDF always stays (at least partially) visible.
- *
- * Horizontal: TransformOrigin is (0.5, 0), so horizontal zoom is symmetric
- * around the centre. When zoomed out (scale ≤ 1) the content already centres
- * itself via the pivot — no horizontal pan is allowed.
- *
- * Vertical: pivot is at Y=0, so the top edge of the content is always at
- * offsetY. When the content is shorter than the viewport it is centred;
- * when taller, scrolling is clamped to the document bounds.
- */
 private fun clampOffset(
     offsetX: Float,
     offsetY: Float,
@@ -69,7 +63,7 @@ private fun clampOffset(
 
     val scaledH = contentH * scale
     val cy = if (scaledH < viewportH) {
-        (viewportH - scaledH) / 2f          // centre vertically when zoomed out
+        (viewportH - scaledH) / 2f
     } else {
         offsetY.coerceIn(viewportH - scaledH, 0f)
     }
@@ -79,13 +73,26 @@ private fun clampOffset(
 @Composable
 fun PdfViewerScreen() {
     val pdfRenderer: PdfRenderer = koinInject()
+    val scope = rememberCoroutineScope()
     var document by remember { mutableStateOf<PdfDocument?>(null) }
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
-    var viewportSize by remember { mutableStateOf(Size.Zero) }
 
-    // LRU cache: keeps last 5 rendered bitmaps in memory.
+    // Debounced viewport size: onSizeChanged fires on every pixel during window resize.
+    // pendingViewportSize absorbs rapid updates; viewportSize only updates after 64 ms
+    // of quiet, preventing a full recompose on every resize event.
+    val pendingViewportSize = remember { mutableStateOf(Size.Zero) }
+    var viewportSize by remember { mutableStateOf(Size.Zero) }
+    LaunchedEffect(pendingViewportSize.value) {
+        delay(64)
+        viewportSize = pendingViewportSize.value
+    }
+
+    // Semaphore caps simultaneous page renders so opening a large PDF doesn't
+    // saturate Dispatchers.Default with dozens of concurrent decode jobs.
+    val renderSemaphore = remember { Semaphore(3) }
+
     val pageCache = remember {
         object : LinkedHashMap<Int, ImageBitmap>(8, 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, ImageBitmap>?) =
@@ -95,17 +102,21 @@ fun PdfViewerScreen() {
 
     val filePicker = rememberFilePicker { path ->
         if (path != null) {
-            document?.let { pdfRenderer.closeDocument(it.id) }
-            document = pdfRenderer.openDocument(path)
-            scale = 1f; offsetX = 0f; offsetY = 0f
+            scope.launch {
+                // openDocument reads file metadata — keep it off the UI thread.
+                val newDoc = withContext(Dispatchers.IO) {
+                    document?.let { pdfRenderer.closeDocument(it.id) }
+                    pdfRenderer.openDocument(path)
+                }
+                document = newDoc
+                scale = 1f; offsetX = 0f; offsetY = 0f
+            }
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
-            // Total layout height of all pages at scale=1. Recomputed when the
-            // viewport width changes (window resize) or a new document is opened.
             val contentHeight by remember(doc) {
                 derivedStateOf {
                     if (viewportSize.width > 0f) {
@@ -121,9 +132,9 @@ fun PdfViewerScreen() {
                     .fillMaxSize()
                     .clipToBounds()
                     .onSizeChanged { size ->
-                        viewportSize = Size(size.width.toFloat(), size.height.toFloat())
+                        pendingViewportSize.value =
+                            Size(size.width.toFloat(), size.height.toFloat())
                     }
-                    // Touch: single-finger drag + pinch zoom/pan.
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
@@ -134,7 +145,6 @@ fun PdfViewerScreen() {
                             offsetX = cx; offsetY = cy
                         }
                     }
-                    // Mouse wheel → scroll (pan).
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -153,7 +163,6 @@ fun PdfViewerScreen() {
                             }
                         }
                     }
-                    // Desktop: Ctrl+wheel → zoom (jvmMain actual; no-op elsewhere).
                     .ctrlScrollZoom { factor ->
                         scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
                         val (cx, cy) = clampOffset(
@@ -163,9 +172,6 @@ fun PdfViewerScreen() {
                         offsetX = cx; offsetY = cy
                     },
             ) {
-                // fillMaxWidth() first: width = viewport width (fixes left-align on wide windows).
-                // wrapContentHeight(unbounded): column can be taller than the viewport.
-                // graphicsLayer shifts actual page content within the fixed clipped viewport.
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -184,6 +190,7 @@ fun PdfViewerScreen() {
                             docId = doc.id,
                             page = page,
                             cache = pageCache,
+                            semaphore = renderSemaphore,
                         )
                     }
                 }
@@ -214,15 +221,18 @@ private fun AsyncPdfPageImage(
     docId: PdfDocumentId,
     page: PdfPage,
     cache: MutableMap<Int, ImageBitmap>,
+    semaphore: Semaphore,
 ) {
     var bitmap by remember(page.index) { mutableStateOf(cache[page.index]) }
 
     LaunchedEffect(page.index) {
         if (cache[page.index] == null) {
-            val pageImage: PdfPageImage = withContext(Dispatchers.Default) {
-                pdfRenderer.renderPage(docId, page.index, page.widthPx, page.heightPx)
+            val img = semaphore.withPermit {
+                val pageImage: PdfPageImage = withContext(Dispatchers.Default) {
+                    pdfRenderer.renderPage(docId, page.index, page.widthPx, page.heightPx)
+                }
+                pageImage.toImageBitmap()
             }
-            val img = pageImage.toImageBitmap()
             cache[page.index] = img
             bitmap = img
         }
