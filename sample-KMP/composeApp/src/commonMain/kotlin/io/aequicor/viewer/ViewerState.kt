@@ -8,10 +8,11 @@ data class ViewerState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val zoom: Float = DEFAULT_ZOOM,
+    val offsetX: Float = 0f,
 ) {
     companion object {
         const val DEFAULT_ZOOM = 1f
-        const val MIN_ZOOM = 0.25f
+        const val MIN_ZOOM = 0.05f
         const val MAX_ZOOM = 8f
     }
 }

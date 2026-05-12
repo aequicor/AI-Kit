@@ -20,7 +20,7 @@ class PdfViewerViewModel(
 
     fun openDocument(bytes: ByteArray) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null, document = null, renderedPages = emptyMap()) }
+            _state.update { it.copy(isLoading = true, error = null, document = null, renderedPages = emptyMap(), offsetX = 0f) }
             runCatching { openDocumentUseCase(bytes) }
                 .onSuccess { doc -> _state.update { it.copy(document = doc, isLoading = false) } }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
@@ -43,6 +43,10 @@ class PdfViewerViewModel(
         _state.update { s ->
             s.copy(zoom = (s.zoom * scaleDelta).coerceIn(ViewerState.MIN_ZOOM, ViewerState.MAX_ZOOM))
         }
+    }
+
+    fun onPanX(delta: Float) {
+        _state.update { s -> s.copy(offsetX = s.offsetX + delta) }
     }
 
     override fun onCleared() {
