@@ -12,12 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.CoreGraphics.CGBitmapContextCreate
 import platform.CoreGraphics.CGBitmapContextGetData
-import platform.CoreGraphics.CGBitmapContextRelease
 import platform.CoreGraphics.CGColorSpaceCreateDeviceRGB
 import platform.CoreGraphics.CGColorSpaceRelease
 import platform.CoreGraphics.CGContextRelease
-import platform.CoreGraphics.CGImageAlphaInfo
-import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.kCGImageAlphaPremultipliedFirst
 import platform.Foundation.NSData
 import platform.PDFKit.PDFDocument
 import platform.PDFKit.PDFPage
@@ -30,7 +28,6 @@ class IosPdfRenderAdapter(
     private companion object {
         const val ARGB_BYTES_PER_PIXEL = 4
         const val BITS_PER_COMPONENT = 8L
-        const val PDF_POINTS_PER_INCH = 72.0
     }
 
     private var pdfDocument: PDFDocument? = null
@@ -42,7 +39,7 @@ class IosPdfRenderAdapter(
         val doc = PDFDocument(data = nsData)
         pdfDocument = doc
 
-        val pageCount = doc.pageCount().toInt()
+        val pageCount = doc.pageCount.toInt()
         val pages = (0 until pageCount).map { i ->
             val page: PDFPage = doc.pageAtIndex(i.toULong())!!
             val bounds = page.boundsForBox(platform.PDFKit.kPDFDisplayBoxMediaBox)
@@ -75,7 +72,7 @@ class IosPdfRenderAdapter(
                 bitsPerComponent = BITS_PER_COMPONENT.toULong(),
                 bytesPerRow = bytesPerRow.toULong(),
                 space = colorSpace,
-                bitmapInfo = CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value,
+                bitmapInfo = kCGImageAlphaPremultipliedFirst,
             )
             checkNotNull(context) { "Failed to create CGBitmapContext" }
 
