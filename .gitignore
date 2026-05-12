@@ -30,9 +30,6 @@ gradle-app.setting
 # during dogfooding are NOT ignored — Session 2 of the v3 pipeline locates
 # them via `git log --grep="kit: plan for"`, so they must live in history.
 .aikit/bin/
-sample-*/.aikit/manifest.yaml
-sample-*/.claude/
-sample-*/CLAUDE.md
 
 # OS
 .DS_Store
