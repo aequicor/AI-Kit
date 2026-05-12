@@ -72,5 +72,7 @@ policies:
     - "No platform-specific code (android/ios/jvm/js) in commonMain source sets"
     - "No hardcoded API keys or secrets in source files or config"
     - "No committing build/ or .gradle/ directories"
+    - "No direct use of kotlinx.coroutines.Dispatchers in business logic or data layer — coroutine dispatchers must be injected via constructor parameters and provided through the DI graph"
+    - "No magic numbers — all non-trivial numeric and color literals must be extracted into named constants with a descriptive name"
 
 knowledge: {}

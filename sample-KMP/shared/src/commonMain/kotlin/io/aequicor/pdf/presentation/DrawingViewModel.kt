@@ -9,13 +9,17 @@ import io.aequicor.pdf.domain.Stroke
 import io.aequicor.pdf.domain.StrokeId
 import io.aequicor.pdf.domain.StrokePoint
 import io.aequicor.pdf.domain.repository.AnnotationRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
+
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class DrawingViewModel(private val repo: AnnotationRepository) : ViewModel() {
+class DrawingViewModel(
+    private val repo: AnnotationRepository,
+    private val dispatcher: CoroutineDispatcher,
+) : ViewModel() {
 
     private val _layer = MutableStateFlow(AnnotationLayer(PdfDocumentId(""), 0, emptyList()))
     val layer: StateFlow<AnnotationLayer> = _layer.asStateFlow()
@@ -23,7 +27,10 @@ class DrawingViewModel(private val repo: AnnotationRepository) : ViewModel() {
     private val _activePoints = MutableStateFlow<List<StrokePoint>>(emptyList())
     val activePoints: StateFlow<List<StrokePoint>> = _activePoints.asStateFlow()
 
-    private var currentTool: DrawingTool = DrawingTool.Brush(widthDp = 4f, color = 0xFF000000L)
+    private var currentTool: DrawingTool = DrawingTool.Brush(
+        widthDp = DrawingTool.Brush.DEFAULT_WIDTH_DP,
+        color = DrawingTool.Brush.COLOR_BLACK,
+    )
 
     private val undoStack = ArrayDeque<DrawCommand>()
     private val redoStack = ArrayDeque<DrawCommand>()
@@ -40,7 +47,7 @@ class DrawingViewModel(private val repo: AnnotationRepository) : ViewModel() {
     }
 
     fun addPoint(point: StrokePoint) {
-        _activePoints.value = _activePoints.value + point
+        _activePoints.value += point
     }
 
     fun endStroke() {
@@ -79,7 +86,7 @@ class DrawingViewModel(private val repo: AnnotationRepository) : ViewModel() {
     }
 
     private fun saveCurrentLayer() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(dispatcher) {
             repo.saveLayer(_layer.value)
         }
     }
@@ -89,9 +96,11 @@ class DrawingViewModel(private val repo: AnnotationRepository) : ViewModel() {
     }
 }
 
+private const val ID_LENGTH = 16
+
 private fun generateId(): String {
     val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-    return (1..16).map { chars.random() }.joinToString("")
+    return (1..ID_LENGTH).map { chars.random() }.joinToString("")
 }
 
 private sealed interface DrawCommand {

@@ -8,18 +8,21 @@ import io.aequicor.pdf.domain.Stroke
 import io.aequicor.pdf.domain.StrokeId
 import io.aequicor.pdf.domain.StrokePoint
 import io.aequicor.pdf.domain.repository.AnnotationRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class AnnotationRepositoryImpl(private val db: Database) : AnnotationRepository {
+class AnnotationRepositoryImpl(
+    private val db: Database,
+    private val dispatcher: CoroutineDispatcher,
+) : AnnotationRepository {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun getLayer(docId: PdfDocumentId, page: Int): AnnotationLayer =
-        withContext(Dispatchers.Default) {
+        withContext(dispatcher) {
             val row = db.annotationQueries.selectByPage(docId.value, page.toLong()).executeAsOneOrNull()
             val strokes = row?.let { json.decodeFromString<List<StrokeDto>>(it.strokesJson) }
                 ?.map { it.toDomain() } ?: emptyList()
@@ -27,7 +30,7 @@ class AnnotationRepositoryImpl(private val db: Database) : AnnotationRepository 
         }
 
     override suspend fun saveLayer(layer: AnnotationLayer): Unit =
-        withContext(Dispatchers.Default) {
+        withContext(dispatcher) {
             val strokesJson = json.encodeToString(layer.strokes.map { StrokeDto.fromDomain(it) })
             db.annotationQueries.insertOrReplace(
                 documentId = layer.documentId.value,
@@ -53,10 +56,12 @@ private data class StrokeDto(
     )
 
     companion object {
+        private const val ERASER_COLOR_NONE = 0L
+
         fun fromDomain(stroke: Stroke): StrokeDto {
             val (toolType, widthDp, color) = when (val t = stroke.tool) {
                 is DrawingTool.Brush -> Triple("brush", t.widthDp, t.color)
-                is DrawingTool.Eraser -> Triple("eraser", t.widthDp, 0L)
+                is DrawingTool.Eraser -> Triple("eraser", t.widthDp, ERASER_COLOR_NONE)
             }
             return StrokeDto(
                 id = stroke.id.value,
