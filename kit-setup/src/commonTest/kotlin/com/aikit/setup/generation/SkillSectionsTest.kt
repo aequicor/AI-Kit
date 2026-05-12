@@ -108,6 +108,72 @@ class SkillSectionsTest {
     }
 
     @Test
+    fun headingsInsideFencedCodeBlocksAreNotSectionBreakers() {
+        // Regression: aikit-plan-artifact's procedure carries a markdown
+        // TEMPLATE wrapped in ```markdown ... ```; that template begins with
+        // `# <Task title>`. Before the fence-aware fix the sectioniser saw
+        // that line as a real H1, closed `# Procedure` after four lines, and
+        // dropped the rest (the actual template, verb vocabulary, id
+        // convention) into a phantom `<task title>` section that matched no
+        // alias and got discarded.
+        val body = """
+            Desc.
+
+            # Procedure
+
+            ## File template
+
+            ```markdown
+            # <Task title>
+
+            **Created:** <YYYY-MM-DD>
+
+            ## Context
+
+            stuff
+            ```
+
+            ## Verify verbs
+
+            After the fence, still inside procedure.
+
+            # Output format
+
+            result here
+        """.trimIndent()
+        val s = parseSkillSections(body)
+        assertTrue("# <Task title>" in s.procedure, "fenced H1 dropped: ${s.procedure}")
+        assertTrue("Verify verbs" in s.procedure, "post-fence content dropped: ${s.procedure}")
+        assertTrue("After the fence" in s.procedure)
+        assertEquals("result here", s.outputFormat)
+    }
+
+    @Test
+    fun tildeFencesAlsoSuppressHeadingDetection() {
+        // Tilde fences (`~~~`) are CommonMark-equivalent to backtick fences;
+        // a `# Heading` inside a tilde block must not start a new section.
+        val body = """
+            Desc.
+
+            # Procedure
+
+            ~~~
+            # Not a heading
+            ~~~
+
+            Tail.
+
+            # Output
+
+            done
+        """.trimIndent()
+        val s = parseSkillSections(body)
+        assertTrue("Not a heading" in s.procedure, "tilde-fenced H1 dropped: ${s.procedure}")
+        assertTrue("Tail." in s.procedure)
+        assertEquals("done", s.outputFormat)
+    }
+
+    @Test
     fun htmlCommentBeforeDescriptionIsSkipped() {
         // The optional-skill marker is an HTML comment on line 1. The
         // description detector must ignore comment-only lines so the marker

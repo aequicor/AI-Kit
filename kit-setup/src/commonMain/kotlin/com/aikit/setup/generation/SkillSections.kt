@@ -29,6 +29,12 @@ data class SkillSections(
  *    structure procedures with sub-headings without breaking the parse
  *  - heading titles are matched case-insensitively, with a small alias set
  *    (`when to invoke` / `output` / `output format` / `procedure`)
+ *  - lines inside a fenced code block (delimited by three-or-more backticks
+ *    or tildes) are treated as opaque content; a `#` line inside such a
+ *    block is NOT a heading. Without this, a SKILL whose procedure carries
+ *    a markdown template wrapped in ```` ```markdown ```` (e.g. the plan
+ *    artifact's `# <Task title>` line) would truncate at the first fenced
+ *    `#` and leak the rest into a phantom section.
  *
  * Sections that don't appear in the file collapse to `""` — the wrapper
  * placeholder then renders empty rather than raising. The procedure
@@ -40,20 +46,33 @@ fun parseSkillSections(body: String): SkillSections {
     val sections = linkedMapOf<String, StringBuilder>()
     val headerRegex = Regex("^#\\s+(.+?)\\s*$")
     val htmlCommentLine = Regex("^\\s*<!--.*-->\\s*$")
+    val fenceRegex = Regex("^(`{3,}|~{3,}).*$")
+    var inFence = false
     var currentTitle: String? = null
     var currentBuf: StringBuilder = StringBuilder()
     var preheaderLines = mutableListOf<String>()
 
     for (line in lines) {
-        val match = headerRegex.matchEntire(line)
-        if (match != null) {
-            // Close out the previous section (or pre-header content).
-            if (currentTitle != null) {
-                sections[currentTitle.lowercase()] = currentBuf
+        if (fenceRegex.matches(line)) {
+            inFence = !inFence
+            if (currentTitle == null) {
+                preheaderLines += line
+            } else {
+                currentBuf.appendLine(line)
             }
-            currentTitle = match.groupValues[1].trim()
-            currentBuf = StringBuilder()
             continue
+        }
+        if (!inFence) {
+            val match = headerRegex.matchEntire(line)
+            if (match != null) {
+                // Close out the previous section (or pre-header content).
+                if (currentTitle != null) {
+                    sections[currentTitle.lowercase()] = currentBuf
+                }
+                currentTitle = match.groupValues[1].trim()
+                currentBuf = StringBuilder()
+                continue
+            }
         }
         if (currentTitle == null) {
             preheaderLines += line
