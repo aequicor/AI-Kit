@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.aequicor.domain.model.PdfPageSize
@@ -80,6 +81,12 @@ fun PdfViewerScreen(
             modifier = Modifier.weight(1f).transformable(transformState).clipToBounds(),
         ) {
             val pageWidth: Dp = maxWidth * state.zoom
+            val density = LocalDensity.current
+            val viewportPx = with(density) { maxWidth.toPx() }
+            val pagePx = viewportPx * state.zoom
+            // Centre the page; when zoom > 1, clamp so page edges never cross viewport edges.
+            val overflow = maxOf(0f, pagePx - viewportPx)
+            val translationX = (viewportPx - pagePx) / 2f + state.offsetX.coerceIn(-overflow / 2f, overflow / 2f)
             when {
                 state.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 state.error != null -> Text(
@@ -88,7 +95,7 @@ fun PdfViewerScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
                 document != null -> Box(
-                    modifier = Modifier.fillMaxSize().graphicsLayer(translationX = state.offsetX),
+                    modifier = Modifier.fillMaxSize().graphicsLayer(translationX = translationX),
                 ) {
                     LazyColumn(state = listState, modifier = Modifier.fillMaxHeight()) {
                         items(pageCount) { pageIndex ->
