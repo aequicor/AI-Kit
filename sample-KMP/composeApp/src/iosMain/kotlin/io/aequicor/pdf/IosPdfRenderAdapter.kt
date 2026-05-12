@@ -3,6 +3,7 @@ package io.aequicor.pdf
 import io.aequicor.domain.model.PdfDocument
 import io.aequicor.domain.model.PdfPage
 import io.aequicor.domain.model.PdfPageSize
+import io.aequicor.domain.model.RenderedPage
 import io.aequicor.domain.port.PdfRenderPort
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -54,7 +55,7 @@ class IosPdfRenderAdapter(
         PdfDocument(pageCount = pageCount, pages = pages)
     }
 
-    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
+    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): RenderedPage =
         withContext(ioDispatcher) {
             val doc = checkNotNull(pdfDocument) { "No document open" }
             val page: PDFPage = doc.pageAtIndex(pageIndex.toULong())!!
@@ -84,8 +85,9 @@ class IosPdfRenderAdapter(
                 page.drawWithBox(platform.PDFKit.kPDFDisplayBoxMediaBox, toContext = context)
 
                 val rawPtr = CGBitmapContextGetData(context)
-                    ?: return@withContext ByteArray(totalBytes)
-                ByteArray(totalBytes) { i -> (rawPtr.reinterpret<kotlinx.cinterop.ByteVar>()[i]) }
+                    ?: return@withContext RenderedPage(ByteArray(totalBytes), targetSize.widthPx, targetSize.heightPx)
+                val bytes = ByteArray(totalBytes) { i -> (rawPtr.reinterpret<kotlinx.cinterop.ByteVar>()[i]) }
+                RenderedPage(bytes, targetSize.widthPx, targetSize.heightPx)
             } finally {
                 CGContextRelease(context)
                 CGColorSpaceRelease(colorSpace)

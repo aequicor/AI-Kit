@@ -1,8 +1,7 @@
 package io.aequicor.viewer
 
 import io.aequicor.domain.model.PdfDocument
-
-data class RenderedPage(val bytes: ByteArray, val width: Int, val height: Int)
+import io.aequicor.domain.model.RenderedPage
 
 data class ViewerState(
     val document: PdfDocument? = null,

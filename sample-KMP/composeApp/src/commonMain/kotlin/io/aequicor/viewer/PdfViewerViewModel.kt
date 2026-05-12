@@ -3,6 +3,7 @@ package io.aequicor.viewer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.aequicor.domain.model.PdfPageSize
+import io.aequicor.domain.model.RenderedPage
 import io.aequicor.domain.port.PdfRenderPort
 import io.aequicor.domain.usecase.OpenDocumentUseCase
 import kotlinx.coroutines.Job
@@ -52,9 +53,9 @@ class PdfViewerViewModel(
         val renderSize = PdfPageSize(vpW, renderH)
         renderJobs[pageIndex] = viewModelScope.launch {
             runCatching { port.renderPage(pageIndex, renderSize) }
-                .onSuccess { bytes ->
+                .onSuccess { result: RenderedPage ->
                     _state.update {
-                        it.copy(renderedPages = it.renderedPages + (pageIndex to RenderedPage(bytes, vpW, renderH)))
+                        it.copy(renderedPages = it.renderedPages + (pageIndex to result))
                     }
                 }
         }

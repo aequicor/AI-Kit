@@ -3,6 +3,7 @@ package io.aequicor.domain
 import io.aequicor.domain.model.PdfDocument
 import io.aequicor.domain.model.PdfPage
 import io.aequicor.domain.model.PdfPageSize
+import io.aequicor.domain.model.RenderedPage
 import io.aequicor.domain.port.PdfRenderPort
 
 class FakePdfRenderPort(
@@ -24,8 +25,12 @@ class FakePdfRenderPort(
         return PdfDocument(pageCount = pageCount, pages = pages)
     }
 
-    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
-        ByteArray(targetSize.widthPx * targetSize.heightPx * ARGB_BYTES_PER_PIXEL)
+    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): RenderedPage =
+        RenderedPage(
+            bytes = ByteArray(targetSize.widthPx * targetSize.heightPx * ARGB_BYTES_PER_PIXEL),
+            width = targetSize.widthPx,
+            height = targetSize.heightPx,
+        )
 
     override suspend fun closeDocument() {
         closeCalled = true
