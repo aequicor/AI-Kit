@@ -593,6 +593,7 @@ class DefaultKitGenerator(
                 if (slash < 0) null else rest.substring(0, slash)
             }.distinct()
         if (ids.isEmpty()) return
+        val enabledOptionalSkills = manifest.policies.optionalSkills.toSet()
 
         // Pick a default dialect: use the family of the highest-priority
         // anthropic-provider model when available, else first declared dialect.
@@ -614,6 +615,10 @@ class DefaultKitGenerator(
         for (id in ids) {
             val bodyPath = "skills/$id/SKILL.md"
             val rawBody = templates.read(bodyPath) ?: continue
+            // Optional skills must be explicitly opted-in via policies.optional_skills.
+            // The marker lives in the raw body so the check happens before any
+            // dialect wrapping or placeholder expansion alters the file.
+            if (isOptionalSkill(rawBody) && id !in enabledOptionalSkills) continue
             val body = preprocessOrFail(rawBody, renderCtx, bodyPath, errors) ?: continue
             val sections = parseSkillSections(body)
             val procedureText = sections.procedure.ifEmpty { body }

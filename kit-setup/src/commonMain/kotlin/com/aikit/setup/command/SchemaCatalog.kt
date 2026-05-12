@@ -20,6 +20,17 @@ data class SchemaCatalog(
     val agentDialectVariants: Map<String, List<String>>,
     val commands: List<String>,
     val skills: List<String>,
+    /**
+     * Optional skills bundled in the binary. Each entry carries the skill's
+     * id and a one-line description harvested from the SKILL.md body. Optional
+     * skills are emitted only when the manifest opts in via
+     * `policies.optional_skills`. The list is sorted by id for stable output.
+     *
+     * Surfaces here so SETUP_PROMPT.md (or any other orchestrator) can present
+     * the recommendations to the user with concrete descriptions instead of
+     * a bare id list.
+     */
+    val optionalSkills: List<OptionalSkillEntry>,
     val promptDialects: List<String>,
     val targetAdapters: List<String>,
     val knowledgeSections: List<String>,
@@ -76,4 +87,15 @@ data class ProfileEntry(
     val name: String,
     val axis: String,
     val description: String?,
+)
+
+/**
+ * One bundled optional skill — id plus the SKILL.md one-line description that
+ * the orchestrating agent shows the user when proposing the recommended
+ * opt-in list at setup time. The id is the same string the user (or the
+ * agent) drops into `policies.optional_skills[]`.
+ */
+data class OptionalSkillEntry(
+    val id: String,
+    val description: String,
 )

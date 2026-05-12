@@ -61,6 +61,29 @@ If a runner config was already detected in 1.2, suggest that one as the default 
 
 AWAIT the user reply. Do not proceed without it.
 
+### 1.4 Recommend optional skills
+
+After the runner + family reply lands, show the bundled optional skills and ask which to enable. The 4 core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are always emitted and not listed here.
+
+Output (translate the prose into the detected language; keep the ids in English):
+
+```
+The kit ships 6 optional skills. They are recommended for the v3 pipeline but you can opt out per item. Reply with the IDs you want enabled (space- or comma-separated), or `all` (default), or `none`.
+
+- debug-loop — 5-step root-cause triage for /kit-fix (reproduce → localize → reduce → fix → guard).
+- tdd-cycle — Red-Green-Refactor cycle + test pyramid for `standard` / `heavy` steps.
+- security-checklist — 8 OWASP-style red-flag patterns for steps touching input / auth / secrets / SQL.
+- doubt-driven-review — Adversarial fresh-context self-review before replying `next` on a step.
+- simplification-pass — Behavior-preserving complexity reduction before commit.
+- adr-on-decision — Architecture Decision Record (.aikit/adr/) when a step makes a non-trivial choice.
+
+Default: all enabled.
+```
+
+If the user is unsure or sends `ok` / empty / `default`, enable all six. The chosen IDs land in `policies.optional_skills: [...]` in Phase 2.1. Use `kit-setup schema` (Phase 3.1 once the binary is on disk) to confirm available IDs if the user objects.
+
+AWAIT the user reply. Do not proceed without it.
+
 ---
 
 ## Phase 2 — Confirm
@@ -136,13 +159,21 @@ policies:
   forbidden_patterns:                # optional but recommended; goes into CLAUDE.md
     - "<convention violation 1>"
     - "<convention violation 2>"
+  optional_skills:                   # opt-in IDs from Phase 1.4 — omit the key if `none`
+    - debug-loop
+    - tdd-cycle
+    - security-checklist
+    - doubt-driven-review
+    - simplification-pass
+    - adr-on-decision
 
 knowledge: {}                        # empty for default flow; user can attach docs later
 ```
 
 Notes for the orchestrator (do NOT include in the manifest itself):
 
-- `commands` and `skills` are NOT top-level manifest fields. The generator scans `templates/commands/` and `templates/skills/` and emits everything found — there is no filter. Don't try to add `commands: [kit, kit-do, kit-fix]` or `skills: [summary-format]` to the manifest; the verifier will accept them silently but they have no effect.
+- `commands` is NOT a top-level manifest field. The generator scans `templates/commands/` and emits everything found.
+- `skills` is NOT a top-level manifest field either. The 4 core skills are always emitted. Optional skills (marked with `<!-- aikit:optional -->` inside their `SKILL.md` body) are emitted **only** when their ID appears under `policies.optional_skills`. Don't try a top-level `skills:` list — the verifier accepts it silently but it has no effect.
 - `agents` MUST be a list of objects with `id`, `description`, `prompt.include`, `tools`. A bare list of strings (`agents: [Main, Researcher]`) fails with `missing_agent_prompt`.
 - The pipeline-driving agent MUST declare `role: orchestrator` (see Main above). Its body is inlined into the runner's main-loop prompt (`CLAUDE.md` / `AGENTS.md` / `CONVENTIONS.md`, or an `alwaysApply: true` rule for Cursor) — subagent files are isolated one-shot contexts and structurally cannot drive multi-turn AWAIT gates. Exactly one orchestrator per manifest; declaring two fails with `multiple_orchestrators`. Legacy back-compat: an agent with `id: Main` and no `role` is auto-promoted to orchestrator.
 - `prompt_dialects` and `target_adapters` MUST have both `id` and `path`.
@@ -250,7 +281,8 @@ Setup complete. Generated <N> files for <runner>, committed as <short-sha>:
 
 What you got:
 - 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
-- 4 skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary).
+- 4 core skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary).
+- <N> optional skills you enabled in Phase 1.4 (list each by id, one per line).
 - 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
 - User-prompts under .claude/prompts/ — manual helpers you can paste into a chat
   when needed (e.g. explore-module). The Main agent does NOT invoke them
@@ -282,5 +314,5 @@ DONE. End the session.
 - NEVER write `kit-setup verify` errors as paraphrased prose — they're machine output. Quote the JSON; translate only the underlying problem when needed.
 - NEVER write API keys, tokens, or secrets into the manifest. The verifier scans for them; if found, it'll fail with `secret_pattern_match`.
 - NEVER touch files outside `.aikit/` and the binary location during setup.
-- The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are auto-emitted from the templates tree; do NOT add them as manifest fields.
+- The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are auto-emitted from the templates tree; do NOT add them as manifest fields. Optional skills (Phase 1.4) go under `policies.optional_skills` — never as a top-level `skills:` list.
 - NEVER promise the user "no more setup needed" — the v3 pipeline is per-task, not autonomous. The kit files are scaffolding; the human-in-the-loop is the design, not a workaround.

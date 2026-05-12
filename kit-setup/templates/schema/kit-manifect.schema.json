@@ -89,7 +89,21 @@
     "tools":            { "type": "array" },
     "workflows":        { "type": "array" },
     "knowledge":        { "type": "object" },
-    "policies":         { "type": "object" },
+    "policies": {
+      "type": "object",
+      "properties": {
+        "forbidden_patterns": { "type": "array", "items": { "type": "string" } },
+        "secrets_policy":     { "type": "object" },
+        "test_strategy":      { "type": "string" },
+        "slice_caps":         { "type": "object" },
+        "model_constraints":  { "type": "object" },
+        "optional_skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Opt-in list of optional skill IDs to emit (e.g. debug-loop, tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision). Core skills emit regardless."
+        }
+      }
+    },
     "workspace":        { "type": "object" },
     "extends":          { "type": "array", "items": { "type": "string" } },
     "x":                { "type": "object" }

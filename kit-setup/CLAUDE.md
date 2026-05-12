@@ -171,6 +171,14 @@ Known load codes: `manifest_not_found`, `read_failed`, `parse_failed`.
 - **Add a subcommand**: extend the `Command` sealed class, add a parsing
   branch in `Args.parse`, build a service + renderer + adapter triple,
   wire it in `KitSetupApp`. Update help text in `Help.kt`.
+- **Add an optional skill**: drop a new directory under
+  `templates/skills/<id>/` with a `SKILL.md` body whose **first line** is
+  `<!-- aikit:optional -->` followed by the one-line description. The
+  generator (`DefaultKitGenerator.renderSkills`) emits the skill only
+  when its id appears in `policies.optional_skills[]`; the schema
+  command auto-lists it under `optional_skills:` so the orchestrating
+  agent can recommend it to the user. Adding a core (always-emitting)
+  skill is the same flow without the marker.
 
 ## Build & run
 

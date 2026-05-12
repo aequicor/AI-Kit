@@ -46,6 +46,13 @@ data class Policies(
     val sliceCaps: Map<String, String>,
     /** Kit-wide hard floors per task type (`policies.model_constraints[task]`). */
     val modelConstraints: Map<String, ModelConstraint> = emptyMap(),
+    /**
+     * Opt-in list of optional skill IDs to emit. Optional skills (marked with
+     * `<!-- aikit:optional -->` in their SKILL.md body) are skipped unless
+     * their id appears here. Core skills are emitted regardless. Empty list
+     * is the default — only core skills emit.
+     */
+    val optionalSkills: List<String> = emptyList(),
 )
 
 /**

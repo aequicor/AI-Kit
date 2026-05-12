@@ -21,7 +21,9 @@ data class SkillSections(
  * Splits [body] into [SkillSections] using a tiny markdown sectioniser:
  *
  *  - the description is the first non-blank line that precedes any `#`
- *    heading (often the one-liner that opens the file)
+ *    heading (often the one-liner that opens the file). Lines that are
+ *    entirely an HTML comment (`<!-- ... -->`) are skipped so the optional
+ *    marker (see [isOptionalSkill]) does not leak into the description.
  *  - only **level-1** (`#`) headings start a new section; `##` and deeper
  *    are treated as content within the current section so authors can
  *    structure procedures with sub-headings without breaking the parse
@@ -37,6 +39,7 @@ fun parseSkillSections(body: String): SkillSections {
     val lines = body.lines()
     val sections = linkedMapOf<String, StringBuilder>()
     val headerRegex = Regex("^#\\s+(.+?)\\s*$")
+    val htmlCommentLine = Regex("^\\s*<!--.*-->\\s*$")
     var currentTitle: String? = null
     var currentBuf: StringBuilder = StringBuilder()
     var preheaderLines = mutableListOf<String>()
@@ -62,7 +65,10 @@ fun parseSkillSections(body: String): SkillSections {
         sections[currentTitle.lowercase()] = currentBuf
     }
 
-    val description = preheaderLines.firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+    val description = preheaderLines
+        .firstOrNull { it.isNotBlank() && !htmlCommentLine.matches(it) }
+        ?.trim()
+        .orEmpty()
 
     fun pickSection(vararg aliases: String): String {
         for (a in aliases) {
@@ -82,3 +88,19 @@ fun parseSkillSections(body: String): SkillSections {
         outputFormat = outputFormat,
     )
 }
+
+/**
+ * True when [body] declares the skill as optional via the `<!-- aikit:optional -->`
+ * HTML comment marker. Optional skills are skipped by the generator unless their
+ * id appears in `policies.optional_skills` in the manifest — see
+ * [com.aikit.setup.generation.DefaultKitGenerator.renderSkills].
+ *
+ * The marker can appear anywhere in the file but conventionally lands on the
+ * first line, before the description. Match is permissive on surrounding
+ * whitespace; `aikit:optional` is the only payload form accepted (so
+ * adjacent comments like `<!-- TODO -->` don't accidentally opt in).
+ */
+fun isOptionalSkill(body: String): Boolean =
+    OPTIONAL_MARKER_REGEX.containsMatchIn(body)
+
+private val OPTIONAL_MARKER_REGEX = Regex("<!--\\s*aikit:optional\\s*-->")

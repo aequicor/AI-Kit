@@ -1,5 +1,6 @@
 package com.aikit.setup.output
 
+import com.aikit.setup.command.OptionalSkillEntry
 import com.aikit.setup.command.ProfileAxisInfo
 import com.aikit.setup.command.ProfileEntry
 import com.aikit.setup.command.SchemaCatalog
@@ -16,6 +17,9 @@ class SchemaResultRendererTest {
         agentDialectVariants = mapOf("CodeWriter" to listOf("anthropic", "qwen")),
         commands = listOf("kit-fix"),
         skills = listOf("bug-retro"),
+        optionalSkills = listOf(
+            OptionalSkillEntry(id = "debug-loop", description = "Five-step triage for /kit-fix."),
+        ),
         promptDialects = listOf("anthropic", "openai"),
         targetAdapters = listOf("claude-code"),
         knowledgeSections = listOf("conventions"),
@@ -52,6 +56,7 @@ class SchemaResultRendererTest {
                 """"agent_dialect_variants":{"CodeWriter":["anthropic","qwen"]},""" +
                 """"commands":["kit-fix"],""" +
                 """"skills":["bug-retro"],""" +
+                """"optional_skills":[{"id":"debug-loop","description":"Five-step triage for /kit-fix."}],""" +
                 """"prompt_dialects":["anthropic","openai"],""" +
                 """"target_adapters":["claude-code"],""" +
                 """"knowledge_sections":["conventions"],""" +
@@ -125,6 +130,30 @@ class SchemaResultRendererTest {
         assertTrue(rendered.contains("framework (0..N, 0):"), "got: $rendered")
         assertTrue(rendered.contains("capability (0..N, 0):"), "got: $rendered")
         // Empty buckets get an explicit placeholder so users can see the axis exists.
+        assertTrue(rendered.contains("(none bundled)"), "got: $rendered")
+    }
+
+    @Test
+    fun humanRendererListsOptionalSkillsWithDescription() {
+        val rendered = HumanSchemaResultRenderer().render(catalog)
+
+        assertTrue(
+            rendered.contains("optional_skills") && rendered.contains("(1) :"),
+            "got: $rendered",
+        )
+        assertTrue(
+            rendered.contains("* debug-loop — Five-step triage for /kit-fix."),
+            "got: $rendered",
+        )
+    }
+
+    @Test
+    fun humanRendererMarksBundleWithNoOptionalSkills() {
+        val rendered = HumanSchemaResultRenderer().render(catalog.copy(optionalSkills = emptyList()))
+        assertTrue(
+            rendered.contains("optional_skills") && rendered.contains("(0) :"),
+            "got: $rendered",
+        )
         assertTrue(rendered.contains("(none bundled)"), "got: $rendered")
     }
 

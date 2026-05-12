@@ -1,6 +1,8 @@
 package com.aikit.setup.command
 
 import com.aikit.setup.cli.KIT_SETUP_VERSION
+import com.aikit.setup.generation.isOptionalSkill
+import com.aikit.setup.generation.parseSkillSections
 import com.aikit.setup.manifest.BlockYamlParser
 import com.aikit.setup.manifest.RawNode
 import com.aikit.setup.manifest.YamlParser
@@ -42,6 +44,7 @@ class SchemaService(
             agentDialectVariants = variants.byBase,
             commands = listSimpleNames(prefix = "commands/"),
             skills = listTopLevelDirs(prefix = "skills/"),
+            optionalSkills = collectOptionalSkills(),
             promptDialects = listTopLevelDirs(prefix = "dialects/"),
             targetAdapters = listTopLevelDirs(prefix = "target_adapters/"),
             knowledgeSections = listSimpleNames(prefix = "knowledge/"),
@@ -52,6 +55,28 @@ class SchemaService(
             profiles = collectProfiles(),
             enums = enumValues(),
         )
+    }
+
+    /**
+     * Walks `skills/<id>/SKILL.md`, picks the ones whose body carries the
+     * `<!-- aikit:optional -->` marker, and projects them into
+     * [OptionalSkillEntry] records with their first-line description.
+     *
+     * Sorted by id for stable JSON output. Skills without the marker (the
+     * v3 core: summary-format, agent-failure-modes, verify-by-hand-tiers,
+     * aikit-plan-artifact) are excluded — they always emit, so listing them
+     * here would only confuse the setup orchestrator.
+     */
+    private fun collectOptionalSkills(): List<OptionalSkillEntry> {
+        val ids = listTopLevelDirs(prefix = "skills/")
+        val out = mutableListOf<OptionalSkillEntry>()
+        for (id in ids) {
+            val body = templates.read("skills/$id/SKILL.md") ?: continue
+            if (!isOptionalSkill(body)) continue
+            val description = parseSkillSections(body).description
+            out += OptionalSkillEntry(id = id, description = description)
+        }
+        return out.sortedBy { it.id }
     }
 
     /**

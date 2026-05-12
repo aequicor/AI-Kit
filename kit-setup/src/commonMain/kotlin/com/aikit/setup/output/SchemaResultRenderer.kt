@@ -1,5 +1,6 @@
 package com.aikit.setup.output
 
+import com.aikit.setup.command.OptionalSkillEntry
 import com.aikit.setup.command.ProfileAxisInfo
 import com.aikit.setup.command.ProfileEntry
 import com.aikit.setup.command.SchemaCatalog
@@ -29,6 +30,7 @@ interface SchemaResultRenderer {
  *   "agent_dialect_variants": { "<base>": ["<dialect>", ...], ... },
  *   "commands": [...],
  *   "skills": [...],
+ *   "optional_skills": [{"id":"...","description":"..."}, ...],
  *   "prompt_dialects": [...],
  *   "target_adapters": [...],
  *   "knowledge_sections": [...],
@@ -50,6 +52,7 @@ class JsonSchemaResultRenderer : SchemaResultRenderer {
             "agent_dialect_variants" to catalog.agentDialectVariants,
             "commands" to catalog.commands,
             "skills" to catalog.skills,
+            "optional_skills" to catalog.optionalSkills.map(::optionalSkillToMap),
             "prompt_dialects" to catalog.promptDialects,
             "target_adapters" to catalog.targetAdapters,
             "knowledge_sections" to catalog.knowledgeSections,
@@ -72,6 +75,11 @@ class JsonSchemaResultRenderer : SchemaResultRenderer {
         "axis" to profile.axis,
         "description" to profile.description,
     )
+
+    private fun optionalSkillToMap(skill: OptionalSkillEntry): Map<String, Any?> = linkedMapOf(
+        "id" to skill.id,
+        "description" to skill.description,
+    )
 }
 
 /**
@@ -92,6 +100,7 @@ class HumanSchemaResultRenderer : SchemaResultRenderer {
         appendLine(line("target_adapters", catalog.targetAdapters))
         appendLine(line("commands", catalog.commands))
         appendLine(line("skills", catalog.skills))
+        appendLine(optionalSkillsBlock(catalog))
         appendLine(line("knowledge_sections", catalog.knowledgeSections))
         appendLine(line("shared_snippets", catalog.sharedSnippets))
         appendLine(line("rules", catalog.rules))
@@ -154,6 +163,26 @@ class HumanSchemaResultRenderer : SchemaResultRenderer {
     private fun line(label: String, items: List<String>): String {
         val title = "${label.padEnd(LABEL_WIDTH)}(${items.size})"
         return "$title : ${items.joinToString(", ")}"
+    }
+
+    /**
+     * Renders the optional-skills block: one line per skill with id and the
+     * one-line description harvested from SKILL.md. Empty when the bundle
+     * carries no optional skills — the section still appears so the user
+     * knows the feature exists.
+     */
+    private fun optionalSkillsBlock(catalog: SchemaCatalog): String = buildString {
+        val entries = catalog.optionalSkills
+        val title = "${"optional_skills".padEnd(LABEL_WIDTH)}(${entries.size})"
+        appendLine("$title :")
+        if (entries.isEmpty()) {
+            append("  (none bundled)")
+            return@buildString
+        }
+        for ((i, skill) in entries.withIndex()) {
+            val suffix = if (i == entries.lastIndex) "" else "\n"
+            append("  * ${skill.id} — ${skill.description}$suffix")
+        }
     }
 
     private fun line(

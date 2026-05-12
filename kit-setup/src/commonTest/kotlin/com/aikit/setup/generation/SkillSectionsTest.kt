@@ -2,6 +2,7 @@ package com.aikit.setup.generation
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SkillSectionsTest {
@@ -104,5 +105,48 @@ class SkillSectionsTest {
         val s = parseSkillSections(body)
         assertEquals("", s.triggers)
         assertTrue("Not actually triggers." in s.procedure)
+    }
+
+    @Test
+    fun htmlCommentBeforeDescriptionIsSkipped() {
+        // The optional-skill marker is an HTML comment on line 1. The
+        // description detector must ignore comment-only lines so the marker
+        // does not leak into the rendered SKILL_DESCRIPTION variable.
+        val body = """
+            <!-- aikit:optional -->
+            Real description follows.
+
+            # Procedure
+
+            Do thing.
+        """.trimIndent()
+        val s = parseSkillSections(body)
+        assertEquals("Real description follows.", s.description)
+    }
+
+    @Test
+    fun detectsOptionalSkillMarker() {
+        val optionalBody = """
+            <!-- aikit:optional -->
+            Optional skill description.
+        """.trimIndent()
+        val coreBody = """
+            Core skill description.
+
+            # Procedure
+            Do thing.
+        """.trimIndent()
+        assertTrue(isOptionalSkill(optionalBody))
+        assertFalse(isOptionalSkill(coreBody))
+    }
+
+    @Test
+    fun optionalMarkerToleratesSurroundingWhitespace() {
+        // The marker may appear with extra whitespace inside the comment
+        // (`<!--  aikit:optional  -->`) but a different payload must not opt in.
+        assertTrue(isOptionalSkill("<!--   aikit:optional   -->"))
+        assertTrue(isOptionalSkill("body text\n<!-- aikit:optional -->\nmore"))
+        assertFalse(isOptionalSkill("<!-- aikit:other -->"))
+        assertFalse(isOptionalSkill("<!-- aikit -->"))
     }
 }

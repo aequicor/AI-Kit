@@ -211,6 +211,7 @@ class SchemaServiceTest {
         assertTrue(catalog.agentDialectVariants.isEmpty())
         assertTrue(catalog.commands.isEmpty())
         assertTrue(catalog.skills.isEmpty())
+        assertTrue(catalog.optionalSkills.isEmpty())
         assertTrue(catalog.promptDialects.isEmpty())
         assertTrue(catalog.targetAdapters.isEmpty())
         assertTrue(catalog.knowledgeSections.isEmpty())
@@ -223,5 +224,50 @@ class SchemaServiceTest {
         assertEquals(3, catalog.profileAxes.size)
         // Enums are independent of the bundle — same shape regardless of templates.
         assertEquals(5, catalog.enums.size)
+    }
+
+    @Test
+    fun collectsOptionalSkillsWithDescription() {
+        // Core skill (no marker) lands in `skills:` only; optional skill with
+        // the marker lands in BOTH `skills:` and `optional_skills:` — the agent
+        // uses `optional_skills:` to recommend opt-ins to the user.
+        val registry = InMemoryTemplateRegistry(
+            mapOf(
+                "skills/core-one/SKILL.md" to """
+                    Core skill description.
+
+                    # Procedure
+
+                    Do thing.
+                """.trimIndent(),
+                "skills/debug-loop/SKILL.md" to """
+                    <!-- aikit:optional -->
+                    Five-step root-cause triage for /kit-fix.
+
+                    # Procedure
+
+                    Reproduce, localize, reduce, fix, guard.
+                """.trimIndent(),
+                "skills/tdd-cycle/SKILL.md" to """
+                    <!-- aikit:optional -->
+                    Red-Green-Refactor cycle.
+
+                    # Procedure
+
+                    Red, green, refactor.
+                """.trimIndent(),
+            ),
+        )
+
+        val catalog = SchemaService(registry).catalog()
+
+        assertEquals(listOf("core-one", "debug-loop", "tdd-cycle"), catalog.skills)
+        assertEquals(
+            listOf(
+                OptionalSkillEntry("debug-loop", "Five-step root-cause triage for /kit-fix."),
+                OptionalSkillEntry("tdd-cycle", "Red-Green-Refactor cycle."),
+            ),
+            catalog.optionalSkills,
+        )
     }
 }
