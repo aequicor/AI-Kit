@@ -4,7 +4,7 @@ Generates AI agent configuration files for [Claude Code](https://claude.ai/code)
 
 The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits the per-runner files (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc. — depending on which targets you enable).
 
-The bundle ships a complete v7 agent pipeline: 5-agent roster (Main / Architect / CodeWriter / Verifier / BugFixer), 21 slash commands (`/kit-new-feature`, `/kit-fix`, `/kit-techdebt`, `/kit-sleep`, `/kit-revert-step`, ...), 10 skills (mutation-sample, gate-telemetry, definition-of-done, replan-on-discovery, ...), 12 stack profiles, and the policy machinery for risk-based lanes, ground-truth gates, and per-step commits.
+The bundle ships the v3 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → single-shot Fix targeting one commit — one `summary-format` skill defining the bullet-only CONTEXT / PLAN / STEP / FIX block shapes, and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
 
 ---
 
@@ -20,11 +20,25 @@ The agent reads your project, calls `kit-setup schema` to learn what's bundled, 
 
 ---
 
+## Workflow
+
+Once the kit is generated, the v3 pipeline gives you three slash commands for any task. They run in separate sessions so heavy context (file reads, debug iterations) stays scoped to where it's needed.
+
+1. **`/kit <task>`** — Plan session. The agent gathers context (Stage 1) and produces a 3–10 step plan committed as `.aikit/plans/<id>.md` with the message `kit: plan for <slug>`. Output: a PLAN SUMMARY pointing at the next command. The session ends.
+
+2. **`/kit-do <plan-id>`** — Execute session. Walks the plan step by step, auto-committing each (`kit: step N/M — <slug>`) and emitting a STEP SUMMARY for human review. After the last step it enters Stage 4 (Ship): runs tests, proposes a squash, and gates any push behind explicit human approval.
+
+3. **`/kit-fix <commit-hash> <description>`** — Single-step Fix session targeting one specific commit. Reads its diff, makes the fix, commits as `kit: fix <hash> — <slug>`, and emits a FIX SUMMARY block the Execute session pastes back to resume.
+
+Human validates every commit. Git is the source of truth — sessions can restart, machines can change, `git log` reconstructs the state.
+
+---
+
 ## Profiles — bundled presets you opt into
 
 Profiles are reusable manifest fragments grouped along three orthogonal axes. Listed in `stack.profiles: [...]`, they're merged into the manifest before validation, so a one-line opt-in fills `forbidden_patterns`, language tooling, framework UI hints, and policy defaults.
 
-| Axis | Cardinality | Bundled (v2.2) |
+| Axis | Cardinality | Bundled |
 |---|---|---|
 | `language` | exactly 1 | `kotlin-gradle`, `make-generic`, `python-poetry`, `typescript-pnpm` |
 | `framework` | 0..N | `compose-multiplatform`, `nextjs`, `paper-plugin`, `react-spa` |
@@ -109,6 +123,8 @@ gradlew.bat linkReleaseExecutableMingwX64
 ```
 
 The freshly built binary lands in `build/bin/<target>/releaseExecutable/kit-setup.kexe` (`.exe` on Windows).
+
+**Rebuild after editing any template.** Files under `kit-setup/templates/` (agent prompts, slash commands, target adapters, profiles, snippets) are embedded into the binary at compile time via the `generateTemplates` Gradle task — Kotlin/Native has no runtime resource lookup. After any template change, re-run `linkReleaseExecutable<Target>` for your host; an old binary will keep using the pre-edit templates. Downstream users always pull a fresh binary from the Releases page; this only affects you while developing locally.
 
 ---
 

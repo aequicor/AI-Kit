@@ -23,6 +23,17 @@ gradle-app.setting
 # OpenCode
 .opencode/
 
+# AI-Kit per-project setup
+# The kit-setup binary is platform-specific and downloaded fresh per project;
+# never check it in. Generated kit artifacts inside test fixtures
+# (sample-* projects) follow the same rule. Plan files authored by /kit
+# during dogfooding are NOT ignored — Session 2 of the v3 pipeline locates
+# them via `git log --grep="kit: plan for"`, so they must live in history.
+.aikit/bin/
+sample-*/.aikit/manifest.yaml
+sample-*/.claude/
+sample-*/CLAUDE.md
+
 # OS
 .DS_Store
 Thumbs.db

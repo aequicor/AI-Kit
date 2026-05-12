@@ -20,7 +20,7 @@ class SchemaResultRendererTest {
         targetAdapters = listOf("claude-code"),
         knowledgeSections = listOf("conventions"),
         sharedSnippets = listOf("project_context"),
-        rules = listOf("typescript-strict"),
+        rules = listOf("typescript/typescript-strict"),
         userPrompts = listOf("explore-module"),
         profileAxes = listOf(
             ProfileAxisInfo("language", "exactly_one"),
@@ -56,7 +56,7 @@ class SchemaResultRendererTest {
                 """"target_adapters":["claude-code"],""" +
                 """"knowledge_sections":["conventions"],""" +
                 """"shared_snippets":["project_context"],""" +
-                """"rules":["typescript-strict"],""" +
+                """"rules":["typescript/typescript-strict"],""" +
                 """"user_prompts":["explore-module"],""" +
                 """"profile_axes":[""" +
                 """{"name":"language","cardinality":"exactly_one"},""" +

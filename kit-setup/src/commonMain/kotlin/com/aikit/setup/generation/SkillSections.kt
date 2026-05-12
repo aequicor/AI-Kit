@@ -22,7 +22,9 @@ data class SkillSections(
  *
  *  - the description is the first non-blank line that precedes any `#`
  *    heading (often the one-liner that opens the file)
- *  - everything from one `#`-heading up to the next is the section body
+ *  - only **level-1** (`#`) headings start a new section; `##` and deeper
+ *    are treated as content within the current section so authors can
+ *    structure procedures with sub-headings without breaking the parse
  *  - heading titles are matched case-insensitively, with a small alias set
  *    (`when to invoke` / `output` / `output format` / `procedure`)
  *
@@ -34,7 +36,7 @@ data class SkillSections(
 fun parseSkillSections(body: String): SkillSections {
     val lines = body.lines()
     val sections = linkedMapOf<String, StringBuilder>()
-    val headerRegex = Regex("^#{1,6}\\s+(.+?)\\s*$")
+    val headerRegex = Regex("^#\\s+(.+?)\\s*$")
     var currentTitle: String? = null
     var currentBuf: StringBuilder = StringBuilder()
     var preheaderLines = mutableListOf<String>()

@@ -185,6 +185,120 @@ class BlockYamlParserTest {
     }
 
     @Test
+    fun leadingUtf8BomIsStripped() {
+        // Some Windows tools (older PowerShell `Set-Content -Encoding utf8`)
+        // prefix YAML files with U+FEFF. Without stripping, the first key
+        // would carry an invisible BOM and validation would lie about which
+        // keys are present.
+        val bom = Char(0xFEFF).toString()
+        val root = parser.parse(bom + "manifest_version: \"1.0.0\"\nproject:\n  slug: demo")
+        assertEquals("1.0.0", root.field("manifest_version").stringOrNull())
+        assertEquals("demo", root.path("project", "slug").stringOrNull())
+        // The BOM must not bleed into the first key name.
+        val keys = (root as RawNode.Mapping).entries.keys
+        assertTrue(keys.contains("manifest_version"), "BOM should not corrupt the first key; got keys=$keys")
+    }
+
+    @Test
+    fun absentBomLeavesContentIntact() {
+        val root = parser.parse("manifest_version: \"1.0.0\"")
+        assertEquals("1.0.0", root.field("manifest_version").stringOrNull())
+    }
+
+    @Test
+    fun foldedBlockScalarRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse(
+                """
+                description: >
+                  multi
+                  line
+                """.trimIndent(),
+            )
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("Folded/literal block scalars"), "expected block-scalar hint, got: $msg")
+        assertTrue(msg.contains(">"), "expected indicator in message, got: $msg")
+    }
+
+    @Test
+    fun literalBlockScalarRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse(
+                """
+                note: |
+                  line 1
+                  line 2
+                """.trimIndent(),
+            )
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("Folded/literal block scalars"), "expected block-scalar hint, got: $msg")
+    }
+
+    @Test
+    fun yamlAnchorRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse("ref: &shared 42")
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("anchor"), "expected anchor hint, got: $msg")
+        assertTrue(msg.contains("Quote the value"), "expected quoting hint, got: $msg")
+    }
+
+    @Test
+    fun yamlAliasRejectedWithHint() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse("copy: *shared")
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("alias"), "expected alias hint, got: $msg")
+    }
+
+    @Test
+    fun anchorInSequenceItemRejected() {
+        val ex = assertFailsWith<YamlParseException> {
+            parser.parse(
+                """
+                items:
+                  - &first one
+                  - two
+                """.trimIndent(),
+            )
+        }
+        val msg = ex.message ?: ""
+        assertTrue(msg.contains("anchor"), "expected anchor hint, got: $msg")
+    }
+
+    @Test
+    fun quotedAmpersandIsAccepted() {
+        // Literal `&` at the start of a scalar is allowed inside quotes —
+        // the anchor check only fires on unquoted plain scalars.
+        val root = parser.parse("pattern: \"&literal\"")
+        assertEquals("&literal", root.field("pattern").stringOrNull())
+    }
+
+    @Test
+    fun quotedStarIsAccepted() {
+        val root = parser.parse("glob: \"*.kt\"")
+        assertEquals("*.kt", root.field("glob").stringOrNull())
+    }
+
+    @Test
+    fun blockScalarChompingVariantsRejected() {
+        for (indicator in listOf(">-", "|-", ">+", "|+")) {
+            val ex = assertFailsWith<YamlParseException>("indicator $indicator should be rejected") {
+                parser.parse("key: $indicator\n  child")
+            }
+            val msg = ex.message ?: ""
+            assertTrue(
+                msg.contains("Folded/literal block scalars"),
+                "expected block-scalar hint for $indicator, got: $msg",
+            )
+        }
+    }
+
+    @Test
     fun realManifestSnippetParsesEndToEnd() {
         val src = """
             manifest_version: "1.0.0"

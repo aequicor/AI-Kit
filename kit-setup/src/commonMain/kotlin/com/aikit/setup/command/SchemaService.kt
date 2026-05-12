@@ -46,7 +46,7 @@ class SchemaService(
             targetAdapters = listTopLevelDirs(prefix = "target_adapters/"),
             knowledgeSections = listSimpleNames(prefix = "knowledge/"),
             sharedSnippets = listSimpleNames(prefix = "_shared/snippets/"),
-            rules = listSimpleNames(prefix = "rules/"),
+            rules = listRulePaths(),
             userPrompts = listSimpleNames(prefix = "user-prompts/"),
             profileAxes = profileAxesInfo(),
             profiles = collectProfiles(),
@@ -170,6 +170,26 @@ class SchemaService(
                 .sortedBy { it.key }
                 .associate { (k, v) -> k to v.sorted() },
         )
+    }
+
+    /**
+     * Returns sorted rule paths under `rules/`. Two shapes are accepted:
+     *  - `<id>`              for rules at the root (language-agnostic).
+     *  - `<scope>/<id>`      for scoped rules, where `<scope>` is either a language
+     *                        name from `manifest.stack.languages` or the literal
+     *                        `shared` (always-applied).
+     *
+     * Deeper paths are intentionally ignored — the rule scope is a single segment.
+     * Matches the path shape consumed by [DefaultKitGenerator.listRules].
+     */
+    private fun listRulePaths(): List<String> {
+        val result = mutableSetOf<String>()
+        for (path in templates.list("rules/")) {
+            if (!path.endsWith(".md")) continue
+            val tail = path.removePrefix("rules/").removeSuffix(".md")
+            if (tail.count { it == '/' } <= 1) result.add(tail)
+        }
+        return result.sorted()
     }
 
     /**

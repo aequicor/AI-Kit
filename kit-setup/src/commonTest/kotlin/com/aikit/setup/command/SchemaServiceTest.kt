@@ -30,7 +30,7 @@ class SchemaServiceTest {
                 "knowledge/routing-table.md" to "",
                 "_shared/snippets/project_context.md" to "",
                 "_shared/snippets/stack_summary.md" to "",
-                "rules/typescript-strict.md" to "",
+                "rules/typescript/typescript-strict.md" to "",
                 "user-prompts/explore-module.md" to "",
                 "schema/kit-manifect.schema.json" to "",
             ),
@@ -51,7 +51,7 @@ class SchemaServiceTest {
         assertEquals(listOf("claude-code", "cursor"), catalog.targetAdapters)
         assertEquals(listOf("conventions", "routing-table"), catalog.knowledgeSections)
         assertEquals(listOf("project_context", "stack_summary"), catalog.sharedSnippets)
-        assertEquals(listOf("typescript-strict"), catalog.rules)
+        assertEquals(listOf("typescript/typescript-strict"), catalog.rules)
         assertEquals(listOf("explore-module"), catalog.userPrompts)
 
         // Profile axes always emitted with stable cardinality contract, even

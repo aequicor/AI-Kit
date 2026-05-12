@@ -176,7 +176,7 @@ class DefaultKitGenerator(
         // as `<file>#{id}` shape (Claude Code / OpenCode / Aider / Qwen). For
         // file-style adapters (Cursor) rules go through renderRules instead.
         if (isSectionStyleRule(adapter, instructionFileTarget = out)) {
-            for (rule in listRules()) {
+            for (rule in listRules(manifest.stack.languages)) {
                 val body = templates.read(rule.bodyPath) ?: continue
                 sb.append("## ").append(rule.id).append("\n\n")
                 sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
@@ -246,8 +246,8 @@ class DefaultKitGenerator(
             emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, section.name, body, alwaysApply = true, targetRoot, written, errors)
         }
 
-        // 2. explicit `rules/*.md` bodies.
-        for (rule in listRules()) {
+        // 2. explicit `rules/*.md` bodies — filtered by manifest.stack.languages.
+        for (rule in listRules(manifest.stack.languages)) {
             val body = templates.read(rule.bodyPath) ?: continue
             emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, rule.id, body, alwaysApply = false, targetRoot, written, errors)
         }
@@ -333,10 +333,37 @@ class DefaultKitGenerator(
 
     private data class RuleEntry(val id: String, val bodyPath: String)
 
-    private fun listRules(): List<RuleEntry> =
-        templates.list("rules/")
+    /**
+     * Lists rules applicable to this manifest, filtered by language.
+     *
+     * Convention:
+     *  - `rules/<id>.md`              — language-agnostic (always emitted).
+     *  - `rules/shared/<id>.md`       — language-agnostic (always emitted; explicit form).
+     *  - `rules/<language>/<id>.md`   — only emitted when `<language>` is in the manifest's
+     *                                   `stack.languages` (matched case-insensitively).
+     *
+     * Match is case-insensitive on the language segment so `Kotlin` and `kotlin` both work.
+     */
+    private fun listRules(languages: List<String>): List<RuleEntry> {
+        val normalized = languages.map { it.lowercase() }.toSet()
+        return templates.list("rules/")
             .filter { it.endsWith(".md") }
-            .map { RuleEntry(id = it.removePrefix("rules/").removeSuffix(".md"), bodyPath = it) }
+            .mapNotNull { path ->
+                val rest = path.removePrefix("rules/")
+                val firstSlash = rest.indexOf('/')
+                if (firstSlash < 0) {
+                    // rules/<id>.md — language-agnostic.
+                    return@mapNotNull RuleEntry(id = rest.removeSuffix(".md"), bodyPath = path)
+                }
+                val segment = rest.substring(0, firstSlash).lowercase()
+                val tail = rest.substring(firstSlash + 1).removeSuffix(".md")
+                if (segment == "shared" || segment in normalized) {
+                    RuleEntry(id = tail, bodyPath = path)
+                } else {
+                    null
+                }
+            }
+    }
 
     /** True iff the adapter writes rules as sections inside [instructionFileTarget]. */
     private fun isSectionStyleRule(adapter: Adapter, instructionFileTarget: String): Boolean {

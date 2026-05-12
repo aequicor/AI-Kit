@@ -59,15 +59,50 @@ class SkillSectionsTest {
     }
 
     @Test
-    fun headingDetectedAtAnyLevel() {
+    fun onlyLevelOneHeadingsStartSections() {
+        // Sub-headings (`##` and deeper) belong to the current section so
+        // authors can structure long procedures with topics without each
+        // sub-heading silently becoming its own (unmatched) section. Here
+        // the `## Common rules` lives INSIDE the `# Procedure` body.
         val body = """
             Desc.
 
-            ### When to invoke
+            # Procedure
 
-            On Thursdays.
+            Lead-in.
+
+            ## Common rules
+
+            - rule one
+            - rule two
+
+            ## Anti-patterns
+
+            - bad one
         """.trimIndent()
         val s = parseSkillSections(body)
-        assertEquals("On Thursdays.", s.triggers)
+        assertTrue("Common rules" in s.procedure, "got procedure: ${s.procedure}")
+        assertTrue("Anti-patterns" in s.procedure, "got procedure: ${s.procedure}")
+        assertTrue("rule one" in s.procedure)
+    }
+
+    @Test
+    fun subHeadingsDoNotMatchTriggerAliases() {
+        // Even if a sub-heading happens to be `## When to invoke` (matching
+        // a triggers alias), it does NOT start a new section — only `#` does.
+        val body = """
+            Desc.
+
+            # Procedure
+
+            See sub-heading below.
+
+            ## When to invoke
+
+            Not actually triggers.
+        """.trimIndent()
+        val s = parseSkillSections(body)
+        assertEquals("", s.triggers)
+        assertTrue("Not actually triggers." in s.procedure)
     }
 }

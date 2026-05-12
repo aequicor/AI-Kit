@@ -25,7 +25,14 @@ package com.aikit.setup.manifest
 class BlockYamlParser : YamlParser {
 
     override fun parse(content: String): RawNode {
-        val lines = preprocess(content)
+        // Strip a leading UTF-8 BOM if present. Some Windows tools — notably
+        // older PowerShell `Set-Content -Encoding utf8` — prefix the file with
+        // U+FEFF; without stripping it, the first key would carry an invisible
+        // BOM character and validation would lie about which keys are present
+        // (e.g. raising `missing_required_key` for a field that's actually
+        // there).
+        val text = if (content.isNotEmpty() && content[0].code == 0xFEFF) content.substring(1) else content
+        val lines = preprocess(text)
         if (lines.isEmpty()) return RawNode.Null
         val state = ParseState(lines)
         return parseBlockNode(state, indent = -1)
@@ -262,6 +269,29 @@ class BlockYamlParser : YamlParser {
     private fun parseScalarOrFlow(input: String, lineNumber: Int): RawNode {
         val s = input.trim()
         if (s.isEmpty()) return RawNode.Null
+        // Folded (`>`) and literal (`|`) block scalars are not supported by
+        // this parser. Catch the indicator tokens explicitly so the user sees
+        // a useful message instead of a downstream "unexpected indentation"
+        // error from the continuation lines.
+        if (s in BLOCK_SCALAR_INDICATORS) {
+            throw YamlParseException(
+                "Folded/literal block scalars ($s) are not supported at line $lineNumber. " +
+                    "Use a single-line quoted string instead.",
+            )
+        }
+        // YAML anchors (`&name`) and aliases (`*name`) are not supported by
+        // this parser either. Without explicit detection they survive as
+        // literal scalars whose `&`/`*` prefix no validation rule explains —
+        // confusing. Quoted values bypass this check (they go through
+        // unquote()), so users wanting a literal `&` or `*` just quote.
+        val first = s.first()
+        if (first == '&' || first == '*') {
+            val kind = if (first == '&') "anchor" else "alias"
+            throw YamlParseException(
+                "YAML $kind ($s) is not supported at line $lineNumber. " +
+                    "Quote the value (e.g. \"$s\") if it should be a literal string.",
+            )
+        }
         return when (s.first()) {
             '[' -> parseFlowSequence(s, lineNumber)
             '{' -> parseFlowMapping(s, lineNumber)
@@ -271,6 +301,10 @@ class BlockYamlParser : YamlParser {
                 else -> RawNode.Scalar(s)
             }
         }
+    }
+
+    private companion object {
+        private val BLOCK_SCALAR_INDICATORS = setOf(">", "|", ">-", "|-", ">+", "|+")
     }
 
     private fun parseFlowSequence(s: String, lineNumber: Int): RawNode.Sequence {
