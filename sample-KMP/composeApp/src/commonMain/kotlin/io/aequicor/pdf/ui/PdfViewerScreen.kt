@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,17 +71,19 @@ fun PdfViewerScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
-            // Viewport: fixed on screen, clips content that pans outside.
-            // Column (not LazyColumn) gives the content its natural height so
-            // graphicsLayer translates the PDF itself, not a screen-sized box.
+            // Viewport: fixed rectangle, clips overflowing content.
+            // transformable sits here — Column has no gestures to compete.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
                     .transformable(transformableState),
             ) {
+                // Content box: sized by its children (page images), NOT fillMaxSize.
+                // graphicsLayer shifts actual page content, not a screen-sized box.
                 Column(
                     modifier = Modifier
+                        .wrapContentSize(Alignment.TopStart, unbounded = true)
                         .fillMaxWidth()
                         .graphicsLayer(
                             scaleX = scale,
@@ -94,7 +97,6 @@ fun PdfViewerScreen() {
                             pdfRenderer = pdfRenderer,
                             docId = doc.id,
                             page = page,
-                            scale = scale,
                             cache = pageCache,
                         )
                     }
@@ -125,7 +127,6 @@ private fun AsyncPdfPageImage(
     pdfRenderer: PdfRenderer,
     docId: PdfDocumentId,
     page: PdfPage,
-    scale: Float,
     cache: MutableMap<Int, ImageBitmap>,
 ) {
     var bitmap by remember(page.index) { mutableStateOf(cache[page.index]) }
