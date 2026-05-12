@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -72,26 +73,32 @@ fun PdfViewerScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
-            LazyColumn(
-                state = lazyListState,
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .transformable(transformableState)
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY,
-                    ),
+                    .clipToBounds()
+                    .transformable(transformableState),
             ) {
-                items(doc.pages, key = { it.index }) { page ->
-                    AsyncPdfPageImage(
-                        pdfRenderer = pdfRenderer,
-                        docId = doc.id,
-                        page = page,
-                        scale = scale,
-                        cache = pageCache,
-                    )
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY,
+                        ),
+                ) {
+                    items(doc.pages, key = { it.index }) { page ->
+                        AsyncPdfPageImage(
+                            pdfRenderer = pdfRenderer,
+                            docId = doc.id,
+                            page = page,
+                            scale = scale,
+                            cache = pageCache,
+                        )
+                    }
                 }
             }
         } else {
