@@ -72,6 +72,24 @@ When the user replies, parse:
 
 ### Initialization (every entry)
 
+0. **First-run onboarding** — only when `.aikit/state/onboarded` is absent in this project. Output:
+   ```
+   First /kit-do in this project. Before approving any step, read the
+   "Agent failure modes — what to look for when reviewing a step" section
+   of this protocol document. The list is short and concrete — six
+   patterns that passing tests do not catch. Knowing them once saves real
+   defects later.
+
+   Reply `ack` to confirm you've read it. The marker .aikit/state/onboarded
+   will be created so this prompt does not repeat. Anything else is treated
+   as a question — answer it, then re-prompt for `ack`.
+   ```
+   AWAIT. On `ack`:
+   - `mkdir -p .aikit/state`
+   - `touch .aikit/state/onboarded`
+   - If a `.gitignore` exists at the project root AND it does not already include `.aikit/state/`, append `.aikit/state/` as a new line (this directory is rebuilt per-checkout — it should not be tracked).
+
+   Then proceed to step 1. On subsequent /kit-do entries the marker exists; this step is silent.
 1. Read `.aikit/plans/<plan-id>.md`. If not found → STOP. Output: `Plan <id> not found at .aikit/plans/<id>.md. Did Session 1 commit it? Check git log --grep="kit: plan".`
 2. Find plan-commit: `git log --all --grep="kit: plan for <slug>" --format="%H" -n 1`. If the search returns empty (file exists per step 1 but no commit is reachable), STOP. Output: `Plan file .aikit/plans/<id>.md exists on disk but no "kit: plan for <slug>" commit is reachable. Possible causes: the path is .gitignored in this project, Session 1's commit failed silently (pre-commit hook), or the commit was reset / dropped after Session 1. Recover with: git add .aikit/plans/<id>.md (add -f if .gitignored) && git commit -m "kit: plan for <slug>". Then re-enter /kit-do.`
 3. Walk the commits since the plan: `git log --oneline <plan-commit>..HEAD`.
@@ -104,27 +122,61 @@ For each step from current to last:
 
    If any constraint is violated AND the step was `light`, render the SUMMARY header's tier as `standard (escalated from light)`. State out loud: `Shape violated on light step: <constraints>. Escalating tier to standard for AWAIT.`
 6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line.
-7. **Gate decision** — determines the prompt at the bottom of the SUMMARY:
-   - `BUILD: green` → standard AWAIT prompt (`next` / `revert` / FIX SUMMARY + `next`).
+7. **Gate decision** — determines whether to AWAIT or auto-advance:
+   - `BUILD: green` AND step's planned tier is `light` AND `Shape: OK` AND all invariants `OK` → **auto-`next`**. Append to the SUMMARY:
+     ```
+     Auto-approved (light, shape-OK). Full diff is reviewed at Ship-stage.
+     Proceeding to step <N+1>.
+     ```
+     Skip the AWAIT below. Do not increment the cadence-break counter (the human was not asked anything).
+   - `BUILD: green` AND tier is `standard` / `heavy` / `standard (escalated from light)` → AWAIT, with the standard prompt (`next` / `revert` / FIX SUMMARY + `next`).
    - `BUILD: red` → AWAIT with: `Cannot proceed: this step's verify is red (<failing verbs>). Resolve with: /kit-fix <commit-hash> "<one-line desc>". Or override with: next --keep-red "<reason>"`. The next reply must be a pasted FIX SUMMARY + `next`, or `next --keep-red "<reason>"`. Anything else is parsed as a clarifying instruction; re-prompt.
    - `BUILD: skipped` → AWAIT with: `Verify could not run for: <verbs and reasons>. Cannot auto-gate. Resolve toolchain access and reply 'retry-verify', paste a manual FIX SUMMARY if you ran the gate yourself, or reply 'next --skip-verify "<reason>"' to acknowledge no automatic gate is possible.`
-8. AWAIT.
+8. AWAIT (skipped when step 7 ran auto-`next`).
 
-When the user replies, **first action is always rehydration** (see Behavioral contracts below). Then parse:
-- `next` → advance to next step. Allowed only when the previous step's `BUILD: green` (or `red` was resolved by a pasted FIX SUMMARY whose re-verification turned green).
-- `next --keep-red "<reason>"` → advance; record `Carried red — step <N>: <reason>` in every subsequent STEP SUMMARY's `Carried overrides` block until the build returns to green.
-- `next --skip-verify "<reason>"` → advance; record `Carried skip-verify — step <N>: <reason>` similarly.
-- `retry-verify` → re-run the previous step's verify. Render an updated SUMMARY with the new BUILD block. Re-gate.
-- `revert` → confirm once: `Revert will run "git reset --hard HEAD~1" and discard the commit. Confirm with "revert!"`. Only on `revert!` proceed: `git reset --hard HEAD~1`, set `last_known_hash = HEAD`, ask user how to proceed (retry / replan / abort).
-- A pasted `## FIX SUMMARY` block + `next` → run paste-validation contract (Behavioral contracts), then **re-run the step's verify on the current HEAD**. If still red, output: `Fix did not turn the build green. Verify still failing: <verbs>. Run another /kit-fix or accept with --keep-red.` and AWAIT.
-- Anything else → treat as a clarifying instruction; if it implies replanning, propose replan and AWAIT decision.
+   **Reflection quiz** prepends the AWAIT prompt when EITHER:
+   - the current step's rendered tier is `heavy`, OR
+   - the cadence-break counter `<standard-streak>` is `>= 3`.
+
+   Quiz prompt:
+   ```
+   Quick reflection (anti-blur):
+     In one sentence — what did the last <N> steps achieve? (steps <X> through <Y>)
+     Your answer →
+   ```
+   The window <X> through <Y> spans from the last AWAIT (or plan start) to the current step, **including auto-`next` light steps**. The reply owes a single sentence followed by the regular command on the next line, OR `next --no-quiz "<reason>"` to opt out.
+
+   On a sentence reply: keyword-overlap check — words of length ≥5 from the reflection vs words of length ≥5 from the step titles in the window. Empty overlap → output `Mismatch with recent step titles. You said "<echo of reflection>" but recent steps were: <titles>. Proceed anyway? (y/n)`. `y` → process the command on the next line. `n` → re-prompt the AWAIT.
+
+   Counters reset on: `heavy` step's AWAIT completion, quiz pass, `--no-quiz` use.
+
+When the user replies (or after auto-`next` ran in step 7), **first action is always rehydration** (see Behavioral contracts below). Then parse:
+- `next` → advance to next step. Allowed only when the previous step's `BUILD: green` (or `red` was resolved by a pasted FIX SUMMARY whose re-verification turned green). Counter: increment `<standard-streak>` if the completed step's rendered tier was `standard` or `standard (escalated from light)`; reset to `0` if it was `heavy`.
+- `next --keep-red "<reason>"` → advance; record `Carried red — step <N>: <reason>` in every subsequent STEP SUMMARY's `Carried overrides` block until the build returns to green. Counter: same as plain `next`.
+- `next --skip-verify "<reason>"` → advance; record `Carried skip-verify — step <N>: <reason>` similarly. Counter: same as plain `next`.
+- `next --no-quiz "<reason>"` → opt out of the current quiz; advance and record `Skipped reflection at step <N>: <reason>` in the next SUMMARY's `Carried overrides`. Counter: reset `<standard-streak>` to `0`.
+- `retry-verify` → re-run the previous step's verify. Render an updated SUMMARY with the new BUILD block. Re-gate. Counter: unchanged.
+- `revert` → confirm once: `Revert will run "git reset --hard HEAD~1" and discard the commit. Confirm with "revert!"`. Only on `revert!` proceed: `git reset --hard HEAD~1`, set `last_known_hash = HEAD`, ask user how to proceed (retry / replan / abort). Counter: decrement `<standard-streak>` by `1` (floor at `0`) since the step is undone.
+- A pasted `## FIX SUMMARY` block + `next` → run paste-validation contract (Behavioral contracts), then **re-run the step's verify on the current HEAD**. If still red, output: `Fix did not turn the build green. Verify still failing: <verbs>. Run another /kit-fix or accept with --keep-red.` and AWAIT. Counter: unchanged (this is the same AWAIT being re-gated).
+- Anything else → treat as a clarifying instruction; if it implies replanning, propose replan and AWAIT decision. Counter: unchanged.
+
+**Cadence-break bookkeeping.** `<standard-streak>` is held in session working memory across the Steps loop. Auto-`next` light steps (step 7) **do not** increment it (no human reply happened). The quiz triggers in step 8 when the counter reaches `3` OR when the current step is `heavy`. On `--resume`, the counter starts at `0`.
 
 After the last step → automatically enter Stage 4.
 
 ### Stage 4 — Ship
 
-1. **Run tests** using the project's configured test command. State the command verbatim before running it; for Gradle / Maven / Bazel and other first-run-heavy build systems, also state: `First run may download dependencies (multiple minutes) — this is expected, not a hang.` If tests fail → STOP. AWAIT decision: `fix` (offer `/kit-fix` for the failure), `push as-is` (record explicit override), or `abort`.
-2. **List commits** in this task: `git log <plan-commit>~1..HEAD --oneline`. Show the list to the user.
+1. **Re-run verify on the final pre-squash state.** Run `compile`, `test`, AND `lint` regardless of what individual steps verified — Ship-stage forces the full union. Resolve each verb via the active language profile, state each command verbatim. For Gradle / Maven / Bazel / pnpm / poetry first runs in this shell, prepend: `First run may download dependencies (multiple minutes) — this is expected, not a hang.` If any verb fails → STOP. AWAIT decision: `fix` (offer `/kit-fix` for the failure), `push as-is "<reason>"` (record explicit override and the reason), or `abort`.
+2. **List commits, annotate, then run the Ship-stage backstop diff review.**
+   - Annotate: `git log <plan-commit>~1..HEAD --oneline`. For each step commit append a label based on what happened during Stage 3:
+     - `[AWAIT: light]` / `[AWAIT: standard]` / `[AWAIT: heavy]` / `[AWAIT: standard (escalated from light)]`
+     - `[Auto-approved: light, shape-OK]` (these bypassed AWAIT during the loop)
+     - `[external fix]` (any `kit: fix` commit found during rehydration)
+   - State summary: `<N> step commits, of which <K> were auto-approved (light) and bypassed AWAIT. Backstop review of the full cumulative diff follows.`
+   - Output: `git diff <plan-commit>..HEAD`. Pipe the full diff to the user. If `git diff --shortstat <plan-commit>..HEAD` indicates over ~500 lines, state the shortstat first and let the user decide between inline-full or file-by-file `git show <commit>` calls.
+   - AWAIT: `ack` to confirm the diff has been reviewed and proceed to step 3, `revert step <N>` (re-enters Stage 3's revert flow for the specified commit), `/kit-fix <hash> "<desc>"` to fix one of the auto-approved steps before push, or `abort` to stop ship.
+
+   The backstop is the only point in the protocol where every diff line of the task is mandatorily presented. You cannot skip it, and you cannot proceed to squash without `ack`.
 3. **Probe squash base.** Before proposing the message, confirm `<plan-commit>~1` is a sensible reset target:
    - Run `git rev-parse --verify <plan-commit>~1` — if it fails, the plan is the repo's root commit; STOP and output: `Plan commit <hash> has no parent (root commit). Cannot squash with --soft. Reply "keep" to ship as-is or "cancel" to abort.` Skip step 4–5 (squash branches); jump to step 6 on `keep` or end on `cancel`.
    - Otherwise compute `BASE = <plan-commit>~1`. Probe which integration-branch ref actually exists before testing reachability — run `git rev-parse --verify origin/master 2>/dev/null` and `git rev-parse --verify origin/main 2>/dev/null` (stderr silenced; either may legitimately not exist). For each ref that resolves, run `git merge-base --is-ancestor BASE <ref>`. If at least one returns ancestor (exit 0), include a note in step 4 output: `Squash base is on <integration-branch>; the squashed commit will sit directly on top of it.` Skip non-existent refs silently — never surface a raw `fatal: Not a valid object name` to the user. This note is normal but tells the user the plan-commit was the first work on this branch.
