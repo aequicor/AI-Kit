@@ -54,6 +54,7 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.pdfbox)
+            implementation(libs.jai.imageio.jpeg2000)
         }
     }
 }
