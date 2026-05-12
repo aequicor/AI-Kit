@@ -123,10 +123,11 @@ target_adapters:
 
 agents:
   - id: Main
+    role: orchestrator                # drives the main loop — body is inlined into CLAUDE.md / AGENTS.md / CONVENTIONS.md
     description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
     prompt: { include: prompts/Main.md }
     tools: [Read, Edit, Write, Glob, Grep, Bash]
-  - id: Researcher
+  - id: Researcher                    # subagent — emitted as a separate file the orchestrator dispatches via Task
     description: "Session 1 Stage 1 helper — returns one focused digest, never writes code"
     prompt: { include: prompts/Researcher.md }
     tools: [Read, Glob, Grep, WebFetch]
@@ -143,6 +144,7 @@ Notes for the orchestrator (do NOT include in the manifest itself):
 
 - `commands` and `skills` are NOT top-level manifest fields. The generator scans `templates/commands/` and `templates/skills/` and emits everything found — there is no filter. Don't try to add `commands: [kit, kit-do, kit-fix]` or `skills: [summary-format]` to the manifest; the verifier will accept them silently but they have no effect.
 - `agents` MUST be a list of objects with `id`, `description`, `prompt.include`, `tools`. A bare list of strings (`agents: [Main, Researcher]`) fails with `missing_agent_prompt`.
+- The pipeline-driving agent MUST declare `role: orchestrator` (see Main above). Its body is inlined into the runner's main-loop prompt (`CLAUDE.md` / `AGENTS.md` / `CONVENTIONS.md`, or an `alwaysApply: true` rule for Cursor) — subagent files are isolated one-shot contexts and structurally cannot drive multi-turn AWAIT gates. Exactly one orchestrator per manifest; declaring two fails with `multiple_orchestrators`. Legacy back-compat: an agent with `id: Main` and no `role` is auto-promoted to orchestrator.
 - `prompt_dialects` and `target_adapters` MUST have both `id` and `path`.
 - For Claude Code: `providers[].auth: subscription` (the runner handles login). Use `api_key` only if you have an `api_key_env` variable to wire.
 

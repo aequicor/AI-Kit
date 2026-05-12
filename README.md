@@ -174,10 +174,11 @@ target_adapters:                    # tells the renderer where to find adapter c
 
 agents:                             # required, min 1 — v3 fixes the roster at exactly two
   - id: Main
+    role: orchestrator                # inlined into CLAUDE.md / AGENTS.md (main-loop prompt)
     description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
     prompt: { include: prompts/Main.md }
     tools: [Read, Edit, Write, Glob, Grep, Bash]
-  - id: Researcher
+  - id: Researcher                    # subagent — separate artifact file the orchestrator dispatches
     description: "Session 1 Stage 1 helper — returns one focused digest, never writes code"
     prompt: { include: prompts/Researcher.md }
     tools: [Read, Glob, Grep, WebFetch]
@@ -199,6 +200,7 @@ These are the rules that show up most often as a `kit-setup verify` failure:
 - **`targets`**, **`providers`**, **`models`**, **`agents`** must each have at least one entry. Empty arrays fail validation.
 - **`providers[].auth: api_key`** requires `api_key_env` (the name of the env var, never the key itself).
 - **`agents[]`** must be a list of objects with `id`, `description`, `prompt.include`, and `tools`. A bare `agents: [Main, Researcher]` fails with `missing_agent_prompt`.
+- **`agents[].role`** is optional and accepts `orchestrator` or `subagent` (default). Exactly one orchestrator per manifest — its body is inlined into the runner's main-loop prompt (`CLAUDE.md` / `AGENTS.md` / `CONVENTIONS.md`, or an `alwaysApply: true` rule for Cursor). Two orchestrators fail with `multiple_orchestrators`. For back-compat, an agent with `id: Main` and no `role` is auto-promoted to orchestrator.
 - **`prompt_dialects[]`** and **`target_adapters[]`** each require both `id` and `path`.
 - **`targets[].id`** must reference one of the bundled adapter IDs (or one you've added under `kit-setup/templates/target_adapters/<id>/`). Same for **`models[].family`** against `dialects/<family>/`.
 - **`render_targets`** entries must exist in `targets[].id`.

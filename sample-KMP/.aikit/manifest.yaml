@@ -60,6 +60,7 @@ target_adapters:
 
 agents:
   - id: Main
+    role: orchestrator
     description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
     prompt: { include: prompts/Main.md }
     tools: [Read, Edit, Write, Glob, Grep, Bash]

@@ -5,6 +5,7 @@ import com.aikit.setup.manifest.Manifest
 import com.aikit.setup.validation.rules.AgentPromptPresentRule
 import com.aikit.setup.validation.rules.ManifestVersionRule
 import com.aikit.setup.validation.rules.ModelProviderExistsRule
+import com.aikit.setup.validation.rules.OrchestratorUnicityRule
 import com.aikit.setup.validation.rules.ProjectSlugRule
 import com.aikit.setup.validation.rules.ProviderAuthRule
 import com.aikit.setup.validation.rules.RenderTargetsExistRule
@@ -262,6 +263,88 @@ class StructuralRulesTest {
                 agents:
                   - id: A
                     prompt: { include: prompts/A.md }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun orchestratorUnicityAcceptsSingleExplicit() {
+        val errors = OrchestratorUnicityRule().check(
+            parse(
+                """
+                agents:
+                  - { id: Driver, role: orchestrator }
+                  - { id: Helper }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun orchestratorUnicityAcceptsLegacyMainShorthand() {
+        // `id: Main` with no role is auto-promoted; this single-agent setup
+        // is still valid even without an explicit `role:` field.
+        val errors = OrchestratorUnicityRule().check(
+            parse(
+                """
+                agents:
+                  - { id: Main }
+                  - { id: Researcher }
+                """,
+            ),
+        )
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun orchestratorUnicityRejectsTwoExplicit() {
+        val errors = OrchestratorUnicityRule().check(
+            parse(
+                """
+                agents:
+                  - { id: A, role: orchestrator }
+                  - { id: B, role: orchestrator }
+                """,
+            ),
+        )
+        assertEquals(2, errors.size)
+        assertTrue(errors.all { it.code == "multiple_orchestrators" })
+        assertEquals(listOf("/agents/0/role", "/agents/1/role"), errors.map { it.path })
+    }
+
+    @Test
+    fun orchestratorUnicityRejectsLegacyMainPlusExplicit() {
+        // Coexisting back-compat `Main` and an explicit orchestrator is the
+        // ambiguous case the rule is designed to catch — the renderer cannot
+        // decide whose body to inline.
+        val errors = OrchestratorUnicityRule().check(
+            parse(
+                """
+                agents:
+                  - { id: Main }
+                  - { id: Driver, role: orchestrator }
+                """,
+            ),
+        )
+        assertEquals(2, errors.size)
+        assertTrue(errors.all { it.code == "multiple_orchestrators" })
+    }
+
+    @Test
+    fun orchestratorUnicityIgnoresSubagentRole() {
+        // Explicit `role: subagent` is the default and must not count toward
+        // the orchestrator pool, even when paired with a legacy `id: Main`
+        // somewhere else.
+        val errors = OrchestratorUnicityRule().check(
+            parse(
+                """
+                agents:
+                  - { id: Main, role: orchestrator }
+                  - { id: Researcher, role: subagent }
+                  - { id: Verifier }
                 """,
             ),
         )

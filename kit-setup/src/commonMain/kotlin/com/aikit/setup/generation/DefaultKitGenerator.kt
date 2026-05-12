@@ -93,12 +93,17 @@ class DefaultKitGenerator(
         val adapter = packages.loadAdapter(adapterPath)
 
         // Constitution / instruction file (CLAUDE.md, AGENTS.md, …).
-        renderInstructionFile(manifest, adapter, targetRoot, written, errors)
+        // The orchestrator agent (role: orchestrator, or the legacy `Main` id
+        // with no role declared) is inlined here, not emitted as a subagent —
+        // its prompt must live in the runner's main-loop system prompt so it
+        // can drive multi-turn AWAIT gates that subagents structurally can't.
+        renderInstructionFile(manifest, target, adapter, resolver, targetRoot, written, errors)
 
-        // Agents.
+        // Agents (subagents only — orchestrator went into the instruction file).
         if (adapter.capabilities["subagents"] == true) {
             for (agent in manifest.agents) {
                 if (agent.targetsOverride != null && target.id !in agent.targetsOverride) continue
+                if (isOrchestrator(agent)) continue
                 renderAgent(manifest, target, adapter, agent, resolver, targetRoot, written, errors)
             }
         }
@@ -117,7 +122,7 @@ class DefaultKitGenerator(
         //   - section-style (`CLAUDE.md#{id}`): folded into instruction file by renderInstructionFile.
         //   - file-style (`.cursor/rules/{id}.mdc`): one rule per file, dialect-wrapped.
         if (isFileStyleRule(adapter)) {
-            renderRules(manifest, adapter, targetRoot, written, errors)
+            renderRules(manifest, target, adapter, resolver, targetRoot, written, errors)
         }
 
         // User-prompts (`user-prompts/*.md`). Always file-style.
@@ -133,17 +138,23 @@ class DefaultKitGenerator(
 
     private fun renderInstructionFile(
         manifest: TypedManifest,
+        target: Target,
         adapter: Adapter,
+        resolver: ModelResolver,
         targetRoot: String,
         written: MutableList<String>,
         errors: MutableList<GenerationError>,
     ) {
         val out = adapter.instructionFile ?: return
         // Cursor maps `instruction_file` to a directory — `.cursor/rules` —
-        // skip the single-file constitution write and rely on per-rule files.
+        // skip the single-file constitution write and rely on per-rule files
+        // (renderRules emits the orchestrator body there too).
         if (out.endsWith("/")) return
         if (adapter.capabilities["scoped_rules"] == true) return
-        if (manifest.knowledge?.constitution?.sections.isNullOrEmpty() && manifest.policies.forbiddenPatterns.isEmpty()) {
+        val orchestrator = orchestratorAgentFor(manifest, target)
+        val hasConstitution = !manifest.knowledge?.constitution?.sections.isNullOrEmpty() ||
+            manifest.policies.forbiddenPatterns.isNotEmpty()
+        if (!hasConstitution && orchestrator == null) {
             return
         }
         val baseVars = baseVariables(manifest)
@@ -180,6 +191,16 @@ class DefaultKitGenerator(
                 val body = templates.read(rule.bodyPath) ?: continue
                 sb.append("## ").append(rule.id).append("\n\n")
                 sb.append(engine.render(body, baseVars).trimEnd()).append("\n\n")
+            }
+        }
+        // Orchestrator agent — inline its rendered body (dialect-wrapped, no
+        // frontmatter) so the runner's main loop carries the pipeline prompt
+        // directly. Subagents on this target still get their own files.
+        if (orchestrator != null) {
+            val body = renderAgentBodyOrNull(manifest, target, orchestrator, resolver, errors)
+            if (body != null) {
+                sb.append("## ").append(orchestrator.id).append(" — orchestrator\n\n")
+                sb.append(body.trimEnd()).append("\n\n")
             }
         }
         val content = sb.toString().trimEnd() + "\n"
@@ -224,7 +245,9 @@ class DefaultKitGenerator(
      */
     private fun renderRules(
         manifest: TypedManifest,
+        target: Target,
         adapter: Adapter,
+        resolver: ModelResolver,
         targetRoot: String,
         written: MutableList<String>,
         errors: MutableList<GenerationError>,
@@ -250,6 +273,19 @@ class DefaultKitGenerator(
         for (rule in listRules(manifest.stack.languages)) {
             val body = templates.read(rule.bodyPath) ?: continue
             emitRuleFile(adapter, outTemplate, dialect, wrapper, engine, baseVars, rule.id, body, alwaysApply = false, targetRoot, written, errors)
+        }
+
+        // 3. orchestrator agent body → alwaysApply rule file. File-style
+        // adapters (Cursor) have no main-loop system prompt, so the
+        // orchestrator pipeline is delivered as an always-loaded rule. Use
+        // the agent wrapper output verbatim — placeholders and dialect
+        // wrapping already resolved by renderWrappedAgent.
+        val orchestrator = orchestratorAgentFor(manifest, target)
+        if (orchestrator != null) {
+            val rendered = renderAgentBodyOrNull(manifest, target, orchestrator, resolver, errors)
+            if (rendered != null) {
+                emitRuleFile(adapter, outTemplate, dialect, wrapper = null, engine, baseVars, orchestrator.id, rendered, alwaysApply = true, targetRoot, written, errors)
+            }
         }
     }
 
@@ -392,6 +428,38 @@ class DefaultKitGenerator(
         errors: MutableList<GenerationError>,
     ) {
         val outTemplate = adapter.artifactPaths["agent"] ?: return
+        val rendered = renderWrappedAgent(manifest, target, agent, resolver, errors) ?: return
+
+        val fmTemplatePath = adapter.artifactFrontmatter["agent"]
+            ?.let { "${adapter.packagePath}/$it" }
+        val frontmatter = fmTemplatePath?.let { templates.read(it) }?.let {
+            Frontmatter.render(it, rendered.variables)
+        } ?: ""
+
+        val outPath = outTemplate.replace("{id}", agent.id)
+        val content = frontmatter + rendered.body.trimEnd() + "\n"
+        writeArtifact(targetRoot, outPath, content, written, errors)
+    }
+
+    /**
+     * Renders an agent prompt (dialect-wrapped, placeholders expanded) without
+     * writing anything. Returns the body and the variable map (the latter so
+     * a caller that needs frontmatter can reuse the resolved values).
+     *
+     * Used both by [renderAgent] (subagents → per-runner files) and by
+     * [renderInstructionFile] / [renderRules] (orchestrator → inlined into
+     * the runner's main-loop prompt). All error reporting is via [errors];
+     * a `null` return means a fatal lookup failed and the caller should skip.
+     */
+    private data class RenderedAgent(val body: String, val variables: Map<String, String>)
+
+    private fun renderWrappedAgent(
+        manifest: TypedManifest,
+        target: Target,
+        agent: Agent,
+        resolver: ModelResolver,
+        errors: MutableList<GenerationError>,
+    ): RenderedAgent? {
         val primaryTask = primaryTaskFor(manifest.workflows, agent.id)
         val resolved = resolver.resolve(target, agent, taskType = primaryTask)
         if (resolved == null) {
@@ -400,7 +468,7 @@ class DefaultKitGenerator(
                 code = "no_model_matched",
                 message = "no model satisfied agents[${agent.id}] for target `${target.id}`",
             )
-            return
+            return null
         }
         val dialect = loadDialectFor(manifest, resolved.family)
         if (dialect == null) {
@@ -409,7 +477,7 @@ class DefaultKitGenerator(
                 code = "missing_dialect",
                 message = "no prompt_dialects[] entry for family `${resolved.family}`",
             )
-            return
+            return null
         }
 
         val bodyPath = agent.prompt.perFamily[resolved.family] ?: agent.prompt.defaultPath
@@ -419,18 +487,16 @@ class DefaultKitGenerator(
                 code = "missing_prompt_body",
                 message = "prompt body `$bodyPath` not found in templates",
             )
-            return
+            return null
         }
 
-        val wrapper = adapter.artifactPaths["agent"]?.let { _ ->
-            templates.read("${dialect.packagePath}/${dialect.wrappers["agent"]}")
-        } ?: run {
+        val wrapper = templates.read("${dialect.packagePath}/${dialect.wrappers["agent"]}") ?: run {
             errors += GenerationError(
                 path = dialect.packagePath,
                 code = "missing_agent_wrapper",
                 message = "dialect `${dialect.id}` has no agent wrapper",
             )
-            return
+            return null
         }
 
         val baseVars = baseVariables(manifest) + mapOf(
@@ -450,17 +516,40 @@ class DefaultKitGenerator(
         val resolvedBody = engine.render(body, baseVars).trimEnd()
         val variables = baseVars + mapOf("BODY" to resolvedBody)
         val rendered = engine.render(wrapper, variables)
-
-        val fmTemplatePath = adapter.artifactFrontmatter["agent"]
-            ?.let { "${adapter.packagePath}/$it" }
-        val frontmatter = fmTemplatePath?.let { templates.read(it) }?.let {
-            Frontmatter.render(it, variables)
-        } ?: ""
-
-        val outPath = outTemplate.replace("{id}", agent.id)
-        val content = frontmatter + rendered.trimEnd() + "\n"
-        writeArtifact(targetRoot, outPath, content, written, errors)
+        return RenderedAgent(body = rendered, variables = variables)
     }
+
+    /**
+     * Thin wrapper used when only the rendered body is needed (no frontmatter,
+     * no file write) — instruction-file inlining for the orchestrator.
+     */
+    private fun renderAgentBodyOrNull(
+        manifest: TypedManifest,
+        target: Target,
+        agent: Agent,
+        resolver: ModelResolver,
+        errors: MutableList<GenerationError>,
+    ): String? = renderWrappedAgent(manifest, target, agent, resolver, errors)?.body
+
+    /**
+     * True for the agent that drives the runner's main loop. Two signals:
+     *  - explicit `role: orchestrator` in the manifest (preferred);
+     *  - legacy heuristic: an agent with `id == "Main"` and no `role` declared.
+     *
+     * Use [orchestratorAgentFor] to fetch the (at most one) orchestrator
+     * filtered by `targets_override`; the unicity invariant is enforced by
+     * [com.aikit.setup.validation.rules.OrchestratorUnicityRule].
+     */
+    private fun isOrchestrator(agent: Agent): Boolean {
+        if (agent.role?.equals("orchestrator", ignoreCase = true) == true) return true
+        if (agent.role == null && agent.id == "Main") return true
+        return false
+    }
+
+    private fun orchestratorAgentFor(manifest: TypedManifest, target: Target): Agent? =
+        manifest.agents.firstOrNull { agent ->
+            isOrchestrator(agent) && (agent.targetsOverride == null || target.id in agent.targetsOverride)
+        }
 
     // ── skills ───────────────────────────────────────────────────────────────
 

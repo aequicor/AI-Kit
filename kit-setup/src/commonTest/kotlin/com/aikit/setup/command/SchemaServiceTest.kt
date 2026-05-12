@@ -69,7 +69,7 @@ class SchemaServiceTest {
         // Enum catalog is hand-written and independent of the bundle — agents
         // need it to author manifests with the canonical values.
         assertEquals(
-            listOf("provider_auth", "model_tier", "cost_hint", "knowledge_store_kind"),
+            listOf("provider_auth", "model_tier", "cost_hint", "knowledge_store_kind", "agent_role"),
             catalog.enums.keys.toList(),
         )
         assertEquals(
@@ -87,6 +87,10 @@ class SchemaServiceTest {
         assertEquals(
             listOf("filesystem", "mcp", "http", "composite"),
             catalog.enums.getValue("knowledge_store_kind"),
+        )
+        assertEquals(
+            listOf("orchestrator", "subagent"),
+            catalog.enums.getValue("agent_role"),
         )
     }
 
@@ -218,6 +222,6 @@ class SchemaServiceTest {
         // when no profiles ship with this binary.
         assertEquals(3, catalog.profileAxes.size)
         // Enums are independent of the bundle — same shape regardless of templates.
-        assertEquals(4, catalog.enums.size)
+        assertEquals(5, catalog.enums.size)
     }
 }

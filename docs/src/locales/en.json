@@ -25,7 +25,7 @@
     "start": "Get started"
   },
   "home": {
-    "badge": "Documentation · v3.1.0",
+    "badge": "Documentation · v3.2.0",
     "title": "One kit — a ready development process for any AI agent",
     "lead": "AI Kit adds a development workflow on top of your AI agent. The same set of commands works in Claude Code, Cursor, OpenCode, Aider and Qwen Code: new features, bug fixes, review checkpoints, isolated sessions for messy fixes, autonomous runs.",
     "ctaQuick": "Set up in a minute",
@@ -260,7 +260,7 @@
         },
         {
           "command": "schema [--format json|human]",
-          "body": "Lists the profiles, agents, targets, and commands bundled in this binary, plus `enums` with allowed values for validator-enforced fields (provider_auth, model_tier, cost_hint, knowledge_store_kind). Default is JSON; --format human prints a readable tree."
+          "body": "Lists the profiles, agents, targets, and commands bundled in this binary, plus `enums` with allowed values for validator-enforced fields (provider_auth, model_tier, cost_hint, knowledge_store_kind, agent_role). Default is JSON; --format human prints a readable tree."
         },
         {
           "command": "--help / -h",
@@ -311,35 +311,35 @@
           "status": "supported",
           "role": "Claude Code by Anthropic",
           "files": ["CLAUDE.md", ".claude/agents/*.md", ".claude/commands/*.md", ".claude/settings.json"],
-          "body": "Top-level guidance, subagent definitions, slash commands, permissions and MCP servers. Constitution flows into CLAUDE.md."
+          "body": "Top-level guidance, subagent definitions, slash commands, permissions and MCP servers. CLAUDE.md carries both the constitution and the orchestrator agent body (`role: orchestrator`) — the runner's main loop needs that prompt directly. Other agents land under `.claude/agents/*.md` as Task-dispatched subagents."
         },
         {
           "id": "cursor",
           "status": "supported",
           "role": "Cursor",
           "files": [".cursor/rules/*.mdc", ".cursor/mcp.json"],
-          "body": "One .mdc file per constitution section, alwaysApply: true. Plus an MCP config. Cursor doesn't have slash commands, so those aren't rendered."
+          "body": "One .mdc file per constitution section, alwaysApply: true. The orchestrator agent (role: orchestrator) ships as one more alwaysApply rule — Cursor has no main-loop system prompt, so the pipeline lives as always-loaded context. Plus an MCP config. Cursor doesn't have slash commands, so those aren't rendered."
         },
         {
           "id": "opencode",
           "status": "supported",
           "role": "OpenCode",
           "files": ["AGENTS.md", ".opencode/agents/*.md", ".opencode/commands/*.md", "opencode.json"],
-          "body": "AGENTS.md as the main guidance, assistant definitions, slash commands, provider/MCP block. Don't enable simultaneously with qwen-code — they both write AGENTS.md."
+          "body": "AGENTS.md carries both the constitution and the orchestrator agent body (`role: orchestrator`). Assistant definitions for subagents land under `.opencode/agents/*.md`. Plus slash commands and a provider/MCP block. Don't enable simultaneously with qwen-code — they both write AGENTS.md."
         },
         {
           "id": "aider",
           "status": "supported",
           "role": "Aider",
           "files": ["CONVENTIONS.md", ".aider.conf.yml", ".aider/prompts/*.md"],
-          "body": "CONVENTIONS.md, which Aider auto-loads, plus a global config with model binding. Prompts ship as separate files."
+          "body": "CONVENTIONS.md, which Aider auto-loads, carries both the constitution and the orchestrator agent body. Plus a global config with model binding and prompts as separate files."
         },
         {
           "id": "qwen-code",
           "status": "supported",
           "role": "Qwen Code",
           "files": ["AGENTS.md", ".qwen/agents/*.md", ".qwen/settings.json"],
-          "body": "Mirror of the opencode layout but in its own folder. settings.json contains the modelProviders block for Qwen."
+          "body": "Mirror of the opencode layout but in its own folder — AGENTS.md carries the constitution and the orchestrator body, subagents land under .qwen/agents/. settings.json contains the modelProviders block for Qwen."
         }
       ]
     },

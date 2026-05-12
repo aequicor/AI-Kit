@@ -71,6 +71,13 @@ class SchemaService(
         "model_tier" to listOf("fast", "balanced", "reasoner"),
         "cost_hint" to listOf("cheap", "balanced", "premium"),
         "knowledge_store_kind" to listOf("filesystem", "mcp", "http", "composite"),
+        // `agents[].role` — orchestrator (exactly one, inlined into the
+        // runner's main-loop prompt) vs subagent (default; emitted as a
+        // separate artifact file). Omitting the field is treated as
+        // `subagent`, except for the legacy id `Main`, which auto-promotes
+        // to orchestrator for back-compat. The unicity invariant is enforced
+        // by OrchestratorUnicityRule (error code: multiple_orchestrators).
+        "agent_role" to listOf("orchestrator", "subagent"),
     )
 
     /**

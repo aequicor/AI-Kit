@@ -25,7 +25,7 @@
     "start": "Начать"
   },
   "home": {
-    "badge": "Документация · v3.1.0",
+    "badge": "Документация · v3.2.0",
     "title": "Один кит — готовый процесс разработки с любым ИИ‑агентом",
     "lead": "AI Kit добавляет процесс разработки поверх вашего AI-агента. Один и тот же набор команд работает в Claude Code, Cursor, OpenCode, Aider и Qwen Code: новые фичи, фиксы, точки ревью, отдельные сессии для сложных багов, автономные прогоны.",
     "ctaQuick": "Поставить за минуту",
@@ -260,7 +260,7 @@
         },
         {
           "command": "schema [--format json|human]",
-          "body": "Показывает, какие профили, агенты, цели и команды встроены в этот бинарник, а также `enums` с допустимыми значениями для полей, которые проверяет валидатор (provider_auth, model_tier, cost_hint, knowledge_store_kind). По умолчанию JSON, --format human — читаемое дерево."
+          "body": "Показывает, какие профили, агенты, цели и команды встроены в этот бинарник, а также `enums` с допустимыми значениями для полей, которые проверяет валидатор (provider_auth, model_tier, cost_hint, knowledge_store_kind, agent_role). По умолчанию JSON, --format human — читаемое дерево."
         },
         {
           "command": "--help / -h",
@@ -311,35 +311,35 @@
           "status": "поддерживается",
           "role": "Claude Code от Anthropic",
           "files": ["CLAUDE.md", ".claude/agents/*.md", ".claude/commands/*.md", ".claude/settings.json"],
-          "body": "Главный файл, описания субагентов, slash-команды, разрешения и MCP-сервера. Конституция расходится по CLAUDE.md."
+          "body": "Главный файл, описания субагентов, slash-команды, разрешения и MCP-сервера. CLAUDE.md содержит и конституцию, и тело агента-оркестратора (`role: orchestrator`) — основной цикл рантайма работает с этим промптом напрямую. Остальные агенты ложатся в `.claude/agents/*.md` как субагенты, которых оркестратор дёргает через Task."
         },
         {
           "id": "cursor",
           "status": "поддерживается",
           "role": "Cursor",
           "files": [".cursor/rules/*.mdc", ".cursor/mcp.json"],
-          "body": "Каждая секция конституции — отдельный .mdc-файл с alwaysApply: true. Плюс конфиг MCP. Slash-команд у Cursor нет, поэтому они не рендерятся."
+          "body": "Каждая секция конституции — отдельный .mdc-файл с alwaysApply: true. Тело агента-оркестратора (role: orchestrator) едет ещё одним alwaysApply-правилом — у Cursor нет основного цикла с системным промптом, поэтому пайплайн живёт как всегда-загруженный контекст. Плюс конфиг MCP. Slash-команд у Cursor нет, поэтому они не рендерятся."
         },
         {
           "id": "opencode",
           "status": "поддерживается",
           "role": "OpenCode",
           "files": ["AGENTS.md", ".opencode/agents/*.md", ".opencode/commands/*.md", "opencode.json"],
-          "body": "AGENTS.md как основная инструкция, описания ассистентов, slash-команды, настройки провайдера и MCP. Не включайте одновременно с qwen-code — они оба пишут AGENTS.md."
+          "body": "AGENTS.md содержит и конституцию, и тело агента-оркестратора (`role: orchestrator`). Описания субагентов уходят в `.opencode/agents/*.md`. Плюс slash-команды и блок провайдера/MCP. Не включайте одновременно с qwen-code — они оба пишут AGENTS.md."
         },
         {
           "id": "aider",
           "status": "поддерживается",
           "role": "Aider",
           "files": ["CONVENTIONS.md", ".aider.conf.yml", ".aider/prompts/*.md"],
-          "body": "CONVENTIONS.md, который Aider подгружает автоматически, плюс глобальный конфиг с привязкой модели. Промпты — отдельными файлами."
+          "body": "CONVENTIONS.md, который Aider подгружает автоматически, содержит и конституцию, и тело агента-оркестратора. Плюс глобальный конфиг с привязкой модели и промпты отдельными файлами."
         },
         {
           "id": "qwen-code",
           "status": "поддерживается",
           "role": "Qwen Code",
           "files": ["AGENTS.md", ".qwen/agents/*.md", ".qwen/settings.json"],
-          "body": "Зеркальная opencode схема, но в собственной папке. Settings.json содержит блок modelProviders для Qwen."
+          "body": "Зеркальная opencode схема, но в собственной папке — AGENTS.md содержит конституцию и тело оркестратора, субагенты идут в .qwen/agents/. Settings.json содержит блок modelProviders для Qwen."
         }
       ]
     },
