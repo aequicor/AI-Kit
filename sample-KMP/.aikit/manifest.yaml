@@ -75,5 +75,7 @@ policies:
   forbidden_patterns:
     - "platform-specific code in commonMain without expect/actual"
     - "hardcoded platform checks via if-else instead of expect/actual"
+    - "Прямое обращение к Dispatchers.IO / Dispatchers.Default / Dispatchers.Main внутри класса без инжекции через конструктор — объявите параметр CoroutineDispatcher в конструкторе и используйте его"
+    - "Магическая константа — числовой литерал (кроме 0 и 1) использован инлайн в production-коде без именованной val/const (magic number)"
 
 knowledge: {}

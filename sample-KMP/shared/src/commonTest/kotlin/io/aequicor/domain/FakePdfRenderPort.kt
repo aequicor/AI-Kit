@@ -11,6 +11,10 @@ class FakePdfRenderPort(
     private val pageHeight: Int = 200,
 ) : PdfRenderPort {
 
+    private companion object {
+        const val ARGB_BYTES_PER_PIXEL = 4
+    }
+
     var closeCalled = false
 
     override suspend fun openDocument(bytes: ByteArray): PdfDocument {
@@ -21,7 +25,7 @@ class FakePdfRenderPort(
     }
 
     override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
-        ByteArray(targetSize.widthPx * targetSize.heightPx * 4)
+        ByteArray(targetSize.widthPx * targetSize.heightPx * ARGB_BYTES_PER_PIXEL)
 
     override suspend fun closeDocument() {
         closeCalled = true

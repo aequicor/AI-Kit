@@ -16,6 +16,15 @@ class JvmPdfRenderAdapter(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : PdfRenderPort {
 
+    private companion object {
+        const val PDF_BASE_DPI = 72f
+        const val ARGB_BYTES_PER_PIXEL = 4
+        const val ARGB_RED_SHIFT = 16
+        const val ARGB_GREEN_SHIFT = 8
+        const val ARGB_ALPHA_SHIFT = 24
+        const val CHANNEL_MASK = 0xFF
+    }
+
     private var document: PDDocument? = null
     private var pdfRenderer: PDFRenderer? = null
 
@@ -41,7 +50,7 @@ class JvmPdfRenderAdapter(
             val doc = checkNotNull(document) { "No document open" }
             val page = doc.getPage(pageIndex)
             val naturalW = page.mediaBox.width
-            val dpi = (targetSize.widthPx / naturalW) * 72f
+            val dpi = (targetSize.widthPx / naturalW) * PDF_BASE_DPI
             val image: BufferedImage = renderer.renderImageWithDPI(pageIndex, dpi, org.apache.pdfbox.rendering.ImageType.ARGB)
             argb8888Bytes(image)
         }
@@ -62,15 +71,15 @@ class JvmPdfRenderAdapter(
     private fun argb8888Bytes(image: BufferedImage): ByteArray {
         val w = image.width
         val h = image.height
-        val buf = ByteArray(w * h * 4)
+        val buf = ByteArray(w * h * ARGB_BYTES_PER_PIXEL)
         var i = 0
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val argb = image.getRGB(x, y)
-                buf[i++] = ((argb shr 16) and 0xFF).toByte() // R
-                buf[i++] = ((argb shr 8) and 0xFF).toByte()  // G
-                buf[i++] = (argb and 0xFF).toByte()           // B
-                buf[i++] = ((argb shr 24) and 0xFF).toByte() // A
+                buf[i++] = ((argb shr ARGB_RED_SHIFT) and CHANNEL_MASK).toByte()
+                buf[i++] = ((argb shr ARGB_GREEN_SHIFT) and CHANNEL_MASK).toByte()
+                buf[i++] = (argb and CHANNEL_MASK).toByte()
+                buf[i++] = ((argb shr ARGB_ALPHA_SHIFT) and CHANNEL_MASK).toByte()
             }
         }
         return buf
