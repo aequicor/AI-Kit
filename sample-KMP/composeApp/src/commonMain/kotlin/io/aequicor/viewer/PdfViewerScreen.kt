@@ -2,7 +2,6 @@ package io.aequicor.viewer
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +35,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.abs
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -50,8 +50,9 @@ fun PdfViewerScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
-    val transformState = rememberTransformableState { zoomChange, _, _ ->
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         viewModel.onZoomChange(zoomChange)
+        viewModel.onPanX(panChange.x)
     }
 
     val document = state.document
@@ -72,13 +73,8 @@ fun PdfViewerScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .transformable(transformState)
+                .transformable(transformState, canPan = { abs(it.x) > abs(it.y) })
                 .clipToBounds()
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { _, dragAmount ->
-                        viewModel.onPanX(dragAmount)
-                    }
-                }
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {

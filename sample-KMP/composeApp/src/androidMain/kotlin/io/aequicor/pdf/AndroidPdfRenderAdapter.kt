@@ -6,6 +6,7 @@ import androidx.core.graphics.createBitmap
 import io.aequicor.domain.model.PdfDocument
 import io.aequicor.domain.model.PdfPage
 import io.aequicor.domain.model.PdfPageSize
+import io.aequicor.domain.model.RenderedPage
 import io.aequicor.domain.port.PdfRenderPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,7 +36,7 @@ class AndroidPdfRenderAdapter : PdfRenderPort {
         PdfDocument(pageCount = r.pageCount, pages = pages)
     }
 
-    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
+    override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): RenderedPage =
         withContext(Dispatchers.IO) {
             val r = checkNotNull(renderer) { "No document open" }
             r.openPage(pageIndex).use { page ->
@@ -44,7 +45,7 @@ class AndroidPdfRenderAdapter : PdfRenderPort {
                 val buf = ByteArray(bitmap.byteCount)
                 bitmap.copyPixelsToBuffer(java.nio.ByteBuffer.wrap(buf))
                 bitmap.recycle()
-                buf
+                RenderedPage(bytes = buf, width = targetSize.widthPx, height = targetSize.heightPx)
             }
         }
 
