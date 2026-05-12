@@ -1,5 +1,4 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -34,12 +33,8 @@ kotlin {
         binaries.executable()
     }
     
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
-    
+    // wasmJs excluded: SQLDelight 2.0.2 has no wasmJs artifacts; re-enable after SQLDelight upgrade.
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)

@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -24,14 +23,13 @@ kotlin {
         browser()
     }
 
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
+    // wasmJs excluded: SQLDelight 2.0.2 has no wasmJs artifacts for runtime/coroutines-extensions.
+    // Re-enable after upgrading SQLDelight to a version that ships wasmJs variants.
 
     sourceSets {
         commonMain.dependencies {
             implementation(libs.koin.core)
+            implementation(libs.koin.core.viewmodel)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
@@ -54,16 +52,6 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.sqldelight.native.driver)
-        }
-        val jsMain by getting {
-            dependencies {
-                implementation(libs.sqldelight.web.worker.driver)
-            }
-        }
-        val wasmJsMain by getting {
-            dependencies {
-                implementation(libs.sqldelight.web.worker.driver)
-            }
         }
     }
 }
