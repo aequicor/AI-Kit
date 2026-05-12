@@ -6,12 +6,10 @@ import io.aequicor.domain.model.PdfPageSize
 import io.aequicor.domain.port.PdfRenderPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
 
 class JvmPdfRenderAdapter : PdfRenderPort {
 
@@ -21,7 +19,7 @@ class JvmPdfRenderAdapter : PdfRenderPort {
     override suspend fun openDocument(bytes: ByteArray): PdfDocument = withContext(Dispatchers.IO) {
         closeDocumentInternal()
 
-        val doc = PDDocument.load(ByteArrayInputStream(bytes))
+        val doc = Loader.loadPDF(bytes)
         document = doc
         pdfRenderer = PDFRenderer(doc)
 
