@@ -99,6 +99,18 @@ The manifest path argument is optional — `verify` and `generate` default to `.
 
 ---
 
+## Versioning
+
+AI Kit follows [Semantic Versioning](https://semver.org/):
+
+| Bump | Trigger |
+|---|---|
+| **Major** | Breaking change to the `kit-setup` executable: subcommand renamed/removed, JSON output shape changed, exit-code contract changed, JSON error-code renamed/removed, manifest schema field renamed/removed in a way that breaks existing manifests. |
+| **Minor** | Breaking change to the bundled template tree: a profile, target adapter, dialect, prompt body, command, or skill is **added or removed** (new names become available, or old names stop working). |
+| **Patch** | Content-only changes inside existing template files — wording, prompt refinements, style tweaks. Also: doc fixes, CI/tooling changes, test additions. |
+
+---
+
 ## Build from source
 
 Requires JDK 21.

@@ -128,6 +128,16 @@ npm run build    # tsc -b && vite build → docs/dist
 npm run preview
 ```
 
+## Versioning rules (SemVer)
+
+| Bump | When |
+|---|---|
+| **Major** (`X+1.0.0`) | Breaking change to the `kit-setup` executable interface: subcommand renamed/removed, JSON output shape changed, exit-code contract changed, JSON error codes renamed/removed, manifest schema field renamed/removed that breaks existing manifests. |
+| **Minor** (`X.Y+1.0`) | Breaking change to the bundled template tree: a profile, target adapter, dialect, prompt body, command, or skill is **added or removed** (existing manifests referencing old names break, or new names become available). |
+| **Patch** (`X.Y.Z+1`) | Content-only changes inside existing template files: wording, prompt refinements, style tweaks — no structural additions or removals. Also: doc-only fixes, CI/tooling changes, test additions. |
+
+**In practice:** adding a new profile = minor; rewriting its body = patch; removing it = minor; renaming a subcommand = major.
+
 ## Release plan — keep README and the Pages site in sync
 
 Releases are triggered by pushing a `v*` tag. The release workflow (`.github/workflows/release.yml`) builds all four native binaries and attaches them to a GitHub Release. The Pages workflow (`.github/workflows/pages.yml`) **only fires on changes under `docs/**`** — bumping the CLI version alone will not refresh the published guide.
