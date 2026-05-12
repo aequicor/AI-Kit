@@ -6,6 +6,8 @@ import io.aequicor.domain.model.PdfPageSize
 import io.aequicor.domain.port.PdfRenderPort
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -25,6 +27,7 @@ class JvmPdfRenderAdapter(
         const val CHANNEL_MASK = 0xFF
     }
 
+    private val renderMutex = Mutex()
     private var document: PDDocument? = null
     private var pdfRenderer: PDFRenderer? = null
 
@@ -45,14 +48,16 @@ class JvmPdfRenderAdapter(
     }
 
     override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
-        withContext(ioDispatcher) {
-            val renderer = checkNotNull(pdfRenderer) { "No document open" }
-            val doc = checkNotNull(document) { "No document open" }
-            val page = doc.getPage(pageIndex)
-            val naturalW = page.mediaBox.width
-            val dpi = (targetSize.widthPx / naturalW) * PDF_BASE_DPI
-            val image: BufferedImage = renderer.renderImageWithDPI(pageIndex, dpi, org.apache.pdfbox.rendering.ImageType.ARGB)
-            argb8888Bytes(image)
+        renderMutex.withLock {
+            withContext(ioDispatcher) {
+                val renderer = checkNotNull(pdfRenderer) { "No document open" }
+                val doc = checkNotNull(document) { "No document open" }
+                val page = doc.getPage(pageIndex)
+                val naturalW = page.mediaBox.width
+                val dpi = (targetSize.widthPx / naturalW) * PDF_BASE_DPI
+                val image: BufferedImage = renderer.renderImageWithDPI(pageIndex, dpi, org.apache.pdfbox.rendering.ImageType.ARGB)
+                argb8888Bytes(image)
+            }
         }
 
     override suspend fun closeDocument() = withContext(ioDispatcher) {
