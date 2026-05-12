@@ -51,13 +51,16 @@ When the user replies, parse:
    - **Independently committable** — no half-finished steps.
    - **Bounded** — one cohesive change, not a kitchen sink.
    - **Compatible with the invariants** — if a step inherently requires breaking one, list the violation in the step's Plan deviations at planning time so it is not a surprise during execution.
-3. For each step, capture: goal, definition-of-done (one line), assumptions, **review tier**, and (for `standard` / `heavy`) **what would be wrong**.
+3. For each step, capture: goal, definition-of-done (one line), assumptions, **review tier**, and (for `standard` / `heavy`) **what would be wrong**, **verify**, **expect**, and (for `light`) **shape**.
    - **Review tier rules:**
      - `light` — config / types / rename / move / dead-code delete / format-only. Expected diff <50 lines. No test changes.
      - `standard` — new business logic, refactor inside a file, package-private API additions.
      - `heavy` — public API, security boundary, schema / migration, dependency changes, build-config changes, test removal or weakening, cross-module refactors.
      - When in doubt, escalate one tier up. A misclassified `light` that scope-creeps is the most expensive mistake.
    - **What would be wrong** (one line, required for `standard` / `heavy`, `(n/a)` for `light`): a concrete antipattern the agent and the human should both watch for in the diff. Example: `writes directly to Recomposer instead of via Channel — races on fast strokes`.
+   - **Verify**: list of verbs from the `Verify verbs` table (default `[compile, test]`). Drop `test` only if the step is type-level (`compile` covers it). Add `lint` when the step introduces a new pattern that a linter could regress. Use `{shell: "<cmd>"}` only for genuinely one-off gates that no verb covers.
+   - **Expect**: always `green` in v3.1. Steps that intentionally leave the build red use the `--keep-red` override at execute time, not in the plan.
+   - **Shape** (required on `light`, optional otherwise): three constraints that bound an acceptable diff for the step — `files-glob`, `max-diff-lines`, `no-test-changes`. Tight enough that the step matches the declared tier; not so tight that legitimate work fails the check. A `light` step whose shape is violated at execute time is automatically escalated to `standard` for human review.
 4. **Validate DoD commands against the current toolchain.** Before writing the plan, for each step whose DoD invokes a build / test tool, confirm the command actually exists in this project's build system and is not a known NO-OP. Use the build system's own task-listing or dry-run mode (e.g. list available tasks, parse the project's script manifest, run a `--help` / `-n` introspection). Consult the stack-specific traps surfaced via `policies.forbidden_patterns` in the manifest (the active language / framework profiles add stack-specific NO-OP aggregators and misleading task names there). If a DoD command cannot be validated (offline, unfamiliar build system), mark that step's DoD with `Assumption:` so the human can correct before `/kit-do`.
 5. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
 6. Write `.aikit/plans/<id>.md` (format below).
@@ -81,18 +84,39 @@ When the user replies, parse:
 
 ### Stage 3 — Steps (loop)
 
+**Pre-loop baseline** (Fresh start only — skip on `--resume`):
+
+1. Determine the baseline command set: union of `Verify` verbs declared across all steps in the plan (default `[compile, test]` if none declared). Resolve each verb via the active language profile.
+2. Run each baseline command. State each command verbatim before running. For Gradle / Maven / Bazel / pnpm / poetry first runs, prepend: `First run may download dependencies (multiple minutes) — this is expected, not a hang.`
+3. If any baseline command exits non-zero → STOP. Output: `Pre-step baseline failed: <verbs that failed>. The build was already red before this plan started; cannot attribute step diffs to regressions. Resolve the existing red build, then re-enter /kit-do.`
+4. All green → state: `Baseline green (<verbs listed>). Beginning step 1.`
+
 For each step from current to last:
 
-1. Execute the step.
+1. Execute the step's code change.
 2. `git add -A && git commit -m "kit: step <N>/<total> — <slug>"`. If commit fails (pre-commit hook, dirty conflicts) → STOP, surface the error to the user verbatim. Do not retry, do not `--no-verify`.
 3. Set `last_known_hash = HEAD`.
-4. Output `STEP SUMMARY` (format below). The Agent-verified section must reaffirm **each** plan-level invariant against this step's diff — mark `OK` or `VIOLATED`. Any `VIOLATED` entry must point at a matching `Plan deviations` line that explains why; if there is no rationale, the step is not done and you owe a fix.
-5. AWAIT.
+4. **Run verify.** Resolve the step's `Verify` field (or default `[compile, test]`) via the active language profile. Run each command in sequence. Capture per-verb exit code and a one-line failure summary if non-zero. Aggregate: `BUILD: green` if all exit 0, `BUILD: red` if any exit non-zero, `BUILD: skipped` if any verb cannot run (toolchain absent, credentials missing) and none are red.
+5. **Shape check** (run only when the step's plan declared a `Shape:` block — required for `light`, optional otherwise):
+   - `files-glob` — `git diff --name-only <commit>~1 <commit>` against the glob; any path not matched is a violation.
+   - `max-diff-lines` — `git diff --shortstat <commit>~1 <commit>` additions + deletions; over the cap is a violation.
+   - `no-test-changes: true` — any test-path match (project-specific; typical: `**/test/**`, `**/*Test.kt`, `**/*.test.ts`, `tests/**`) is a violation.
+
+   If any constraint is violated AND the step was `light`, render the SUMMARY header's tier as `standard (escalated from light)`. State out loud: `Shape violated on light step: <constraints>. Escalating tier to standard for AWAIT.`
+6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line.
+7. **Gate decision** — determines the prompt at the bottom of the SUMMARY:
+   - `BUILD: green` → standard AWAIT prompt (`next` / `revert` / FIX SUMMARY + `next`).
+   - `BUILD: red` → AWAIT with: `Cannot proceed: this step's verify is red (<failing verbs>). Resolve with: /kit-fix <commit-hash> "<one-line desc>". Or override with: next --keep-red "<reason>"`. The next reply must be a pasted FIX SUMMARY + `next`, or `next --keep-red "<reason>"`. Anything else is parsed as a clarifying instruction; re-prompt.
+   - `BUILD: skipped` → AWAIT with: `Verify could not run for: <verbs and reasons>. Cannot auto-gate. Resolve toolchain access and reply 'retry-verify', paste a manual FIX SUMMARY if you ran the gate yourself, or reply 'next --skip-verify "<reason>"' to acknowledge no automatic gate is possible.`
+8. AWAIT.
 
 When the user replies, **first action is always rehydration** (see Behavioral contracts below). Then parse:
-- `next` → advance to next step.
+- `next` → advance to next step. Allowed only when the previous step's `BUILD: green` (or `red` was resolved by a pasted FIX SUMMARY whose re-verification turned green).
+- `next --keep-red "<reason>"` → advance; record `Carried red — step <N>: <reason>` in every subsequent STEP SUMMARY's `Carried overrides` block until the build returns to green.
+- `next --skip-verify "<reason>"` → advance; record `Carried skip-verify — step <N>: <reason>` similarly.
+- `retry-verify` → re-run the previous step's verify. Render an updated SUMMARY with the new BUILD block. Re-gate.
 - `revert` → confirm once: `Revert will run "git reset --hard HEAD~1" and discard the commit. Confirm with "revert!"`. Only on `revert!` proceed: `git reset --hard HEAD~1`, set `last_known_hash = HEAD`, ask user how to proceed (retry / replan / abort).
-- A pasted `## FIX SUMMARY` block + `next` → run paste-validation contract, then advance.
+- A pasted `## FIX SUMMARY` block + `next` → run paste-validation contract (Behavioral contracts), then **re-run the step's verify on the current HEAD**. If still red, output: `Fix did not turn the build green. Verify still failing: <verbs>. Run another /kit-fix or accept with --keep-red.` and AWAIT.
 - Anything else → treat as a clarifying instruction; if it implies replanning, propose replan and AWAIT decision.
 
 After the last step → automatically enter Stage 4.
@@ -134,8 +158,9 @@ The session ends after Stage 4. Do not start a new task in the same session.
 3. Read related source files to understand context.
 4. Make the fix.
 5. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`.
-6. Output `FIX SUMMARY` (format below).
-7. END. Do not loop, do not run ship, do not push.
+6. **Run verify.** Resolve the `Verify` field from the target step in the plan (or default `[compile, test]`) via the active language profile. Run each command. Capture per-verb result. If the fix did not turn the build green, the fix is not done — return to step 4 unless the structural intent of the fix is to land a `--keep-red` carry; if so, document the reason in the FIX SUMMARY's `Verify:` explanation field.
+7. Output `FIX SUMMARY` (format below). The `Verify:` block reflects step 6's results verbatim.
+8. END. Do not loop, do not run ship, do not push.
 
 If the diff turns out to be larger than a single conceptual fix, STOP and tell the user: `This fix needs more than one step. Recommend opening a new feature plan with /kit instead.` Do not silently expand scope.
 
@@ -169,6 +194,12 @@ If the diff turns out to be larger than a single conceptual fix, STOP and tell t
 - **DoD:** <one-line check>
 - **Review:** light | standard | heavy
 - **What would be wrong:** <one-line antipattern; required for standard / heavy; `(n/a)` for light>
+- **Verify:** [<verb>, ...]   (verbs from `Verify verbs` table; default `[compile, test]`; for one-off `shell: "<cmd>"`)
+- **Expect:** green             (v3.1 only accepts `green` here; deliberate red stops use `--keep-red` at execute time)
+- **Shape:** (required for `light`, optional for standard / heavy — bounds the diff so a scope-creeping `light` is caught mechanically)
+    - **files-glob:** "<glob>"        # paths the diff is allowed to touch
+    - **max-diff-lines:** <N>          # additions + deletions cap
+    - **no-test-changes:** true | false
 - **Assumptions:** <if any>
 
 ### Step 2 — <slug>
@@ -195,7 +226,7 @@ Any `[module]` placeholder in a profile command is substituted with the manifest
 
 Escape hatch — `shell: "<command>"` runs the literal command verbatim. Use sparingly; a step that's mostly `shell:` indicates either a missing profile field or that the verb vocabulary needs expanding.
 
-The `verify` field on step format and the Session 2 gate that consumes it are wired in a subsequent commit; this section documents the vocabulary the wiring will use.
+The `verify` field on step format is consumed by Session 2's per-step verify run (Stage 3 step 4) and by Session 3's post-fix verify (Session 3 step 6). Session 2's gate decision (Stage 3 step 7) blocks `next` on `BUILD: red` until `/kit-fix` resolves it or `--keep-red` overrides explicitly.
 
 ### CONTEXT SUMMARY (Session 1, end of Stage 1)
 
@@ -252,6 +283,17 @@ Open a new session and run:
 
 ### Agent-verified (automatic)
 
+**BUILD:** green | red | skipped
+- compile: green | red (exit <code>) | skipped (<reason>)
+- test:    green | red (<N> failures) | skipped (<reason>)
+- lint:    green | red (<N> findings) | skipped (<reason>)
+- shell:   green | red | skipped     (if a shell-override verb was used)
+
+**Shape:** OK | violated | (n/a — no Shape declared)
+- files-glob:      OK | violated (touched outside glob: <path>)
+- max-diff-lines:  OK | violated (<actual> > <cap>)
+- no-test-changes: OK | violated (touched test path: <path>)
+
 **Done:**
 - <by file, concrete>
 
@@ -265,6 +307,10 @@ Open a new session and run:
 - <invariant 1>: OK | VIOLATED — <if violated, one-line pointer to the matching Plan deviations entry>
 - <invariant 2>: OK | VIOLATED — <...>
 - ...
+
+**Carried overrides:** (propagated from prior `--keep-red` / `--skip-verify`; omit the block entirely if there are none)
+- step <N>: keep-red — <reason>
+- step <M>: skip-verify — <reason>
 
 ### Human-required (cognitive)
 
@@ -299,7 +345,7 @@ Write only checks the human must perform that the agent cannot. Do not restate w
 - **`heavy`** — explicit STOP cue plus active checks against the antipattern and the failure-modes catalogue.
   Example: `STOP. Read full diff. Explain to yourself why each public API change is intentional. Re-read risk-antipattern above. Check against agent-failure-modes items #1 (test deletion) and #4 (silent dependency).`
 
-Never substitute "run the tests" or "check it compiles" for Human-required content. Those belong in Agent-verified — when they ship in a future revision they will be filled automatically. Human-required is for judgments the build cannot make.
+Never substitute "run the tests" or "check it compiles" for Human-required content. Those belong in the Agent-verified `BUILD:` block, which Session 2 fills automatically after each step's verify run. Human-required is for judgments the build cannot make.
 
 ### FIX SUMMARY (Session 3, end)
 
@@ -312,6 +358,11 @@ Never substitute "run the tests" or "check it compiles" for Human-required conte
 
 **Solution:**
 - <by file, concrete>
+
+**Verify:** green | red (— if red, one-line explanation; otherwise this fix is not done)
+- compile: green | red | skipped
+- test:    green | red | skipped
+- lint:    green | red | skipped
 
 **Touched outside the target commit's footprint:**
 - <if any, else "(nothing)">
