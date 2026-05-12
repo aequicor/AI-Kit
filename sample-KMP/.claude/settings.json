@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [],
+    "allow": []
+  },
+  "mcpServers": {},
+  "env": {
+    "KIT_LANG": "ru"
+  }
+}
