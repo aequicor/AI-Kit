@@ -2,6 +2,7 @@ package io.aequicor.viewer
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,12 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.aequicor.domain.model.PdfPageSize
-import androidx.compose.runtime.snapshotFlow
 
 @Composable
 fun PdfViewerScreen(
@@ -46,24 +46,13 @@ fun PdfViewerScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
-    val transformState = rememberTransformableState { zoomChange, panDelta, _ ->
+    // transformable handles scroll-wheel zoom only; horizontal drag goes to pointerInput below
+    val transformState = rememberTransformableState { zoomChange, _, _ ->
         viewModel.onZoomChange(zoomChange)
-        viewModel.onPanX(panDelta.x)
     }
 
     val document = state.document
     val pageCount = document?.pageCount ?: 0
-
-    LaunchedEffect(document) {
-        if (document == null) return@LaunchedEffect
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo }.collect { visibleItems ->
-            visibleItems.forEach { item ->
-                viewModel.ensurePageRendered(item.index)
-                if (item.index > 0) viewModel.ensurePageRendered(item.index - 1)
-                if (item.index < pageCount - 1) viewModel.ensurePageRendered(item.index + 1)
-            }
-        }
-    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -78,15 +67,30 @@ fun PdfViewerScreen(
         }
 
         BoxWithConstraints(
-            modifier = Modifier.weight(1f).transformable(transformState).clipToBounds(),
+            modifier = Modifier
+                .weight(1f)
+                .transformable(transformState)
+                .clipToBounds()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures { _, dragAmount ->
+                        viewModel.onPanX(dragAmount)
+                    }
+                },
         ) {
-            val pageWidth: Dp = maxWidth * state.zoom
+            val pageWidthDp: Dp = maxWidth * state.zoom
             val density = LocalDensity.current
-            val viewportPx = with(density) { maxWidth.toPx() }
+            val viewportWidthPx = with(density) { maxWidth.toPx() }.toInt()
+
+            // Inform ViewModel of display resolution so pages render at viewport quality
+            LaunchedEffect(viewportWidthPx) {
+                viewModel.setViewportWidth(viewportWidthPx)
+            }
+
+            val viewportPx = viewportWidthPx.toFloat()
             val pagePx = viewportPx * state.zoom
-            // Centre the page; when zoom > 1, clamp so page edges never cross viewport edges.
             val overflow = maxOf(0f, pagePx - viewportPx)
             val translationX = (viewportPx - pagePx) / 2f + state.offsetX.coerceIn(-overflow / 2f, overflow / 2f)
+
             when {
                 state.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 state.error != null -> Text(
@@ -97,16 +101,22 @@ fun PdfViewerScreen(
                 document != null -> Box(
                     modifier = Modifier.fillMaxSize().graphicsLayer(translationX = translationX),
                 ) {
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxHeight()) {
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                         items(pageCount) { pageIndex ->
                             val pdfPageSize = document.pages[pageIndex].size
                             val aspectRatio = pdfPageSize.widthPx.toFloat() / pdfPageSize.heightPx.toFloat()
+
+                            // Per-item trigger: fires when item enters viewport or viewport size changes
+                            LaunchedEffect(pageIndex, state.viewportWidthPx) {
+                                viewModel.ensurePageRendered(pageIndex)
+                            }
+
                             PdfPageView(
                                 pageIndex = pageIndex,
                                 pageSize = pdfPageSize,
-                                renderedBytes = state.renderedPages[pageIndex],
-                                pageWidth = pageWidth,
-                                pageHeight = pageWidth / aspectRatio,
+                                renderedPage = state.renderedPages[pageIndex],
+                                pageWidth = pageWidthDp,
+                                pageHeight = pageWidthDp / aspectRatio,
                             )
                         }
                     }
@@ -124,12 +134,12 @@ fun PdfViewerScreen(
 private fun PdfPageView(
     pageIndex: Int,
     pageSize: PdfPageSize,
-    renderedBytes: ByteArray?,
+    renderedPage: RenderedPage?,
     pageWidth: Dp,
     pageHeight: Dp,
 ) {
-    val bitmap = remember(renderedBytes) {
-        renderedBytes?.toImageBitmap(pageSize.widthPx, pageSize.heightPx)
+    val bitmap = remember(renderedPage) {
+        renderedPage?.let { rp -> rp.bytes.toImageBitmap(rp.width, rp.height) }
     }
 
     Box(

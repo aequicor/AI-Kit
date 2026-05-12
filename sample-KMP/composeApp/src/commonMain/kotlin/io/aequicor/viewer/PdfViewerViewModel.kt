@@ -2,6 +2,7 @@ package io.aequicor.viewer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.aequicor.domain.model.PdfPageSize
 import io.aequicor.domain.port.PdfRenderPort
 import io.aequicor.domain.usecase.OpenDocumentUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class PdfViewerViewModel(
     private val openDocumentUseCase: OpenDocumentUseCase,
@@ -27,14 +29,27 @@ class PdfViewerViewModel(
         }
     }
 
+    fun setViewportWidth(px: Int) {
+        if (px <= 0) return
+        val current = _state.value.viewportWidthPx
+        if (current == 0 || abs(px - current).toFloat() / current > 0.1f) {
+            _state.update { it.copy(viewportWidthPx = px, renderedPages = emptyMap()) }
+        }
+    }
+
     fun ensurePageRendered(pageIndex: Int) {
         val s = _state.value
         if (s.renderedPages.containsKey(pageIndex)) return
         val page = s.document?.pages?.getOrNull(pageIndex) ?: return
+        val vpW = s.viewportWidthPx.takeIf { it > 0 } ?: page.size.widthPx
+        val renderH = (vpW.toFloat() * page.size.heightPx / page.size.widthPx).toInt()
+        val renderSize = PdfPageSize(vpW, renderH)
         viewModelScope.launch {
-            runCatching { port.renderPage(pageIndex, page.size) }
+            runCatching { port.renderPage(pageIndex, renderSize) }
                 .onSuccess { bytes ->
-                    _state.update { it.copy(renderedPages = it.renderedPages + (pageIndex to bytes)) }
+                    _state.update {
+                        it.copy(renderedPages = it.renderedPages + (pageIndex to RenderedPage(bytes, vpW, renderH)))
+                    }
                 }
         }
     }

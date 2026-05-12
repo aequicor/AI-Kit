@@ -2,13 +2,16 @@ package io.aequicor.viewer
 
 import io.aequicor.domain.model.PdfDocument
 
+data class RenderedPage(val bytes: ByteArray, val width: Int, val height: Int)
+
 data class ViewerState(
     val document: PdfDocument? = null,
-    val renderedPages: Map<Int, ByteArray> = emptyMap(),
+    val renderedPages: Map<Int, RenderedPage> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val zoom: Float = DEFAULT_ZOOM,
     val offsetX: Float = 0f,
+    val viewportWidthPx: Int = 0,
 ) {
     companion object {
         const val DEFAULT_ZOOM = 1f
