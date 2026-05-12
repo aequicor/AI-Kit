@@ -5,14 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -43,12 +41,11 @@ import org.koin.compose.koinInject
 fun PdfViewerScreen() {
     val pdfRenderer: PdfRenderer = koinInject()
     var document by remember { mutableStateOf<PdfDocument?>(null) }
-    val lazyListState = rememberLazyListState()
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
 
-    // Shared LRU cache: keeps last 5 rendered bitmaps across the lazy list.
+    // LRU cache: keeps last 5 rendered bitmaps in memory.
     val pageCache = remember {
         object : LinkedHashMap<Int, ImageBitmap>(8, 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, ImageBitmap>?) =
@@ -73,16 +70,18 @@ fun PdfViewerScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
+            // Viewport: fixed on screen, clips content that pans outside.
+            // Column (not LazyColumn) gives the content its natural height so
+            // graphicsLayer translates the PDF itself, not a screen-sized box.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
                     .transformable(transformableState),
             ) {
-                LazyColumn(
-                    state = lazyListState,
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .graphicsLayer(
                             scaleX = scale,
                             scaleY = scale,
@@ -90,7 +89,7 @@ fun PdfViewerScreen() {
                             translationY = offsetY,
                         ),
                 ) {
-                    items(doc.pages, key = { it.index }) { page ->
+                    doc.pages.forEach { page ->
                         AsyncPdfPageImage(
                             pdfRenderer = pdfRenderer,
                             docId = doc.id,
