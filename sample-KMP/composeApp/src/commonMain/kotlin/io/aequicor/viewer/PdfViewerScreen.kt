@@ -40,7 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.aequicor.domain.model.PdfPageSize
+import io.aequicor.domain.model.RenderedPage
 
 @Composable
 fun PdfViewerScreen(
@@ -135,7 +135,6 @@ fun PdfViewerScreen(
 
                             PdfPageView(
                                 pageIndex = pageIndex,
-                                pageSize = pdfPageSize,
                                 renderedPage = state.renderedPages[pageIndex],
                                 pageWidth = pageWidthDp,
                                 pageHeight = pageWidthDp / aspectRatio,
@@ -155,7 +154,6 @@ fun PdfViewerScreen(
 @Composable
 private fun PdfPageView(
     pageIndex: Int,
-    pageSize: PdfPageSize,
     renderedPage: RenderedPage?,
     pageWidth: Dp,
     pageHeight: Dp,
