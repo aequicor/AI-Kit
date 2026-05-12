@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,11 +75,32 @@ fun PdfViewerScreen() {
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
+                    // Touch: single-finger drag + pinch zoom/pan.
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
                             offsetX += pan.x
                             offsetY += pan.y
+                        }
+                    }
+                    // Mouse: wheel → scroll; Ctrl+wheel → zoom.
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                if (event.type == PointerEventType.Scroll) {
+                                    val delta = event.changes.firstOrNull()?.scrollDelta
+                                        ?: continue
+                                    if (event.keyboardModifiers.isCtrlPressed) {
+                                        val factor = if (delta.y > 0) 0.9f else 1.1f
+                                        scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
+                                    } else {
+                                        offsetX -= delta.x * 30f
+                                        offsetY -= delta.y * 30f
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
                         }
                     },
             ) {
