@@ -38,23 +38,32 @@ When the user replies, parse:
 
 ### Stage 2 — Plan
 
-1. Compose 3–10 MVP-style steps. Each step must be:
+1. **Distill 3–5 plan-level invariants** from the user task and Context digest. An invariant is a boundary statement that applies across **every** step. Examples:
+   - `no public API change` — refactors stay behind existing signatures
+   - `no new third-party dependency` — keeps the dependency surface contained
+   - `existing tests in <path>/** still pass` — anchors regression detection
+   - `touch only files under <path>/**` — bounds the work geographically
+   - `no schema migration` — defers a known-risky concern
+
+   Each invariant is re-asserted in every STEP SUMMARY; violating one is allowed only with rationale in the step's `Plan deviations` field. Pick invariants that the task implicitly requires — do not over-constrain.
+2. Compose 3–10 MVP-style steps. Each step must be:
    - **Runnable** — produces a state where some user-visible behavior or test can be checked.
    - **Independently committable** — no half-finished steps.
    - **Bounded** — one cohesive change, not a kitchen sink.
-2. For each step, capture: goal, definition-of-done (one line), assumptions, **review tier**, and (for `standard` / `heavy`) **what would be wrong**.
+   - **Compatible with the invariants** — if a step inherently requires breaking one, list the violation in the step's Plan deviations at planning time so it is not a surprise during execution.
+3. For each step, capture: goal, definition-of-done (one line), assumptions, **review tier**, and (for `standard` / `heavy`) **what would be wrong**.
    - **Review tier rules:**
      - `light` — config / types / rename / move / dead-code delete / format-only. Expected diff <50 lines. No test changes.
      - `standard` — new business logic, refactor inside a file, package-private API additions.
      - `heavy` — public API, security boundary, schema / migration, dependency changes, build-config changes, test removal or weakening, cross-module refactors.
      - When in doubt, escalate one tier up. A misclassified `light` that scope-creeps is the most expensive mistake.
    - **What would be wrong** (one line, required for `standard` / `heavy`, `(n/a)` for `light`): a concrete antipattern the agent and the human should both watch for in the diff. Example: `writes directly to Recomposer instead of via Channel — races on fast strokes`.
-3. **Validate DoD commands against the current toolchain.** Before writing the plan, for each step whose DoD invokes a build / test tool, confirm the command actually exists in this project's build system and is not a known NO-OP. Use the build system's own task-listing or dry-run mode (e.g. list available tasks, parse the project's script manifest, run a `--help` / `-n` introspection). Consult the stack-specific traps surfaced via `policies.forbidden_patterns` in the manifest (the active language / framework profiles add stack-specific NO-OP aggregators and misleading task names there). If a DoD command cannot be validated (offline, unfamiliar build system), mark that step's DoD with `Assumption:` so the human can correct before `/kit-do`.
-4. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
-5. Write `.aikit/plans/<id>.md` (format below).
-6. `git add .aikit/plans/<id>.md && git commit -m "kit: plan for <slug>"`.
-7. Output `PLAN SUMMARY` ending with: `Open a new session and run: /kit-do <id>`.
-8. END the session. Do not start executing.
+4. **Validate DoD commands against the current toolchain.** Before writing the plan, for each step whose DoD invokes a build / test tool, confirm the command actually exists in this project's build system and is not a known NO-OP. Use the build system's own task-listing or dry-run mode (e.g. list available tasks, parse the project's script manifest, run a `--help` / `-n` introspection). Consult the stack-specific traps surfaced via `policies.forbidden_patterns` in the manifest (the active language / framework profiles add stack-specific NO-OP aggregators and misleading task names there). If a DoD command cannot be validated (offline, unfamiliar build system), mark that step's DoD with `Assumption:` so the human can correct before `/kit-do`.
+5. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
+6. Write `.aikit/plans/<id>.md` (format below).
+7. `git add .aikit/plans/<id>.md && git commit -m "kit: plan for <slug>"`.
+8. Output `PLAN SUMMARY` ending with: `Open a new session and run: /kit-do <id>`.
+9. END the session. Do not start executing.
 
 ## Session 2 — Execute (`/kit-do <plan-id>` or `/kit-do <plan-id> --resume`)
 
@@ -77,7 +86,7 @@ For each step from current to last:
 1. Execute the step.
 2. `git add -A && git commit -m "kit: step <N>/<total> — <slug>"`. If commit fails (pre-commit hook, dirty conflicts) → STOP, surface the error to the user verbatim. Do not retry, do not `--no-verify`.
 3. Set `last_known_hash = HEAD`.
-4. Output `STEP SUMMARY` (format below).
+4. Output `STEP SUMMARY` (format below). The Agent-verified section must reaffirm **each** plan-level invariant against this step's diff — mark `OK` or `VIOLATED`. Any `VIOLATED` entry must point at a matching `Plan deviations` line that explains why; if there is no rationale, the step is not done and you owe a fix.
 5. AWAIT.
 
 When the user replies, **first action is always rehydration** (see Behavioral contracts below). Then parse:
@@ -145,6 +154,14 @@ If the diff turns out to be larger than a single conceptual fix, STOP and tell t
 
 <3–10 lines of facts the plan depends on: stack, conventions, constraints, related modules>
 
+## Invariants
+
+<3–5 plan-level boundary statements; each is re-asserted in every STEP SUMMARY. Violating one requires rationale in the step's Plan deviations.>
+
+- <invariant 1>
+- <invariant 2>
+- ...
+
 ## Steps
 
 ### Step 1 — <slug>
@@ -190,9 +207,14 @@ Reply `ok` to proceed to plan, or correct context with: "<adjustment>"
 Saved to: .aikit/plans/<id>.md
 
 **Steps (<N> total):**
-1. <step 1 title> — <one-line DoD>
-2. <step 2 title> — <one-line DoD>
+1. <step 1 title> — <one-line DoD> — review: <tier>
+2. <step 2 title> — <one-line DoD> — review: <tier>
 ...
+
+**Invariants (re-asserted every step):**
+- <invariant 1>
+- <invariant 2>
+- ...
 
 **Key assumptions:**
 - <assumption 1>
@@ -222,6 +244,11 @@ Open a new session and run:
 
 **Plan deviations:**
 - <a planned signature or approach you intentionally changed during execution and why; "(none)" if you executed the plan as written>
+
+**Invariants:** (one entry per plan-level invariant, checked against this step's diff)
+- <invariant 1>: OK | VIOLATED — <if violated, one-line pointer to the matching Plan deviations entry>
+- <invariant 2>: OK | VIOLATED — <...>
+- ...
 
 ### Human-required (cognitive)
 
