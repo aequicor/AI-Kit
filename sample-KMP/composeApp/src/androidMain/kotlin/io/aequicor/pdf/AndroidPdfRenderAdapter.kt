@@ -1,8 +1,8 @@
 package io.aequicor.pdf
 
-import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.core.graphics.createBitmap
 import io.aequicor.domain.model.PdfDocument
 import io.aequicor.domain.model.PdfPage
 import io.aequicor.domain.model.PdfPageSize
@@ -39,7 +39,7 @@ class AndroidPdfRenderAdapter : PdfRenderPort {
         withContext(Dispatchers.IO) {
             val r = checkNotNull(renderer) { "No document open" }
             r.openPage(pageIndex).use { page ->
-                val bitmap = Bitmap.createBitmap(targetSize.widthPx, targetSize.heightPx, Bitmap.Config.ARGB_8888)
+                val bitmap = createBitmap(targetSize.widthPx, targetSize.heightPx)
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 val buf = ByteArray(bitmap.byteCount)
                 bitmap.copyPixelsToBuffer(java.nio.ByteBuffer.wrap(buf))
