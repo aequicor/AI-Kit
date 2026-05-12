@@ -8,15 +8,25 @@ You complete the setup in **3 phases**. Each phase ends with either an automatic
 
 ## Phase 1 — Discover
 
-### 1.1 Detect language
+### 1.1 Choose language
 
-Detect the user-facing language from the runtime (`LANG`, `LC_ALL`, OS locale). State it once at the start of your first message:
+Your **very first message** must ask the user which language to use for setup. Use English for this one question only:
+
+```
+Which language should I use for setup?
+  1. English (en)
+  2. Русский (ru)
+```
+
+AWAIT the user reply. Accept a number, a letter code, or the language name. Map the reply to a two-letter code (e.g. `ru`, `en`).
+
+State the chosen language once in your second message:
 
 ```
 Setup language: <ru | en | ...>
 ```
 
-All subsequent prose to the user is in that language. Do not ask the user to pick — auto-detect and proceed. If detection is ambiguous, default to English.
+All subsequent prose to the user is in that language.
 
 ### 1.2 Scan the project
 
@@ -207,12 +217,31 @@ Run `kit-setup generate .aikit/manifest.yaml`. Parse JSON:
 - `{"ok": true, "generated": [...]}` → list the generated files to the user (count + paths).
 - `{"ok": false, "errors": [...]}` → STOP, show errors verbatim.
 
-### 3.5 Hand-off
+### 3.5 Commit the kit files
+
+The working tree was clean at the start of Phase 1.2 and the manifest was explicitly approved at the Phase 2 confirm gate, so the entire kit goes in as one commit. Don't leave the generated files dangling in `git status` — that's the failure mode this step prevents.
+
+1. Build the path list:
+   - `.aikit/manifest.yaml` (written in 3.2)
+   - `.gitignore` (touched in 3.1 to add `.aikit/bin/`, only include if actually modified)
+   - Every path from the `generated[]` array of the 3.4 JSON output
+2. Stage exactly those paths: `git add <path> <path> ...`. Do **NOT** use `git add -A` / `git add .` — they would sweep in any unrelated changes that appeared between Phase 1.2 and now. (`.aikit/bin/` is gitignored from 3.1, so the binary won't be staged even with a wildcard, but stay explicit anyway.)
+3. Run `git status --porcelain` and confirm the staged set matches the list above. If anything unexpected is staged or anything from the list is missing, STOP and show the user the diff between expected and actual.
+4. Commit with a one-line message naming the runner:
+   ```
+   git commit -m "Install AI-Kit v3 scaffolding (<runner-id>)"
+   ```
+   Replace `<runner-id>` with the value from `targets[].id` (e.g. `claude-code`).
+5. Capture the resulting short SHA from `git rev-parse --short HEAD` for the hand-off message.
+
+If `git commit` fails (pre-commit hook, signing, etc.), STOP, show the failure output verbatim, and ask the user how to proceed. Never pass `--no-verify`, never `--amend`, never silently retry.
+
+### 3.6 Hand-off
 
 Output a final message in the chosen language:
 
 ```
-Setup complete. Generated <N> files for <runner>:
+Setup complete. Generated <N> files for <runner>, committed as <short-sha>:
 - <file 1>
 - <file 2>
 - ...
@@ -246,7 +275,7 @@ DONE. End the session.
 
 ## Hard rules
 
-- NEVER skip Phase 1 language detection. Always state the chosen language up front.
+- NEVER skip Phase 1 language selection. Always ask the user first, await their reply, then state the chosen language before proceeding.
 - NEVER skip the Phase 2 confirm gate. The user must approve the manifest before generation.
 - NEVER write `kit-setup verify` errors as paraphrased prose — they're machine output. Quote the JSON; translate only the underlying problem when needed.
 - NEVER write API keys, tokens, or secrets into the manifest. The verifier scans for them; if found, it'll fail with `secret_pattern_match`.

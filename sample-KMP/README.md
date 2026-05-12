@@ -26,6 +26,54 @@ This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM
   The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
   can add code to the platform-specific folders here too.
 
+## M1 — PDF Viewer (implemented)
+
+### What's in M1
+
+- **Domain models** (`shared/commonMain`): `PdfDocumentId`, `PdfPage`, `PdfDocument`, `ViewportState` (scale range 25–800 %).
+- **`PdfRenderer` expect/actual** (`shared`): opens documents, renders pages as `PdfPageImage` (raw ARGB/BGRA byte buffer), closes documents.
+  - Android → `android.graphics.pdf.PdfRenderer` (API 21+, zero extra deps)
+  - Desktop/JVM → Apache PDFBox 3.x (`Loader.loadPDF`)
+  - iOS → PDFKit via K/N cinterop (`platform.PDFKit`)
+  - JS/wasmJs → stub (`NotImplementedError`) — PDF.js deferred to M1-web
+- **`FilePicker` expect/actual** (`composeApp`): SAF on Android, `JFileChooser` on Desktop, `UIDocumentPickerViewController` on iOS, stub on web.
+- **`PdfViewerScreen`** (`composeApp/commonMain`): `LazyColumn` with virtualized pages, pinch-to-zoom + drag (`rememberTransformableState`), LRU bitmap cache (5 pages), FAB to open a file.
+- **Koin DI**: `PdfRenderer` registered as `single` in `pdfModule`; `initKoin()` called from all platform entry points.
+- **Tests**: `ViewportStateTest`, `PdfDocumentTest` (commonTest); `PdfRendererJvmTest` integration test (jvmTest, generates a PDF in-memory via PDFBox).
+- **ADR-001**: library choices documented in [`docs/adr/ADR-001-pdf-rendering.md`](./docs/adr/ADR-001-pdf-rendering.md).
+
+### Smoke-test instructions
+
+**Desktop (JVM):**
+```shell
+.\gradlew.bat :composeApp:run          # Windows
+./gradlew    :composeApp:run           # macOS/Linux
+```
+Click the **Open** FAB, pick a PDF, scroll and pinch-zoom (trackpad two-finger pinch or Ctrl+scroll).
+
+**Android:**
+```shell
+.\gradlew.bat :composeApp:assembleDebug
+```
+Install the APK, tap **Open**, select a PDF from Files.
+
+**iOS:** Open `/iosApp` in Xcode → `Product > Build` → run on simulator or device.
+
+**Unit + JVM integration tests:**
+```shell
+.\gradlew.bat :shared:jvmTest          # Windows
+./gradlew    :shared:jvmTest           # macOS/Linux
+```
+
+### Known limitations (M1)
+
+- JS/wasmJs: PDF rendering not yet implemented (throws `NotImplementedError`). PDF.js integration is tracked as M1-web.
+- Desktop Ctrl+scroll zoom: transformable gesture (pinch) works; dedicated scroll-wheel zoom handler deferred to M2.
+- Bitmap cache is in-memory only; evicted on process restart.
+- iOS file picker uses deprecated `documentTypes: ["com.adobe.pdf"]` UTI — will migrate to `UTType.pdf` (iOS 14+) in M2.
+
+---
+
 ### Build and Run Android Application
 
 To build and run the development version of the Android app, use the run configuration from the run widget
