@@ -83,16 +83,17 @@ fun PdfViewerScreen() {
                             offsetY += pan.y
                         }
                     }
-                    // Mouse wheel → scroll (pan).
+                    // Mouse wheel → zoom (±10 % per notch).
+                    // Drag (mouse or touch) → pan via detectTransformGestures above.
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 if (event.type == PointerEventType.Scroll) {
-                                    val delta = event.changes.firstOrNull()?.scrollDelta
+                                    val dy = event.changes.firstOrNull()?.scrollDelta?.y
                                         ?: continue
-                                    offsetX -= delta.x * 30f
-                                    offsetY -= delta.y * 30f
+                                    val factor = if (dy > 0) 0.9f else 1.1f
+                                    scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
                                     event.changes.forEach { it.consume() }
                                 }
                             }
