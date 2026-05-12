@@ -9,5 +9,5 @@ actual fun ByteArray.toImageBitmap(width: Int, height: Int): ImageBitmap =
     SkiaImage.makeRaster(
         imageInfo = ImageInfo.makeN32Premul(width, height),
         bytes = this,
-        rowBytes = (width * 4).toLong(),
+        rowBytes = width * 4,
     ).toComposeImageBitmap()

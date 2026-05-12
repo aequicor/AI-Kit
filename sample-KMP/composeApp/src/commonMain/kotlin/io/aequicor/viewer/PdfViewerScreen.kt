@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,7 +31,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import io.aequicor.domain.model.PdfPageSize
-import kotlinx.coroutines.flow.snapshotFlow
+import androidx.compose.runtime.snapshotFlow
 
 @Composable
 fun PdfViewerScreen(
@@ -49,13 +50,14 @@ fun PdfViewerScreen(
 
     LaunchedEffect(document) {
         if (document == null) return@LaunchedEffect
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo }.collect { visibleItems ->
-            visibleItems.forEach { item ->
-                viewModel.ensurePageRendered(item.index)
-                if (item.index > 0) viewModel.ensurePageRendered(item.index - 1)
-                if (item.index < pageCount - 1) viewModel.ensurePageRendered(item.index + 1)
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+            .collect { visibleItems: List<LazyListItemInfo> ->
+                visibleItems.forEach { item: LazyListItemInfo ->
+                    viewModel.ensurePageRendered(item.index)
+                    if (item.index > 0) viewModel.ensurePageRendered(item.index - 1)
+                    if (item.index < pageCount - 1) viewModel.ensurePageRendered(item.index + 1)
+                }
             }
-        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
