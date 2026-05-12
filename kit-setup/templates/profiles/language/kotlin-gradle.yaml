@@ -5,6 +5,12 @@ _profile_name: kotlin-gradle
 _profile_description: "Kotlin + Gradle (KTS) baseline — kotlin-lsp, detekt, ktlint, serena MCP"
 _profile_axis: language
 
+# /kit-do step.verify verb resolution (see prompts/Main.md, "Verify verbs"):
+#   compile -> compile_command
+#   test    -> test_command
+#   lint    -> lint_command
+# build_command, run_command, and format_command (auto-fix) are not verify
+# verbs; use a `shell:` override in the plan step if you need them as a gate.
 stack:
   languages: [kotlin]
   build_command:   "./gradlew"

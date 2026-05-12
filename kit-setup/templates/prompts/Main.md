@@ -181,6 +181,22 @@ If the diff turns out to be larger than a single conceptual fix, STOP and tell t
 
 Keep it under 2 screens. The plan file is read by both Session 2 (execute) and Session 3 (fix), so brevity matters.
 
+### Verify verbs (vocabulary for `step.verify`)
+
+When a plan step declares `verify: [<verb>, ...]`, each verb resolves through the active language profile's `stack` block in the manifest. The vocabulary is intentionally minimal — three verbs cover the common gates; anything else uses `shell:` override.
+
+| Verb | Resolves to | Purpose |
+|---|---|---|
+| `compile` | `stack.compile_command` | Fast type / syntax check without running |
+| `test` | `stack.test_command` | Test suite the project considers stable |
+| `lint` | `stack.lint_command` | Style and static-analysis checks (typically subsumes format-check in modern configs) |
+
+Any `[module]` placeholder in a profile command is substituted with the manifest's `stack.module` value when set, or removed (with the surrounding `:` collapsed) when empty.
+
+Escape hatch — `shell: "<command>"` runs the literal command verbatim. Use sparingly; a step that's mostly `shell:` indicates either a missing profile field or that the verb vocabulary needs expanding.
+
+The `verify` field on step format and the Session 2 gate that consumes it are wired in a subsequent commit; this section documents the vocabulary the wiring will use.
+
 ### CONTEXT SUMMARY (Session 1, end of Stage 1)
 
 ```

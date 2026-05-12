@@ -6,6 +6,12 @@ _profile_name: make-generic
 _profile_description: "Language-agnostic baseline driven by Make — no LSP, no formatter"
 _profile_axis: language
 
+# /kit-do step.verify verb resolution (see prompts/Main.md, "Verify verbs"):
+#   compile -> compile_command
+#   test    -> test_command
+#   lint    -> lint_command
+# build_command, run_command, and format_command (auto-fix) are not verify
+# verbs; use a `shell:` override in the plan step if you need them as a gate.
 stack:
   languages: [generic]
   build_command:   "make"
