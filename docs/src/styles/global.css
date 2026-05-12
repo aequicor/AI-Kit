@@ -1146,17 +1146,204 @@ details[open] > summary .chev {
   color: var(--subtle);
 }
 
+/* === v3.1 site classes === */
+
+/* Active nav link */
+.nav-links a.active {
+  color: var(--text);
+  position: relative;
+}
+.nav-links a.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -19px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* Copy-prompt block */
+.prompt-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  display: grid;
+  gap: 16px;
+}
+.prompt-block-head { display: grid; gap: 4px; }
+.prompt-block-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.prompt-block-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.prompt-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: start;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+.prompt-copy-btn:hover { background: var(--accent-hover); }
+.prompt-copy-btn:active { transform: translateY(1px); }
+.prompt-copy-btn.is-copied { background: var(--green); }
+.prompt-copy-btn.is-error { background: var(--rose); }
+
+.prompt-preview-label {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.prompt-preview {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: 220px;
+  overflow: hidden;
+}
+.prompt-preview pre {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--subtle);
+}
+.prompt-preview-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 80px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--surface) 85%);
+}
+
+/* Runners grid (Home) */
+.runners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 28px;
+}
+.runner-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  display: grid;
+  gap: 4px;
+}
+.runner-name { font-weight: 600; color: var(--text); }
+.runner-note { font-size: 0.875rem; color: var(--muted); }
+
+/* File tree (Start) */
+.file-tree {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+.file-tree-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 18px;
+}
+.file-tree-row code {
+  color: var(--accent2);
+  font-size: 0.875rem;
+}
+.file-tree-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Scenarios list (Start) */
+.scenarios-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+.scenario-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px 24px;
+}
+.scenario-row h3 {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.scenario-row p { color: var(--subtle); margin: 0; }
+
+/* Command card (Start) */
+.command-card .command-name {
+  display: inline-block;
+  color: var(--accent2);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* 2-col card grid for files/features sections */
+.card-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Files table (Claude / General) */
+.files-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 24px;
+}
+.files-table td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--subtle);
+}
+.files-table tr:first-child td { border-top: none; }
+.files-table code {
+  color: var(--accent2);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+/* Compact steps list */
+.steps-list.compact .step {
+  padding: 14px 18px;
+}
+.steps-list.compact .step h3 { display: none; }
+
 /* === Responsive === */
 
 @media (max-width: 760px) {
   .nav-links { display: none; }
   section { padding: 56px 0; }
   .hero { padding: 64px 0 48px; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 24px 16px; }
   .step { grid-template-columns: 36px 1fr; gap: 14px; padding: 18px; }
   .step-num { width: 30px; height: 30px; font-size: 0.95rem; }
   .final-cta { padding: 72px 0; }
-}
-@media (max-width: 480px) {
-  .stats-row { grid-template-columns: 1fr 1fr; }
+  .prompt-block { padding: 20px; }
+  .files-table td { padding: 10px 8px; font-size: 0.875rem; }
 }
