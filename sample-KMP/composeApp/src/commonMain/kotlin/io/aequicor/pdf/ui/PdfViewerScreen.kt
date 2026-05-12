@@ -83,21 +83,24 @@ fun PdfViewerScreen() {
                             offsetY += pan.y
                         }
                     }
-                    // Mouse wheel → zoom (±10 % per notch).
-                    // Drag (mouse or touch) → pan via detectTransformGestures above.
+                    // Mouse wheel → scroll (pan).
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 if (event.type == PointerEventType.Scroll) {
-                                    val dy = event.changes.firstOrNull()?.scrollDelta?.y
+                                    val delta = event.changes.firstOrNull()?.scrollDelta
                                         ?: continue
-                                    val factor = if (dy > 0) 0.9f else 1.1f
-                                    scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
+                                    offsetX -= delta.x * 30f
+                                    offsetY -= delta.y * 30f
                                     event.changes.forEach { it.consume() }
                                 }
                             }
                         }
+                    }
+                    // Desktop: Ctrl+wheel → zoom (jvmMain actual; no-op on other platforms).
+                    .ctrlScrollZoom { factor ->
+                        scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
                     },
             ) {
                 // Content box: sized by its children (page images), NOT fillMaxSize.
