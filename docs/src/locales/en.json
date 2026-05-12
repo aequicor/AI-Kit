@@ -2,474 +2,330 @@
   "brand": "AI Kit",
   "tagline": "Documentation",
   "theme": {
-    "switchToDark": "Switch to dark theme",
-    "switchToLight": "Switch to light theme"
+    "switchToDark": "Dark theme",
+    "switchToLight": "Light theme"
   },
   "lang": {
     "label": "Language"
   },
-  "install": {
-    "title": "Prompt for your AI agent",
-    "copy": "Copy",
-    "copied": "Copied"
-  },
   "nav": {
-    "what": "What it is",
-    "problems": "Why",
-    "how": "How it works",
-    "scenarios": "Scenarios",
-    "flows": "Workflows",
-    "commands": "Commands",
-    "targets": "Tools",
-    "faq": "FAQ",
-    "start": "Get started"
+    "home": "What is it?",
+    "start": "Get started",
+    "claude": "Claude Code",
+    "general": "Other agents"
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFull": "Copy the full prompt",
+    "copyError": "Couldn't copy — select and copy manually",
+    "github": "GitHub",
+    "releases": "Releases",
+    "expand": "Expand"
   },
   "home": {
-    "badge": "Documentation · v3.2.0",
-    "title": "One kit — a ready development process for any AI agent",
-    "lead": "AI Kit adds a development workflow on top of your AI agent. The same set of commands works in Claude Code, Cursor, OpenCode, Aider and Qwen Code: new features, bug fixes, review checkpoints, isolated sessions for messy fixes, autonomous runs.",
-    "ctaQuick": "Set up in a minute",
-    "ctaGithub": "View on GitHub",
-    "stats": [
-      { "num": "≈1", "unit": "minute", "label": "from empty repo to a working dev process" },
-      { "num": "5", "unit": "agents", "label": "the workflow runs in each of them" },
-      { "num": "0", "unit": "", "label": "accounts, signups, lock-in" },
-      { "num": "100%", "unit": "local", "label": "your code stays on your machine" }
-    ],
-    "what": {
-      "eyebrow": "What it is",
-      "title": "What you get with AI Kit",
-      "lead": "You get a development workflow that doesn't depend on which AI tool you happen to use today. A new hire runs one command and joins the same workflow as everyone else. If the team moves from Cursor to Claude Code, nothing about the workflow changes. Checkpoints stop the agent before risky steps; you can turn them off when you want it to run unattended.",
-      "cards": [
+    "hero": {
+      "badge": "v3.2 · Apache 2.0",
+      "title": "An AI agent that works to a plan — not at random",
+      "lead": "AI Kit turns any AI coding agent — Claude Code, OpenCode, Qwen Code, Cursor, Aider — into a disciplined collaborator: it understands your stack, breaks work into verifiable steps, and stops for your approval.",
+      "ctaStart": "Set up in a minute",
+      "ctaGithub": "Open on GitHub"
+    },
+    "problem": {
+      "eyebrow": "Why this exists",
+      "title": "What goes wrong without a process",
+      "items": [
         {
-          "icon": "📄",
-          "title": ".aikit/manifest.yaml",
-          "body": "A single YAML for the whole project. Describes the stack, modules, rules, agent definitions, and which tools to use."
+          "icon": "🌪",
+          "title": "Chaos on large tasks",
+          "body": "Without a plan, the agent does everything at once in random order. Halfway through it loses track of what it started."
         },
         {
-          "icon": "🛠",
-          "title": "kit-setup CLI",
-          "body": "A binary that reads the manifest and lays out configs. Runs locally, no account, no network after install."
+          "icon": "🧠",
+          "title": "Forgets context",
+          "body": "Nothing carries over between sessions. Every time you re-explain the stack, conventions, the folders to leave alone."
         },
         {
-          "icon": "📚",
-          "title": "Profiles",
-          "body": "Reusable manifest fragments for common stacks and frameworks: kotlin-gradle, typescript-pnpm, nextjs, security-baseline, and more."
+          "icon": "💥",
+          "title": "Breaks neighboring code",
+          "body": "Fixing one thing nicks three others. You find out when the test suite goes red."
         },
         {
           "icon": "🎯",
-          "title": "Render targets",
-          "body": "The list of AI tools you want configs rendered for. Five today; new ones come from files in kit-setup/templates/."
-        },
+          "title": "Builds the wrong thing",
+          "body": "It misreads the task, writes 500 lines, and the result is off-target. Revert and start over."
+        }
+      ]
+    },
+    "solution": {
+      "eyebrow": "What AI Kit does",
+      "title": "Three commands that turn an agent into an executor",
+      "lead": "Not a plugin, not a service — just files in your project that the agent reads on session start and follows.",
+      "items": [
         {
-          "icon": "🤖",
-          "title": "Agents",
-          "body": "Role definitions (review, security, refactor, etc.) become real Claude Code subagents or OpenCode assistants."
+          "icon": "📐",
+          "title": "Knows your stack",
+          "body": "Describe the project once in .aikit/manifest.yaml — the agent knows the language, framework, build/test commands, forbidden paths, your conventions."
         },
         {
           "icon": "📋",
-          "title": "Constitution",
-          "body": "Sections of project rules. They become the body of CLAUDE.md and the .mdc files for Cursor."
+          "title": "Breaks work into verifiable steps",
+          "body": "Plan first — artifacts, steps, definition of done. Then code. One commit per step so you can roll back anything."
+        },
+        {
+          "icon": "🛑",
+          "title": "Stops for confirmation",
+          "body": "After the plan, after risky steps, before commits. You decide what happens next — the agent doesn't run off on its own."
         }
-      ],
-      "summary": "One workflow, set up once, runs on every AI agent your team uses."
+      ]
     },
     "how": {
-      "eyebrow": "How it works",
-      "title": "From an empty repo to ready development workflows",
-      "lead": "Everything runs locally. No accounts, no remote services, no signup.",
+      "eyebrow": "What it looks like",
+      "title": "A simple loop",
       "steps": [
         {
-          "title": "Open an AI agent in your project",
-          "body": "Either Claude Code or OpenCode — the prompt assumes one of those. Run it inside your repo's directory. If you don't have either, install one first.",
-          "hint": "≈30 seconds, one command"
+          "num": "1",
+          "title": "You describe what you need",
+          "body": "One sentence in chat: \"add CSV export\". The agent reads the project itself and proposes a plan."
         },
         {
-          "title": "Paste the prompt into chat",
-          "body": "There's one line on the home page that says, in effect, «fetch the instructions at this URL and follow them». From there the agent takes over.",
-          "hint": "one paste"
+          "num": "2",
+          "title": "You review the plan",
+          "body": "You see the list of steps and artifacts. Approve, tweak, or cancel."
         },
         {
-          "title": "Agent drafts the manifest and verifies it",
-          "body": "It looks at the project — languages, frameworks, how the modules are arranged — then writes .aikit/manifest.yaml and runs kit-setup verify. If verify finds an error, the agent fixes it and re-runs. That loop is part of the normal flow, not a sign of trouble.",
-          "hint": "20–40 seconds, sometimes one correction"
+          "num": "3",
+          "title": "The agent executes step by step",
+          "body": "One step, one commit. At checkpoints it stops and shows you the result."
         },
         {
-          "title": "Agent renders the configs",
-          "body": "kit-setup generate writes the per-tool files: CLAUDE.md and .claude/agents/* for Claude Code, .cursor/rules/* for Cursor, AGENTS.md and opencode.json for OpenCode, and so on. You'll see the list of paths it created.",
-          "hint": "9–15 files for a typical project"
+          "num": "4",
+          "title": "You confirm and move on",
+          "body": "At each step: continue, correct, or stop. You stay in control."
+        }
+      ]
+    },
+    "runners": {
+      "eyebrow": "Supported environments",
+      "title": "One process — five AI agents",
+      "lead": "The same commands work everywhere. Switching from Cursor to Claude Code? The manifest and process stay the same.",
+      "items": [
+        { "id": "claude-code", "name": "Claude Code", "note": "Full support" },
+        { "id": "opencode", "name": "OpenCode", "note": "Full support" },
+        { "id": "qwen-code", "name": "Qwen Code", "note": "Full support" },
+        { "id": "cursor", "name": "Cursor", "note": "Rules and MCP" },
+        { "id": "aider", "name": "Aider", "note": "Conventions and prompts" }
+      ]
+    },
+    "cta": {
+      "title": "Want to try it?",
+      "body": "Setup takes a minute: open the agent in your project, paste the prompt, answer two questions.",
+      "button": "Get started"
+    }
+  },
+  "start": {
+    "hero": {
+      "eyebrow": "Get started",
+      "title": "Set up in a minute",
+      "lead": "Copy the full prompt, paste it into Claude Code or OpenCode inside your project, answer two questions. The agent handles the rest."
+    },
+    "quickSetup": {
+      "title": "Setup prompt",
+      "subtitle": "Copy → paste into your AI agent's chat → answer two questions",
+      "previewLabel": "Beginning of the prompt (preview):",
+      "stepsTitle": "What happens next",
+      "steps": [
+        "The agent asks which language to use for setup (English / Russian).",
+        "Scans your project and asks which AI runner and model family to use.",
+        "Shows a draft .aikit/manifest.yaml and waits for your approval.",
+        "Downloads kit-setup, verifies the manifest, generates files, commits the result."
+      ]
+    },
+    "files": {
+      "eyebrow": "Result",
+      "title": "What lands in your project",
+      "lead": "One manifest and a set of files for the chosen runner. Your existing source code is left alone.",
+      "tree": [
+        { "path": ".aikit/manifest.yaml", "note": "single YAML for the whole project" },
+        { "path": ".aikit/bin/kit-setup", "note": "binary (in .gitignore)" },
+        { "path": "CLAUDE.md / AGENTS.md / CONVENTIONS.md", "note": "agent-facing instructions, varies by runner" },
+        { "path": ".claude/ or .opencode/ or .qwen/ or .cursor/", "note": "sub-agents, slash commands, skills" }
+      ]
+    },
+    "commands": {
+      "eyebrow": "Three commands",
+      "title": "Day-to-day work",
+      "lead": "The same commands across every runner. Each one runs in a fresh chat session.",
+      "items": [
+        {
+          "name": "/kit",
+          "subtitle": "Planning",
+          "body": "Describe the task in one sentence — the agent studies the code, assesses risk, drafts a plan with artifacts, steps, and definition-of-done. It stops for your approval."
+        },
+        {
+          "name": "/kit-do",
+          "subtitle": "Execution",
+          "body": "Walks through the approved plan step by step, one commit per step, with verification. At checkpoints it shows what it built and waits for your \"go\"."
+        },
+        {
+          "name": "/kit-fix",
+          "subtitle": "Targeted fix",
+          "body": "When a bug surfaces, it gets its own session with clean context. Triage → debug → fix → re-verify. Keeps the main plan uncluttered."
         }
       ]
     },
     "scenarios": {
       "eyebrow": "Scenarios",
-      "title": "Where it pays off most",
-      "lead": "Three situations where doing this by hand eats more time than it looks like at the start.",
+      "title": "What this looks like in practice",
       "items": [
         {
-          "title": "Starting a fresh Next.js project",
-          "body": "Cursor opens on an empty project and suggests something off, because it knows nothing specific about this repo. With AI Kit you paste the prompt. The agent reads package.json, recognises Next.js + TS + pnpm, pulls in profiles typescript-pnpm, nextjs, security-baseline. A minute later .cursor/rules/*.mdc are in the repo — and Cursor stops suggesting var or require."
+          "title": "New feature",
+          "body": "/kit \"add CSV export for orders\". The agent reads the modules, drafts a 5-step plan, waits for approval, then /kit-do walks through them."
         },
         {
-          "title": "Migrating the team from Cursor to Claude Code",
-          "body": "Seven files under .cursor/rules. The team is switching to Claude Code, which wants CLAUDE.md, .claude/agents/*, slash commands, settings.json. Instead of porting it all by hand into the new formats — fill out .aikit/manifest.yaml once. Generate renders for both Cursor (during the transition) and Claude Code."
+          "title": "Fix a bug",
+          "body": "/kit-fix \"the save button stops responding on the second click\". Isolated session, doesn't disturb the current plan."
         },
         {
-          "title": "Keeping the agent out of legacy",
-          "body": "A folder slated for rewrite, but off-limits for now. Add legacy/ to forbidden_patterns — AI Kit bakes the rule into every generated config. The same restriction shows up in Cursor, Claude Code, and Aider, instead of you copying the same sentence into three different files."
+          "title": "Change stack or bump dependencies",
+          "body": "Edit stack.profiles in the manifest (e.g. add nextjs), run kit-setup generate — every config is re-rendered."
+        },
+        {
+          "title": "Lock the agent out of legacy/",
+          "body": "Add legacy/ to policies.forbidden_patterns — the rule lands consistently in every generated file."
+        },
+        {
+          "title": "Add a new sub-agent",
+          "body": "Describe the role in agents[] (e.g. review-agent), run generate — a new sub-agent file appears under .claude/agents/ or .opencode/agents/."
         }
       ]
     },
-    "usecases": {
-      "eyebrow": "More detail",
-      "title": "What it looks like in practice",
-      "lead": "A few typical stories with step-by-step actions. The first three are open — the rest are collapsed; click to expand.",
-      "items": [
+    "cli": {
+      "eyebrow": "For the hands-on path",
+      "title": "kit-setup CLI",
+      "lead": "If you'd rather not hand setup to an agent, you can drive everything yourself. The binary is on the releases page — one file per platform.",
+      "subcommands": [
         {
-          "title": "Bootstrapping a Next.js project",
-          "open": true,
-          "steps": [
-            "Created the repo and ran create-next-app.",
-            "Opened Claude Code or OpenCode in the same directory.",
-            "Pasted the prompt. The agent reads package.json, recognises Next.js + TypeScript + pnpm, suggests profiles typescript-pnpm + nextjs + security-baseline.",
-            "About a minute later there's .aikit/manifest.yaml plus a set of .cursor/rules/*.mdc and CLAUDE.md (depending on which render_targets you kept)."
-          ],
-          "watch": "Watch for: the first verify sometimes points out a missing module or an ambiguous rule. The agent fixes it and re-runs verify. The «verify → edit → verify» loop is part of the normal flow, not a failure."
+          "cmd": "kit-setup verify [<path>]",
+          "body": "Validates the manifest. Returns JSON {\"valid\": bool, \"errors\": [...]}. Use it in an edit-then-verify loop."
         },
         {
-          "title": "Migrating the team from Cursor to Claude Code",
-          "open": true,
-          "steps": [
-            "Open .cursor/rules — seven files have piled up over the past six months.",
-            "Run the prompt. The agent reads the existing rules and folds them into .aikit/manifest.yaml: constitution, agent definitions, which models to use.",
-            "In render_targets keep both: claude-code and cursor. The team migrates gradually — both tools work off the same source of truth.",
-            "When the migration is complete, drop cursor from render_targets and re-run generate. The old .cursor/* files remain on disk but stop receiving updates."
-          ],
-          "watch": "Common pitfall: expecting the old .cursor/rules/*.mdc to disappear after you remove the target. AI Kit doesn't delete files outside the current render — clean up .cursor/ yourself."
+          "cmd": "kit-setup generate [<path>]",
+          "body": "Renders files. Returns JSON {\"ok\": bool, \"generated\": [...]}. Idempotent — overwrites its own files cleanly."
         },
         {
-          "title": "Hiding legacy from the agent",
-          "open": true,
-          "steps": [
-            "Open .aikit/manifest.yaml.",
-            "Add legacy/ under forbidden_patterns.",
-            "Run kit-setup generate.",
-            "CLAUDE.md, the .mdc files, and CONVENTIONS.md now contain the rule to leave legacy/ alone."
-          ],
-          "watch": "Path is relative to the project root; for a directory, end it with a slash. Want to forbid more — add another line, the format is free."
-        },
-        {
-          "title": "One project, different models for different tasks",
-          "open": false,
-          "steps": [
-            "Each agent in the manifest has a model field. You can set different models per role: review-agent on a strong model, lint-agent on a fast cheap one.",
-            "If a particular AI tool doesn't support a model, kit-setup verify reports it — it knows which models are available where.",
-            "When a model isn't valid for a target, the prompt-driven agent will either swap it out or drop the target from render_targets."
-          ],
-          "watch": "This is a hand-tuning step. Easier to do after the AI agent has put together a baseline manifest — let the prompt do the draft, then assign models per agent."
-        },
-        {
-          "title": "Adding a fourth tool six months later",
-          "open": false,
-          "steps": [
-            "Open .aikit/manifest.yaml.",
-            "Add the new target to render_targets — say, aider.",
-            "Run kit-setup verify. If two targets want the same file, verify rejects the combo with a clear message.",
-            "Resolve it — for example, drop opencode and keep qwen-code, since they both write AGENTS.md.",
-            "Run generate."
-          ],
-          "watch": "The known collision is opencode and qwen-code on AGENTS.md. Verify catches it. All other targets coexist fine."
-        },
-        {
-          "title": "Freelancer with ten clients",
-          "open": false,
-          "steps": [
-            "Each client has their own stack. For a new one, start the manifest from a profile: kotlin-gradle, typescript-pnpm, python-poetry, make-generic.",
-            "Layer the client's specifics on top: modules, conventions, forbidden paths.",
-            "Generate."
-          ],
-          "watch": "Profiles cover the typical bits; everything specific is written on top. You don't have to keep someone else's rules in your head — the manifest in the client's repo always tells you."
-        }
-      ]
-    },
-    "flows": {
-      "eyebrow": "Workflows",
-      "title": "Day-to-day with the kit",
-      "lead": "How the slash commands compose into the developer's daily loop. The first one runs once at project start; the rest repeat per feature or fix.",
-      "items": [
-        {
-          "title": "1. Set up the kit (once per project)",
-          "open": true,
-          "steps": [
-            "Paste the setup prompt — the agent reads the project, drafts .aikit/manifest.yaml.",
-            "kit-setup verify .aikit/manifest.yaml — fix any errors the JSON reports.",
-            "kit-setup generate .aikit/manifest.yaml — render per-tool configs (CLAUDE.md, .claude/agents/*, .cursor/rules/*, AGENTS.md, etc., depending on render_targets)."
-          ],
-          "watch": "Re-run the setup prompt when the stack changes (new framework, new module, new model). Generate is idempotent — overwrites cleanly."
-        },
-        {
-          "title": "2. Develop a new feature",
-          "open": true,
-          "steps": [
-            "/kit-prepare <rough idea> — intake assistant turns it into a clean prompt and recommends the next /kit-* command.",
-            "/kit-new-feature <description> — risk-classified (trivial / standard / critical), drives the 6-stage pipeline.",
-            "@Architect drafts spec.md + plan.md → CONFIRM gate awaits /kit-approve.",
-            "EXECUTE step-by-step with per-step commits and ground-truth artefacts.",
-            "At each 5.6 CHECKPOINT — review the runbook + Context Snapshot Block; /kit-approve to advance, /kit-defect to re-open in-session, or use the defect-isolation flow below.",
-            "After the last step: RECONCILE → TRACE → DoD gate → DIFF-REVIEW → CLOSE."
-          ],
-          "watch": "Sleep mode (/kit-sleep) collapses CONFIRM and 5.6 user-forks for autonomous runs — use it when you're away from the screen and trust the lane."
-        },
-        {
-          "title": "3. Fix a known bug",
-          "open": true,
-          "steps": [
-            "/kit-fix — scans the active feature's test-cases.md for FAIL / PEND rows, asks which ones to fix.",
-            "/kit-fix TC-42 — direct mode for one test case ID.",
-            "/kit-fix Save button stays disabled — appends a new TC and runs the BUG pipeline (TRIAGE → DEBUG → FIX → RE-VERIFY → REPORT)."
-          ],
-          "watch": "Source of truth is vault/specs/features/<module>/<feature>/test-cases.md. Edit it directly to mark bugs as FAIL — /kit-fix picks them up next run."
-        },
-        {
-          "title": "4. Defect-isolation flow (keeps the main session's context clean)",
-          "open": false,
-          "steps": [
-            "Original session at 5.6 emits a Context Snapshot Block (copyable) alongside the verification request.",
-            "Open a NEW session in the same project directory.",
-            "/kit-fix <defect description> Контекст: <paste Snapshot Block> — the new session fixes the defect with only that context, never reading .planning/CURRENT.md.",
-            "When verified, /kit-approve in the new session — the agent emits a Decision Context Block and stops.",
-            "Return to the original session: /kit-fixed <paste Decision Block> — state syncs (step_commits[N] updated, TC marked PASS), 5.6 fork re-presents.",
-            "/kit-approve in the original session to advance."
-          ],
-          "watch": "Use this for non-trivial fixes where the back-and-forth would bloat the main pipeline session. For one-line typos, /kit-defect in-session is faster."
-        }
-      ]
-    },
-    "commands": {
-      "eyebrow": "Reference",
-      "title": "CLI commands",
-      "lead": "If you'd rather skip the AI agent, all of these run by hand. Download the binary from the Releases page.",
-      "items": [
-        {
-          "command": "verify [<path>]",
-          "body": "Validates the manifest. Emits {\"valid\": bool, \"errors\": [...]}. Used in the «edit → check» loop."
-        },
-        {
-          "command": "generate [<path>]",
-          "body": "Renders the configs. Emits {\"ok\": bool, \"generated\": [...]}. Overwrites its own files on every run."
-        },
-        {
-          "command": "schema [--format json|human]",
-          "body": "Lists the profiles, agents, targets, and commands bundled in this binary, plus `enums` with allowed values for validator-enforced fields (provider_auth, model_tier, cost_hint, knowledge_store_kind, agent_role). Default is JSON; --format human prints a readable tree."
-        },
-        {
-          "command": "--help / -h",
-          "body": "Prints help and exits."
-        },
-        {
-          "command": "--version / -v",
-          "body": "Prints the binary version and exits."
+          "cmd": "kit-setup schema [--format json|human]",
+          "body": "Catalog of bundled templates: profiles, adapters, dialects, commands, skills."
         }
       ],
       "exitTitle": "Exit codes",
       "exit": [
         { "code": "0", "body": "Success." },
-        { "code": "1", "body": "Manifest invalid (verify) or refused by validation (generate)." },
-        { "code": "2", "body": "Usage error, manifest load failure, parse error, or runtime I/O failure." }
-      ]
-    },
-    "profiles": {
-      "eyebrow": "Building the manifest",
-      "title": "What it's assembled from",
-      "lead": "You can write the manifest from scratch, but most of the time it's easier to plug in ready profiles. A profile is a manifest fragment someone else already wrote. Profiles are grouped along three axes.",
-      "axes": [
-        {
-          "name": "language — exactly one",
-          "body": "Your project's main language and build tool. The profile drops in build, test, and lint commands plus typical forbidden paths.",
-          "list": ["kotlin-gradle", "typescript-pnpm", "python-poetry", "make-generic"]
-        },
-        {
-          "name": "framework — any number",
-          "body": "By framework or platform. Adds UI hints and characteristic rules.",
-          "list": ["nextjs", "react-spa", "compose-multiplatform", "paper-plugin"]
-        },
-        {
-          "name": "capability — any number",
-          "body": "Cross-stack policies. Toggle them as needed.",
-          "list": ["security-baseline", "solid", "clean-architecture", "quality-gates"]
-        }
+        { "code": "1", "body": "Manifest invalid (verify) or validation refused (generate)." },
+        { "code": "2", "body": "Usage, manifest load, parse, or I/O failure." }
       ],
-      "note": "Full catalog: kit-setup schema --format human."
+      "releasesLink": "Download the binary →"
+    }
+  },
+  "claude": {
+    "hero": {
+      "eyebrow": "Claude Code",
+      "title": "AI Kit in Claude Code",
+      "lead": "What lands in .claude/, how it leans on Claude Code features — sub-agents, skills, hooks — and how the Anthropic dialect differs from generic."
     },
-    "targets": {
-      "eyebrow": "Components",
-      "title": "What lands in the project per tool",
-      "lead": "The list of render targets and what each drops into the repo. Add to render_targets — config gets rendered; remove it — that config stops updating.",
+    "files": {
+      "eyebrow": "Artifacts",
+      "title": "What gets written to your project",
+      "lead": "Running kit-setup generate with render_targets: [claude-code] writes exactly these files. Existing source code is untouched.",
+      "rows": [
+        { "path": "CLAUDE.md", "purpose": "Main instruction file: project conventions, forbidden patterns, the body of the Main agent (it drives the loop). Claude Code reads this in every session." },
+        { "path": ".claude/agents/*.md", "purpose": "Sub-agents — isolated one-shot contexts that Main dispatches via the Task tool. Default: Researcher." },
+        { "path": ".claude/commands/*.md", "purpose": "Slash commands /kit, /kit-do, /kit-fix. Each file's body is the prompt Claude Code substitutes when invoked." },
+        { "path": ".claude/skills/*/SKILL.md", "purpose": "Skills with auto-triggers driven by their descriptions. Default: summary-format (defines the CONTEXT/PLAN/STEP/FIX block shapes)." },
+        { "path": ".claude/prompts/*.md", "purpose": "User-facing helper prompts. Not auto-invoked — paste them into chat manually when needed." },
+        { "path": ".claude/settings.json", "purpose": "Permissions, Bash allowlist, MCP server config. Ships with sensible defaults." },
+        { "path": ".claude/hooks/*.mjs", "purpose": "Optional. Auto-checks on PreToolUse / PostToolUse / Stop. E.g. block Edit outside permitted directories." }
+      ]
+    },
+    "features": {
+      "eyebrow": "Claude Code features",
+      "title": "What AI Kit leverages in this environment",
       "items": [
         {
-          "id": "claude-code",
-          "status": "supported",
-          "role": "Claude Code by Anthropic",
-          "files": ["CLAUDE.md", ".claude/agents/*.md", ".claude/commands/*.md", ".claude/settings.json"],
-          "body": "Top-level guidance, subagent definitions, slash commands, permissions and MCP servers. CLAUDE.md carries both the constitution and the orchestrator agent body (`role: orchestrator`) — the runner's main loop needs that prompt directly. Other agents land under `.claude/agents/*.md` as Task-dispatched subagents."
+          "title": "Sub-agents via the Task tool",
+          "body": "Each file in .claude/agents/ is an isolated one-shot context. The Main agent dispatches them with the built-in Task tool when it needs to keep heavy research out of the main conversation. They return one message — a compact digest."
         },
         {
-          "id": "cursor",
-          "status": "supported",
-          "role": "Cursor",
-          "files": [".cursor/rules/*.mdc", ".cursor/mcp.json"],
-          "body": "One .mdc file per constitution section, alwaysApply: true. The orchestrator agent (role: orchestrator) ships as one more alwaysApply rule — Cursor has no main-loop system prompt, so the pipeline lives as always-loaded context. Plus an MCP config. Cursor doesn't have slash commands, so those aren't rendered."
+          "title": "Auto-triggered skills",
+          "body": "Each SKILL.md has a description. Claude Code matches user intent against it and loads the skill automatically. AI Kit uses this to guarantee the format of planning blocks."
         },
         {
-          "id": "opencode",
-          "status": "supported",
-          "role": "OpenCode",
-          "files": ["AGENTS.md", ".opencode/agents/*.md", ".opencode/commands/*.md", "opencode.json"],
-          "body": "AGENTS.md carries both the constitution and the orchestrator agent body (`role: orchestrator`). Assistant definitions for subagents land under `.opencode/agents/*.md`. Plus slash commands and a provider/MCP block. Don't enable simultaneously with qwen-code — they both write AGENTS.md."
+          "title": "Hooks for guardrails",
+          "body": "PreToolUse can block a tool call (e.g. Bash with rm -rf), PostToolUse can add a check after Edit, Stop can do a final validation. All hooks are plain .mjs files inside the project."
         },
         {
-          "id": "aider",
-          "status": "supported",
-          "role": "Aider",
-          "files": ["CONVENTIONS.md", ".aider.conf.yml", ".aider/prompts/*.md"],
-          "body": "CONVENTIONS.md, which Aider auto-loads, carries both the constitution and the orchestrator agent body. Plus a global config with model binding and prompts as separate files."
-        },
-        {
-          "id": "qwen-code",
-          "status": "supported",
-          "role": "Qwen Code",
-          "files": ["AGENTS.md", ".qwen/agents/*.md", ".qwen/settings.json"],
-          "body": "Mirror of the opencode layout but in its own folder — AGENTS.md carries the constitution and the orchestrator body, subagents land under .qwen/agents/. settings.json contains the modelProviders block for Qwen."
+          "title": "Permissions and MCP in settings.json",
+          "body": "Bash allowlist, explicit write permissions, MCP server configuration. One file, lives with the project — reviewable like any other code."
         }
       ]
     },
-    "example": {
-      "eyebrow": "Real example",
-      "title": "One manifest, what comes out of it",
-      "lead": "A minimal working .aikit/manifest.yaml — about ten lines. From it AI Kit renders CLAUDE.md, .cursor/rules/*.mdc, AGENTS.md, and the rest.",
-      "manifestLabel": ".aikit/manifest.yaml — what the agent writes",
-      "generatedLabel": "CLAUDE.md — fragment of what comes out",
-      "note": "From those ten lines AI Kit produces about 9–15 files for the chosen render targets. You don't need to remember the full list — every generate prints it."
+    "dialect": {
+      "eyebrow": "Anthropic dialect",
+      "title": "How prompts differ from generic",
+      "lead": "Wrappers in dialects/anthropic/ are written for Claude's quirks: they refer to native tool APIs (Task, Glob, Grep), use structured XML tags for long context, and read more like instructions to a colleague than to a machine. The generic dialect for non-Anthropic models is more directive and skips Claude-specific affordances."
+    }
+  },
+  "general": {
+    "hero": {
+      "eyebrow": "OpenCode · Qwen Code · Cursor · Aider",
+      "title": "AI Kit in other agents",
+      "lead": "Same three commands, same manifest — different files per runner. Here's what gets generated and how each environment differs."
     },
-    "support": {
-      "eyebrow": "Support and updates",
-      "title": "What to do when AI Kit gets in the way",
-      "lead": "The utility doesn't put down roots. All artifacts live inside the project; delete and forget.",
+    "opencode": {
+      "title": "OpenCode",
+      "lead": "Open-source counterpart to Claude Code with sub-agents and slash commands. No hooks — TypeScript plugins instead.",
+      "rows": [
+        { "path": "AGENTS.md", "purpose": "Main instruction file, the AGENTS.md analog of CLAUDE.md." },
+        { "path": ".opencode/agents/*.md", "purpose": "Sub-agents, each with their own permission set." },
+        { "path": ".opencode/commands/*.md", "purpose": "Slash commands /kit, /kit-do, /kit-fix." },
+        { "path": ".opencode/skills/*/SKILL.md", "purpose": "Skills in the same format as Claude Code." },
+        { "path": "opencode.json", "purpose": "Provider, model, and MCP configuration." },
+        { "path": ".opencode/plugins/*.ts", "purpose": "Plugins in place of hooks. Same effect — guardrails and validation — via TypeScript modules." }
+      ]
+    },
+    "qwen": {
+      "title": "Qwen Code",
+      "lead": "Mirrors the OpenCode shape but everything lives under .qwen/. The main instruction file is pulled in via contextFileName in settings.json.",
+      "rows": [
+        { "path": ".qwen/AGENTS.md", "purpose": "Main instruction file. Path is declared in settings.json via contextFileName." },
+        { "path": ".qwen/agents/*.md", "purpose": "Sub-agents." },
+        { "path": ".qwen/commands/*.md", "purpose": "Slash commands." },
+        { "path": ".qwen/skills/*/SKILL.md", "purpose": "Skills." },
+        { "path": ".qwen/settings.json", "purpose": "Model settings (modelProviders) and MCP servers." }
+      ]
+    },
+    "others": {
+      "title": "Cursor and Aider — partial support",
       "items": [
         {
-          "title": "Updating",
-          "body": "Download the new binary from the Releases page or build from git. Run kit-setup generate again — configs update against the latest templates."
+          "name": "Cursor",
+          "body": "No sub-agents, no slash commands. AI Kit renders the constitution as a set of .cursor/rules/*.mdc files with alwaysApply: true, plus .cursor/mcp.json. Useful so the same rules apply automatically across the team."
         },
         {
-          "title": "Extending",
-          "body": "Adding a new profile or adapter for a new tool means adding a file under kit-setup/templates/. After a rebuild the binary knows the new target. Pull requests welcome."
-        },
-        {
-          "title": "Removing",
-          "body": "Delete .aikit/, the generated CLAUDE.md, .cursor/, .opencode/, and similar. The binary is a regular executable — delete it like any file. Nothing is registered system-wide."
+          "name": "Aider",
+          "body": "No sub-agents and no slash commands. AI Kit writes CONVENTIONS.md (Aider loads it automatically), .aider.conf.yml for the global model setting, and user prompts under .aider/prompts/."
         }
       ]
     },
-    "faq": {
-      "eyebrow": "FAQ",
-      "title": "Frequently asked",
-      "lead": "What newcomers ask, and what AI Kit does about it.",
-      "items": [
-        {
-          "q": "Every AI agent works its own way, and there's no shared process across the team.",
-          "a": "In all five tools the workflow is the same: /kit-prepare, /kit-new-feature, /kit-fix, the same checkpoints, the same evidence checks. A developer can switch between Claude Code and Cursor mid-week without changing how they work."
-        },
-        {
-          "q": "Cursor keeps poking around in the legacy folder we shouldn't touch yet.",
-          "a": "Add legacy/ to forbidden_patterns in the manifest. The rule lands in every generated config — Cursor, Claude Code, Aider all stay out of that folder. No need to copy the same sentence into three different files."
-        },
-        {
-          "q": "The team wants shared rules, but everyone configures Cursor their own way.",
-          "a": "The manifest lives in the repo and travels with the project. A new teammate runs git pull and kit-setup generate — their AI works by the same rules as everyone else's. The config becomes part of the codebase, not a personal setup."
-        },
-        {
-          "q": "I don't want to create another account just for a utility.",
-          "a": "There isn't one. AI Kit is a single binary: reads YAML from disk, writes files next to it. Network is only needed once, when you download it from the Releases page."
-        },
-        {
-          "q": "I'm worried generate will break what I've already tweaked by hand.",
-          "a": "Generate only overwrites files it created itself: CLAUDE.md, .cursor/rules/*, AGENTS.md and the like. Your project's own source files are untouched. But edits made directly in the generated files will be lost on the next run — move those edits into the manifest or its templates."
-        },
-        {
-          "q": "I don't like YAML and don't want to learn it.",
-          "a": "Then don't. Open Claude Code or OpenCode in your project, paste the prompt from the home page — the agent surveys the project, drafts the manifest, and runs kit-setup itself. Your part is one paste in chat."
-        },
-        {
-          "q": "My stack isn't a standard one.",
-          "a": "Language and framework fields are free strings — write whatever fits. If there's a profile that matches, add one line to stack.profiles. If not, describe the specifics yourself; the manifest extends freely without a strict schema for values."
-        },
-        {
-          "q": "How much does it cost?",
-          "a": "Nothing. AI Kit is open source under Apache 2.0. No subscriptions, no tiers. The AI assistants themselves (Cursor, Claude Code and so on) are billed separately by their vendors — AI Kit doesn't change that."
-        },
-        {
-          "q": "Do I need to know how to code?",
-          "a": "To use it — no. If you can run an AI agent in chat (Claude Code, OpenCode), paste a prompt, and read the result, you're set."
-        },
-        {
-          "q": "Is it safe?",
-          "a": "The binary doesn't phone home. It reads the manifest from disk and writes files alongside. The prompt you paste into your AI agent fetches one markdown file from GitHub — that's the only network call. Your code and manifest stay on your machine; they only reach the cloud through the AI assistant you're already using."
-        },
-        {
-          "q": "What if something breaks?",
-          "a": "Generate only overwrites its own files. If the result is off — fix the manifest and re-run. Worst case, delete .aikit/ and the generated configs and the repo is back to where it started."
-        },
-        {
-          "q": "Does the kit overwrite existing files?",
-          "a": "Yes, unconditionally — but only the ones it creates itself (CLAUDE.md, .cursor/rules/*, AGENTS.md, etc.). Your own sources are untouched. If you've added something to a generated CLAUDE.md by hand, it'll be lost next run; move edits into the manifest."
-        },
-        {
-          "q": "Can I use it in commercial work?",
-          "a": "Yes. Apache 2.0 allows it. Generated files belong to you — do whatever you need with them."
-        },
-        {
-          "q": "Which render targets should I pick?",
-          "a": "Only the ones you actually use. Multiple at once is fine. The single restriction: opencode + qwen-code together collide on AGENTS.md and verify will reject the combo — pick one."
-        },
-        {
-          "q": "Do I need internet?",
-          "a": "Only when downloading the binary. After that, no. Manifest is read from disk, files are written next to it; nothing is sent outward."
-        },
-        {
-          "q": "What if my language isn't in the list?",
-          "a": "Put it under stack.languages — the field is free-form, the value flows into prompts via shared snippets. There won't be a ready profile for it, but that doesn't block anything."
-        },
-        {
-          "q": "I want to add my own tool or profile.",
-          "a": "Tool adapters and profiles live in kit-setup/templates/. Add a file, rebuild the binary, and it knows the new target. Pull requests welcome in the repo."
-        },
-        {
-          "q": "Where do I report bugs?",
-          "a": "Open an issue on the GitHub repository — link in the footer."
-        }
-      ]
-    },
-    "cta": {
-      "title": "Want to try it?",
-      "body": "Open Claude Code or OpenCode in your project and paste this prompt. About a minute later you'll see a list of files it created.",
-      "button": "Open GitHub"
-    },
-    "scenariosBanner": {
-      "eyebrow": "User scenarios",
-      "title": "How teams actually use AI Kit",
-      "body": "Six worked examples covering common situations: project bootstrap, migrating a team between AI tools, locking the agent out of legacy folders, picking different models per role, adding a new tool months later, and freelance work across multiple stacks.",
-      "cta": "Open user scenarios"
+    "dialect": {
+      "eyebrow": "Generic dialect",
+      "title": "Prompts for non-Anthropic models",
+      "lead": "When provider != anthropic, wrappers come from dialects/generic/. More directive wording, no Anthropic-specific affordances (Task tool, long XML context), denser text — short context windows in some models force tighter prose. qwen and deepseek have their own subdirectories with minor tweaks."
     }
   },
   "footer": {
     "repo": "Repository",
     "releases": "Releases",
-    "license": "Apache License 2.0"
-  },
-  "flows": {
-    "backHome": "Back to home"
-  },
-  "scenariosPage": {
-    "backHome": "Back to home"
+    "license": "Apache 2.0 License"
   }
 }

@@ -5,15 +5,13 @@ import { resolve } from 'path';
 export default defineConfig({
   base: '/AI-Kit/',
   plugins: [react()],
+  server: {
+    fs: {
+      allow: [resolve(__dirname, '..')],
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        flows: resolve(__dirname, 'flows.html'),
-        scenarios: resolve(__dirname, 'scenarios.html'),
-      },
-    },
   },
 });
