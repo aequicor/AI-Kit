@@ -85,6 +85,13 @@ android {
 }
 
 dependencies {
+    constraints {
+        // koin-compose-viewmodel 4.1.0 requests org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0-beta01;
+        // explicit pin keeps the project version winning even if the direct dependency is later removed.
+        implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0") {
+            because("koin-compose-viewmodel 4.1.0 pulls 2.9.0-beta01 — pin to project version to prevent DuplicateClass on Android runtime")
+        }
+    }
     debugImplementation(libs.compose.uiTooling)
 }
 
