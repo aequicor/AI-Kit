@@ -25,7 +25,7 @@
     "start": "Get started"
   },
   "home": {
-    "badge": "Documentation · v3.0.0",
+    "badge": "Documentation · v3.1.0",
     "title": "One kit — a ready development process for any AI agent",
     "lead": "AI Kit adds a development workflow on top of your AI agent. The same set of commands works in Claude Code, Cursor, OpenCode, Aider and Qwen Code: new features, bug fixes, review checkpoints, isolated sessions for messy fixes, autonomous runs.",
     "ctaQuick": "Set up in a minute",
