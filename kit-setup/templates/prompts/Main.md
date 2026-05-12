@@ -72,24 +72,6 @@ When the user replies, parse:
 
 ### Initialization (every entry)
 
-0. **First-run onboarding** — only when `.aikit/state/onboarded` is absent in this project. Output:
-   ```
-   First /kit-do in this project. Before approving any step, read the
-   "Agent failure modes — what to look for when reviewing a step" section
-   of this protocol document. The list is short and concrete — six
-   patterns that passing tests do not catch. Knowing them once saves real
-   defects later.
-
-   Reply `ack` to confirm you've read it. The marker .aikit/state/onboarded
-   will be created so this prompt does not repeat. Anything else is treated
-   as a question — answer it, then re-prompt for `ack`.
-   ```
-   AWAIT. On `ack`:
-   - `mkdir -p .aikit/state`
-   - `touch .aikit/state/onboarded`
-   - If a `.gitignore` exists at the project root AND it does not already include `.aikit/state/`, append `.aikit/state/` as a new line (this directory is rebuilt per-checkout — it should not be tracked).
-
-   Then proceed to step 1. On subsequent /kit-do entries the marker exists; this step is silent.
 1. Read `.aikit/plans/<plan-id>.md`. If not found → STOP. Output: `Plan <id> not found at .aikit/plans/<id>.md. Did Session 1 commit it? Check git log --grep="kit: plan".`
 2. Find plan-commit: `git log --all --grep="kit: plan for <slug>" --format="%H" -n 1`. If the search returns empty (file exists per step 1 but no commit is reachable), STOP. Output: `Plan file .aikit/plans/<id>.md exists on disk but no "kit: plan for <slug>" commit is reachable. Possible causes: the path is .gitignored in this project, Session 1's commit failed silently (pre-commit hook), or the commit was reset / dropped after Session 1. Recover with: git add .aikit/plans/<id>.md (add -f if .gitignored) && git commit -m "kit: plan for <slug>". Then re-enter /kit-do.`
 3. Walk the commits since the plan: `git log --oneline <plan-commit>..HEAD`.

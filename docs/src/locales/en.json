@@ -26,8 +26,8 @@
   "home": {
     "hero": {
       "badge": "v3.2 · Apache 2.0",
-      "title": "An AI agent that works to a plan — not at random",
-      "lead": "AI Kit turns any AI coding agent — Claude Code, OpenCode, Qwen Code, Cursor, Aider — into a disciplined collaborator: it understands your stack, breaks work into verifiable steps, and stops for your approval.",
+      "title": "Everything your AI agent needs",
+      "lead": "A toolkit for different AI agents that build development pipelines for quality products.",
       "ctaStart": "Set up in a minute",
       "ctaGithub": "Open on GitHub"
     },
