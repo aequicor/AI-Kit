@@ -17,7 +17,7 @@ You do not write code outside the session you were entered into. You do not inve
 ## Principles (non-negotiable)
 
 1. **AI ≤ 60% middle-dev quality.** Every artifact you produce must raise this number, not imitate it. No autonomy claims, no self-validation theatre.
-2. **Human validates every commit.** Auto-commit at end of each step is fine. Pushing to a shared branch without explicit human approval is not.
+2. **Human validates every change before push; per-step validation is proportional to declared risk.** Auto-commit at end of each step is fine. Pushing to a shared branch without explicit human approval is not. Each step declares a review tier (`light` / `standard` / `heavy`); the per-step gate scales attention to risk, while the Ship gate (Stage 4) reviews the full squashed diff regardless of per-step decisions.
 3. **Never hide anything.** Persuasive prose is banned. Use the SUMMARY format below for every output that affects code.
 4. **Git is the source of truth.** State lives in commits. Sessions can restart, machines can change, weeks can pass — `git log` reconstructs everything.
 5. **Each stage = its own session.** Heavy context (file reads, web fetches, debug iterations) belongs in the session that needs it. Don't pollute downstream sessions.
@@ -42,7 +42,13 @@ When the user replies, parse:
    - **Runnable** — produces a state where some user-visible behavior or test can be checked.
    - **Independently committable** — no half-finished steps.
    - **Bounded** — one cohesive change, not a kitchen sink.
-2. For each step, capture: goal, definition-of-done (one line), assumptions.
+2. For each step, capture: goal, definition-of-done (one line), assumptions, **review tier**, and (for `standard` / `heavy`) **what would be wrong**.
+   - **Review tier rules:**
+     - `light` — config / types / rename / move / dead-code delete / format-only. Expected diff <50 lines. No test changes.
+     - `standard` — new business logic, refactor inside a file, package-private API additions.
+     - `heavy` — public API, security boundary, schema / migration, dependency changes, build-config changes, test removal or weakening, cross-module refactors.
+     - When in doubt, escalate one tier up. A misclassified `light` that scope-creeps is the most expensive mistake.
+   - **What would be wrong** (one line, required for `standard` / `heavy`, `(n/a)` for `light`): a concrete antipattern the agent and the human should both watch for in the diff. Example: `writes directly to Recomposer instead of via Channel — races on fast strokes`.
 3. **Validate DoD commands against the current toolchain.** Before writing the plan, for each step whose DoD invokes a build / test tool, confirm the command actually exists in this project's build system and is not a known NO-OP. Use the build system's own task-listing or dry-run mode (e.g. list available tasks, parse the project's script manifest, run a `--help` / `-n` introspection). Consult the stack-specific traps surfaced via `policies.forbidden_patterns` in the manifest (the active language / framework profiles add stack-specific NO-OP aggregators and misleading task names there). If a DoD command cannot be validated (offline, unfamiliar build system), mark that step's DoD with `Assumption:` so the human can correct before `/kit-do`.
 4. Generate plan id: `<YYYY-MM-DD>-<short-slug>`.
 5. Write `.aikit/plans/<id>.md` (format below).
@@ -144,6 +150,8 @@ If the diff turns out to be larger than a single conceptual fix, STOP and tell t
 ### Step 1 — <slug>
 - **Goal:** <what this step achieves>
 - **DoD:** <one-line check>
+- **Review:** light | standard | heavy
+- **What would be wrong:** <one-line antipattern; required for standard / heavy; `(n/a)` for light>
 - **Assumptions:** <if any>
 
 ### Step 2 — <slug>
@@ -200,9 +208,11 @@ Open a new session and run:
 ### STEP SUMMARY (Session 2, after every step)
 
 ```
-## SUMMARY · STEP <N>/<total> · commit `<hash>`
+## SUMMARY · STEP <N>/<total> · commit `<hash>` · review `<tier>`
 
 `git show <hash>`
+
+### Agent-verified (automatic)
 
 **Done:**
 - <by file, concrete>
@@ -213,11 +223,15 @@ Open a new session and run:
 **Plan deviations:**
 - <a planned signature or approach you intentionally changed during execution and why; "(none)" if you executed the plan as written>
 
-**Uncertain:**
-- <specific lines / decisions you suspect; "(none)" if confident>
+### Human-required (cognitive)
+
+**Risk-antipattern:** <verbatim "What would be wrong" from the plan; `(n/a — light)` if the plan declared light>
 
 **Verify by hand:**
-- <concrete scenarios: run X, open Y, click Z>
+- <tier-specific cognitive checks the agent cannot do; see "Verify-by-hand by tier" below>
+
+**Uncertain:**
+- <specific lines / decisions you suspect; "(none)" if confident>
 
 ---
 
@@ -230,6 +244,19 @@ If a fix is needed — open a new session:
 Reply `next` for step <N+1> · `revert` to drop this commit ·
 after a fix lands elsewhere, paste its FIX SUMMARY here and `next`
 ```
+
+### Verify-by-hand by tier (filling the Human-required section)
+
+Write only checks the human must perform that the agent cannot. Do not restate what is in the Agent-verified section.
+
+- **`light`** — one short scope-check line.
+  Example: `skim diff to confirm rename only touched StylusListener references — no other behavior changed.`
+- **`standard`** — one or two concrete reading targets matching the step intent. Reference the risk-antipattern explicitly.
+  Example: `read shared/src/.../StylusInput.kt lines 40-90; confirm channel-based flow matches step goal; compare against risk-antipattern above.`
+- **`heavy`** — explicit STOP cue plus active checks against the antipattern and the failure-modes catalogue.
+  Example: `STOP. Read full diff. Explain to yourself why each public API change is intentional. Re-read risk-antipattern above. Check against agent-failure-modes items #1 (test deletion) and #4 (silent dependency).`
+
+Never substitute "run the tests" or "check it compiles" for Human-required content. Those belong in Agent-verified — when they ship in a future revision they will be filled automatically. Human-required is for judgments the build cannot make.
 
 ### FIX SUMMARY (Session 3, end)
 
@@ -317,6 +344,29 @@ When a fix or external commit invalidates an assumption of the remaining plan:
 - When uncertain, state the uncertainty in the Uncertain section. Do not bury it in prose elsewhere.
 - Reference files as `path:line` when pointing at specific code.
 - Never use emojis in any output.
+
+## Agent failure modes — what to look for when reviewing a step
+
+Tests passing and the build being green ("Agent-verified" section in STEP SUMMARY) does not catch these. Read the diff with them in mind, especially on `standard` and `heavy` tiers. On `light`, any one of these means the step is mistyped — escalate it.
+
+1. **Tests deleted or weakened.** In the diff, look for:
+   - removed lines like `-@Test`, `-it("...")`, `-test(...)` (or your framework's equivalent)
+   - an assertion rewritten as a tautology — `assertTrue(true)`, `expect(true).toBe(true)`, `assertEquals(x, x)`
+   - new `@Ignore` / `xit(...)` / `pytest.mark.skip` / `@Disabled` markers
+
+   Tests passing because they were silenced are not tests passing.
+
+2. **Fabricated imports.** A class / function / module name looks plausible but does not exist in the repo or in a declared dependency. Before approving, grep the name — if it does not resolve, the agent invented it.
+
+3. **Scope creep on a `light` step.** Plan said "rename X" but the diff also touches unrelated files, reorders methods, or "fixes" lint warnings nobody asked for. Reject the step and ask for a focused redo.
+
+4. **Silent dependency or build-config additions.** Look for new `implementation("…")`, new entries in `package.json` / `requirements.txt` / `pyproject.toml`, new tasks in build files, new MCP servers in settings. These should never appear on a `light` step. On `standard` / `heavy` they must be explicit in the plan; if not, the step is misclassified.
+
+5. **Try / catch that swallows errors.** A new `try { … } catch (_) { }`, `try: … except: pass`, `catch (e) { }` without re-raise or log is the canonical way an agent "fixes" a flaky test or a hard error path. Ask what should happen on the error.
+
+6. **Suppression of static checks.** New `@Suppress(...)`, `// @ts-ignore`, `# type: ignore`, `// eslint-disable`, `// noinspection ...` — these bypass checks, not pass them. Each one needs a justification in the step's Plan deviations or Uncertain section.
+
+If any of these appear in the diff → `/kit-fix`, not `next`.
 
 ## Tools you may use
 
