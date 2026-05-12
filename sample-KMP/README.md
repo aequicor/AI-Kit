@@ -72,6 +72,61 @@ Install the APK, tap **Open**, select a PDF from Files.
 - Bitmap cache is in-memory only; evicted on process restart.
 - iOS file picker uses deprecated `documentTypes: ["com.adobe.pdf"]` UTI — will migrate to `UTType.pdf` (iOS 14+) in M2.
 
+## M2 — Stylus Input & Annotations (implemented)
+
+### What's in M2
+
+- **Domain models** (`shared/commonMain`): `StrokePoint`, `StrokeId`, `Stroke`, `DrawingTool` (Brush/Eraser), `AnnotationLayer`.
+- **Local persistence** via SQLDelight 2.3.2 + `kotlinx-serialization-json`:
+  - `annotation` table: inline `strokesJson TEXT` per `(documentId, pageIndex)`.
+  - `AnnotationRepository` interface + `AnnotationRepositoryImpl`.
+  - `DatabaseDriverFactory` expect/actual: Android → `AndroidSqliteDriver`, JVM → `JdbcSqliteDriver`, iOS → `NativeSqliteDriver`, JS → stub.
+- **Stylus input** (`composeApp`): `expect fun Modifier.stylusInput(onEvent)` per platform.
+  - Android: raw `MotionEvent` via `nativeEvent`; `AXIS_TILT`+`AXIS_ORIENTATION` for real tilt; palm rejection (drops `TOOL_TYPE_FINGER` while stylus is active).
+  - JVM Desktop: `PointerEventType` + `change.pressure`; touch events skipped.
+  - iOS: accepts Apple Pencil (`PointerType.Stylus`) and touch; pressure from Compose API.
+  - JS: stub in `webMain`.
+- **Stroke rendering** (`composeApp/commonMain`):
+  - `catmullRomPath()` — Catmull-Rom smoothing via cubic Bézier approximation.
+  - `DrawScope.drawStroke()` — pressure-scaled width, `BlendMode.SrcOver` (Brush) / `BlendMode.Clear` (Eraser).
+  - `PdfAnnotationOverlay` — two-layer Canvas: committed strokes (redraws on layer change) + live stroke (redraws per event).
+- **`DrawingViewModel`** (`shared/commonMain`): `ViewModel` with undo/redo via Command pattern (`ArrayDeque`, max 50 entries); saves via injected `CoroutineDispatcher`.
+- **`PdfViewerScreen` updated**: toolbar (Brush / Eraser toggle, Undo, Redo); `DrawablePdfPage` wraps each page with `PdfAnnotationOverlay + stylusInput`.
+- **Koin DI** extended: `CoroutineDispatcher` (expect/actual `ioDispatcher`), `Database`, `AnnotationRepository`, `DrawingViewModel` via `viewModel {}`.
+- **Tests**: `StrokeTest` (5), `DrawingViewModelTest` (8, with `UnconfinedTestDispatcher`), `StrokeSmoothingTest` (6 smoke tests) — all in commonTest.
+- **ADR-002**: stroke storage rationale in [`docs/adr/ADR-002-stroke-storage.md`](./docs/adr/ADR-002-stroke-storage.md).
+
+### Smoke-test instructions (M2)
+
+**Desktop (JVM):**
+```shell
+.\gradlew.bat :composeApp:run          # Windows
+./gradlew    :composeApp:run           # macOS/Linux
+```
+Open a PDF → draw with mouse (or graphics tablet) → undo/redo with toolbar buttons → reopen app and verify strokes persist.
+
+**Android:**
+```shell
+.\gradlew.bat :composeApp:assembleDebug
+```
+Install APK, open a PDF, draw with stylus — palm rejection active. Verify undo/redo. Reopen app; strokes should reload.
+
+**iOS:** Open `/iosApp` in Xcode → run on device with Apple Pencil. Verify Pencil and finger both draw; undo/redo functional.
+
+**Unit tests:**
+```shell
+.\gradlew.bat :shared:jvmTest          # Windows
+./gradlew    :shared:jvmTest           # macOS/Linux
+```
+
+### Known limitations (M2)
+
+- **Multi-page annotation:** only the active drawing page shows its saved strokes; switching pages loses the previous page's in-memory layer. Full multi-page map is tracked for M3.
+- **Timestamp:** `StrokePoint.timestamp` is always `0L` — velocity-based thickness deferred to M3.
+- **JS/wasmJs:** SQLDelight has no wasmJs artifacts; web target is a compile-only stub.
+- **iOS tilt:** Apple Pencil tilt not exposed via standard Compose API; `tiltX/Y` are `0f` on iOS.
+- **Undo stack limit:** capped at 50 strokes; oldest entry evicted silently.
+
 ---
 
 ### Build and Run Android Application
