@@ -22,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -46,7 +49,6 @@ fun PdfViewerScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
-    // transformable handles scroll-wheel zoom only; horizontal drag goes to pointerInput below
     val transformState = rememberTransformableState { zoomChange, _, _ ->
         viewModel.onZoomChange(zoomChange)
     }
@@ -75,13 +77,30 @@ fun PdfViewerScreen(
                     detectHorizontalDragGestures { _, dragAmount ->
                         viewModel.onPanX(dragAmount)
                     }
+                }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Scroll) {
+                                val isCtrl = event.keyboardModifiers.isCtrlPressed
+                                if (isCtrl) {
+                                    val scrollDelta = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                    if (scrollDelta != 0f) {
+                                        val zoomFactor = if (scrollDelta < 0) 1.1f else 1f / 1.1f
+                                        viewModel.onZoomChange(zoomFactor)
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
         ) {
             val pageWidthDp: Dp = maxWidth * state.zoom
             val density = LocalDensity.current
             val viewportWidthPx = with(density) { maxWidth.toPx() }.toInt()
 
-            // Inform ViewModel of display resolution so pages render at viewport quality
             LaunchedEffect(viewportWidthPx) {
                 viewModel.setViewportWidth(viewportWidthPx)
             }
@@ -106,9 +125,11 @@ fun PdfViewerScreen(
                             val pdfPageSize = document.pages[pageIndex].size
                             val aspectRatio = pdfPageSize.widthPx.toFloat() / pdfPageSize.heightPx.toFloat()
 
-                            // Per-item trigger: fires when item enters viewport or viewport size changes
-                            LaunchedEffect(pageIndex, state.viewportWidthPx) {
+                            DisposableEffect(pageIndex, state.viewportWidthPx) {
                                 viewModel.ensurePageRendered(pageIndex)
+                                onDispose {
+                                    viewModel.cancelPageRender(pageIndex)
+                                }
                             }
 
                             PdfPageView(

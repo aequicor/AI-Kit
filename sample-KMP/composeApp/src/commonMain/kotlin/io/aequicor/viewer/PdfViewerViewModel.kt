@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.aequicor.domain.model.PdfPageSize
 import io.aequicor.domain.port.PdfRenderPort
 import io.aequicor.domain.usecase.OpenDocumentUseCase
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,10 @@ class PdfViewerViewModel(
     private val _state = MutableStateFlow(ViewerState())
     val state: StateFlow<ViewerState> = _state.asStateFlow()
 
+    private val renderJobs = mutableMapOf<Int, Job>()
+
     fun openDocument(bytes: ByteArray) {
+        cancelAllRenderJobs()
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null, document = null, renderedPages = emptyMap(), offsetX = 0f) }
             runCatching { openDocumentUseCase(bytes) }
@@ -33,6 +37,7 @@ class PdfViewerViewModel(
         if (px <= 0) return
         val current = _state.value.viewportWidthPx
         if (current == 0 || abs(px - current).toFloat() / current > 0.1f) {
+            cancelAllRenderJobs()
             _state.update { it.copy(viewportWidthPx = px, renderedPages = emptyMap()) }
         }
     }
@@ -40,11 +45,12 @@ class PdfViewerViewModel(
     fun ensurePageRendered(pageIndex: Int) {
         val s = _state.value
         if (s.renderedPages.containsKey(pageIndex)) return
+        if (renderJobs[pageIndex]?.isActive == true) return
         val page = s.document?.pages?.getOrNull(pageIndex) ?: return
         val vpW = s.viewportWidthPx.takeIf { it > 0 } ?: page.size.widthPx
         val renderH = (vpW.toFloat() * page.size.heightPx / page.size.widthPx).toInt()
         val renderSize = PdfPageSize(vpW, renderH)
-        viewModelScope.launch {
+        renderJobs[pageIndex] = viewModelScope.launch {
             runCatching { port.renderPage(pageIndex, renderSize) }
                 .onSuccess { bytes ->
                     _state.update {
@@ -54,9 +60,15 @@ class PdfViewerViewModel(
         }
     }
 
+    fun cancelPageRender(pageIndex: Int) {
+        renderJobs.remove(pageIndex)?.cancel()
+    }
+
     fun onZoomChange(scaleDelta: Float) {
         _state.update { s ->
-            s.copy(zoom = (s.zoom * scaleDelta).coerceIn(ViewerState.MIN_ZOOM, ViewerState.MAX_ZOOM))
+            val newZoom = (s.zoom * scaleDelta).coerceIn(ViewerState.MIN_ZOOM, ViewerState.MAX_ZOOM)
+            val actualScale = newZoom / s.zoom
+            s.copy(zoom = newZoom, offsetX = s.offsetX * actualScale)
         }
     }
 
@@ -65,6 +77,12 @@ class PdfViewerViewModel(
     }
 
     override fun onCleared() {
+        cancelAllRenderJobs()
         viewModelScope.launch { port.closeDocument() }
+    }
+
+    private fun cancelAllRenderJobs() {
+        renderJobs.values.forEach { it.cancel() }
+        renderJobs.clear()
     }
 }
