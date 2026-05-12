@@ -4,19 +4,17 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,11 +22,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import io.aequicor.pdf.PdfPageImage
 import io.aequicor.pdf.PdfRenderer
@@ -40,6 +43,38 @@ import io.aequicor.pdf.domain.PdfPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import kotlin.math.max
+
+/**
+ * Clamps pan offsets so the PDF always stays (at least partially) visible.
+ *
+ * Horizontal: TransformOrigin is (0.5, 0), so horizontal zoom is symmetric
+ * around the centre. When zoomed out (scale ≤ 1) the content already centres
+ * itself via the pivot — no horizontal pan is allowed.
+ *
+ * Vertical: pivot is at Y=0, so the top edge of the content is always at
+ * offsetY. When the content is shorter than the viewport it is centred;
+ * when taller, scrolling is clamped to the document bounds.
+ */
+private fun clampOffset(
+    offsetX: Float,
+    offsetY: Float,
+    scale: Float,
+    viewportW: Float,
+    viewportH: Float,
+    contentH: Float,
+): Pair<Float, Float> {
+    val extraX = max(0f, (viewportW * scale - viewportW) / 2f)
+    val cx = offsetX.coerceIn(-extraX, extraX)
+
+    val scaledH = contentH * scale
+    val cy = if (scaledH < viewportH) {
+        (viewportH - scaledH) / 2f          // centre vertically when zoomed out
+    } else {
+        offsetY.coerceIn(viewportH - scaledH, 0f)
+    }
+    return cx to cy
+}
 
 @Composable
 fun PdfViewerScreen() {
@@ -48,6 +83,7 @@ fun PdfViewerScreen() {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
+    var viewportSize by remember { mutableStateOf(Size.Zero) }
 
     // LRU cache: keeps last 5 rendered bitmaps in memory.
     val pageCache = remember {
@@ -68,19 +104,34 @@ fun PdfViewerScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
-            // Viewport: fixed rectangle, clips overflowing content.
-            // detectTransformGestures handles both single-finger drag (scroll)
-            // and multi-finger pinch (zoom + pan).
+            // Total layout height of all pages at scale=1. Recomputed when the
+            // viewport width changes (window resize) or a new document is opened.
+            val contentHeight by remember(doc) {
+                derivedStateOf {
+                    if (viewportSize.width > 0f) {
+                        doc.pages.sumOf { page ->
+                            viewportSize.width * page.heightPx.toDouble() / page.widthPx
+                        }.toFloat()
+                    } else 0f
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
+                    .onSizeChanged { size ->
+                        viewportSize = Size(size.width.toFloat(), size.height.toFloat())
+                    }
                     // Touch: single-finger drag + pinch zoom/pan.
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
-                            offsetX += pan.x
-                            offsetY += pan.y
+                            val (cx, cy) = clampOffset(
+                                offsetX + pan.x, offsetY + pan.y,
+                                scale, viewportSize.width, viewportSize.height, contentHeight,
+                            )
+                            offsetX = cx; offsetY = cy
                         }
                     }
                     // Mouse wheel → scroll (pan).
@@ -91,24 +142,34 @@ fun PdfViewerScreen() {
                                 if (event.type == PointerEventType.Scroll) {
                                     val delta = event.changes.firstOrNull()?.scrollDelta
                                         ?: continue
-                                    offsetX -= delta.x * 30f
-                                    offsetY -= delta.y * 30f
+                                    val (cx, cy) = clampOffset(
+                                        offsetX - delta.x * 30f,
+                                        offsetY - delta.y * 30f,
+                                        scale, viewportSize.width, viewportSize.height, contentHeight,
+                                    )
+                                    offsetX = cx; offsetY = cy
                                     event.changes.forEach { it.consume() }
                                 }
                             }
                         }
                     }
-                    // Desktop: Ctrl+wheel → zoom (jvmMain actual; no-op on other platforms).
+                    // Desktop: Ctrl+wheel → zoom (jvmMain actual; no-op elsewhere).
                     .ctrlScrollZoom { factor ->
                         scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
+                        val (cx, cy) = clampOffset(
+                            offsetX, offsetY,
+                            scale, viewportSize.width, viewportSize.height, contentHeight,
+                        )
+                        offsetX = cx; offsetY = cy
                     },
             ) {
-                // Content box: sized by its children (page images), NOT fillMaxSize.
-                // graphicsLayer shifts actual page content, not a screen-sized box.
+                // fillMaxWidth() first: width = viewport width (fixes left-align on wide windows).
+                // wrapContentHeight(unbounded): column can be taller than the viewport.
+                // graphicsLayer shifts actual page content within the fixed clipped viewport.
                 Column(
                     modifier = Modifier
-                        .wrapContentSize(Alignment.TopStart, unbounded = true)
                         .fillMaxWidth()
+                        .wrapContentHeight(Alignment.Top, unbounded = true)
                         .graphicsLayer(
                             scaleX = scale,
                             scaleY = scale,
