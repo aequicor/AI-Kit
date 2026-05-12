@@ -2,8 +2,7 @@ package io.aequicor.pdf.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -63,22 +63,23 @@ fun PdfViewerScreen() {
         }
     }
 
-    val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(MIN_SCALE, MAX_SCALE)
-        offsetX += panChange.x
-        offsetY += panChange.y
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         val doc = document
         if (doc != null) {
             // Viewport: fixed rectangle, clips overflowing content.
-            // transformable sits here — Column has no gestures to compete.
+            // detectTransformGestures handles both single-finger drag (scroll)
+            // and multi-finger pinch (zoom + pan).
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
-                    .transformable(transformableState),
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
+                            offsetX += pan.x
+                            offsetY += pan.y
+                        }
+                    },
             ) {
                 // Content box: sized by its children (page images), NOT fillMaxSize.
                 // graphicsLayer shifts actual page content, not a screen-sized box.
