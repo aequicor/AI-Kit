@@ -64,8 +64,8 @@ class SchemaService(
      *
      * Sorted by id for stable JSON output. Skills without the marker (the
      * v3 core: summary-format, agent-failure-modes, verify-by-hand-tiers,
-     * aikit-plan-artifact) are excluded — they always emit, so listing them
-     * here would only confuse the setup orchestrator.
+     * doubt-triage, aikit-plan-artifact) are excluded — they always emit,
+     * so listing them here would only confuse the setup orchestrator.
      */
     private fun collectOptionalSkills(): List<OptionalSkillEntry> {
         val ids = listTopLevelDirs(prefix = "skills/")

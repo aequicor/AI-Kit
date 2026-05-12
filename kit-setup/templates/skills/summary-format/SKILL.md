@@ -22,7 +22,7 @@ Four shapes, one purpose: every output that affects code or plan is a structured
 3. **Cite commits as backticked short hashes** (e.g. `` `abc1234` ``), never long form.
 4. **Empty sections use `(none)` or `(nothing)`** — never delete the section header. The header tells the human you considered the section.
 5. **The Uncertain section is mandatory.** If you are confident in everything, say `(none)` explicitly. The user must see that you considered uncertainty, not that you skipped considering it.
-6. **The Verify-by-hand section is mandatory** for STEP and FIX. List concrete scenarios (run command X, open page Y, check that Z), not abstractions like "test the feature".
+6. **The Verify-by-hand section is mandatory** for STEP and FIX. List concrete runtime scenarios (run command X on device Y, observe signal Z), not abstractions like "test the feature" and never code-reading tasks. Every item must first pass `doubt-triage` — anything resolvable by reading code, docs, or a tool's exit code does not belong here.
 7. **Never use emojis.** Never use persuasive language (successfully, perfectly, comprehensive, robust). State what was done, not how good it is.
 8. **The commit-hash section header is mandatory** for STEP and FIX (`` commit `<hash>` ``). It is the anchor a fix-session or a paste-back uses to find the right commit.
 

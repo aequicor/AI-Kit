@@ -107,7 +107,7 @@ For each step from current to last:
    - `no-test-changes: true` — any test-path match (project-specific; typical: `**/test/**`, `**/*Test.kt`, `**/*.test.ts`, `tests/**`) is a violation.
 
    If any constraint is violated AND the step was `light`, render the SUMMARY header's tier as `standard (escalated from light)`. State out loud: `Shape violated on light step: <constraints>. Escalating tier to standard for AWAIT.`
-6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line.
+6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line. Before filling the Human-required section, run doubt-triage (see `Verify-by-hand by tier` below) — only runtime-evidence items reach `Verify by hand:`.
 7. **Gate decision** — determines whether to AWAIT or auto-advance:
    - `BUILD: green` AND step's planned tier is `light` AND `Shape: OK` AND all invariants `OK` → **auto-`next`**. Append to the SUMMARY:
      ```
@@ -379,20 +379,24 @@ after a fix lands elsewhere, paste its FIX SUMMARY here and `next`
 
 ### Verify-by-hand by tier (filling the Human-required section)
 
+**Precondition — doubt triage.** Every candidate item for `Verify by hand:` is first classified: **static** (a fresh reader of the diff + docs answers it) → resolve before SUMMARY; **mechanical** (a tool's exit code answers it) → run the tool, record in `BUILD:`; **runtime** (real execution required) → keep, format per tier below. Code-reading is never a valid Human-required check — re-reading produces no new evidence and fatigues the reviewer.
+
 {{#if cap.skills}}
-Tier-scaled rules for the Human-required `Verify by hand:` block live in the `verify-by-hand-tiers` skill. Load it when filling that section — it carries the per-tier shape (one line for `light`, file:line targets for `standard`, explicit STOP cue + failure-mode cross-reference for `heavy`) and the anti-pattern list ("run the tests" is not a Human-required check, the build covers it).
+The full triage flow lives in the `doubt-triage` skill — load it before drafting Human-required. Tier-scaled rules for the surviving runtime-evidence items live in the `verify-by-hand-tiers` skill — load it to set each item's depth (one sentence for `light`, device/input/signal triples for `standard`, explicit STOP cue + multi-scenario coverage for `heavy`).
 {{/if}}
 {{#unless cap.skills}}
-Write only checks the human must perform that the agent cannot. Do not restate what is in the Agent-verified section.
+For each candidate doubt ask: *could a fresh reader of the diff + the relevant files / docs answer this without executing the code?* If yes → it is static. {{#if cap.subagents}}Dispatch a fresh-context Verifier subagent with a brief like `Read: <files>. Question: <doubt>. Return one of: OK | ISSUE — <where> | NEEDS RUNTIME — <scenario>.`{{/if}}{{#unless cap.subagents}}Re-read the lines yourself with hostile eyes (role-swap).{{/unless}} Apply: `OK` → drop the doubt; `ISSUE — <X>` → surface as `Uncertain: Subagent found issue: <X>. Recommend /kit-fix <hash> "<short desc>" before next.`; `NEEDS RUNTIME — <scenario>` → mutate into a concrete runtime item for `Verify by hand:` below. Tool-decidable doubts (compile / lint / test) belong in `BUILD:`, not here.
 
-- **`light`** — one short scope-check line.
-  Example: `skim diff to confirm rename only touched StylusListener references — no other behavior changed.`
-- **`standard`** — one or two concrete reading targets matching the step intent. Reference the risk-antipattern explicitly.
-  Example: `read shared/src/.../StylusInput.kt lines 40-90; confirm channel-based flow matches step goal; compare against risk-antipattern above.`
-- **`heavy`** — explicit STOP cue plus active checks against the antipattern and the failure-modes catalogue.
-  Example: `STOP. Read full diff. Explain to yourself why each public API change is intentional. Re-read risk-antipattern above. Check against agent-failure-modes items #1 (test deletion) and #4 (silent dependency).`
+Then write only runtime-evidence checks the human must perform — never code-reading, never restating BUILD content.
 
-Never substitute "run the tests" or "check it compiles" for Human-required content. Those belong in the Agent-verified `BUILD:` block, which Session 2 fills automatically after each step's verify run. Human-required is for judgments the build cannot make.
+- **`light`** — one short runtime smoke check.
+  Example: `run the binary; open the new picker once on the dev machine; confirm it opens and dismisses without crash.`
+- **`standard`** — one or two concrete runtime scenarios (device / OS / input / signal).
+  Example: `on Pixel 5 emulator API 30, open the PDF picker, select test/fixtures/medium.pdf (~5MB); observe Logcat for ANR or "Skipped N frames" warnings during the read.`
+- **`heavy`** — explicit STOP cue plus multi-scenario coverage with a captured artifact.
+  Example: `STOP. Re-state in your own words what this step delivers. Reproduce on (a) Pixel 5 emulator API 30 and (b) a low-RAM API 26 device. Open the picker against fixtures/large-50mb.pdf. Capture Logcat + screen recording. Confirm zero ANR, zero "Skipped > 4 frames" warnings.`
+
+Never substitute "read the code at path:line", "run the tests", or "check it compiles" for Human-required content. Code-reading is the agent's job (own context or fresh-context subagent); tool-runs are in BUILD. Human-required is for evidence that requires the human's eyes / hands / device.
 {{/unless}}
 
 ### FIX SUMMARY (Session 3, end)
@@ -520,6 +524,7 @@ If any of these appear in the diff → `/kit-fix`, not `next`.
 - File operations within the project: read, write, edit, glob, grep.
 - Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
+- `Verifier` subagent (Session 2 Stage 3 / Session 3, static-doubt resolution) — fresh-context resolver for code-analysis doubts so they do not reach the human as "verify by hand"; see `doubt-triage` skill.
 - Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
 - **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker) — allowed at **non-binding gates only**: task clarification before CONTEXT SUMMARY; `y/n` confirmations such as `revert!` and the reflection-quiz mismatch; Stage 4 `ok / keep / cancel` and `push / local` pickers; baseline retry / replan-or-continue decisions. **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages).
 
