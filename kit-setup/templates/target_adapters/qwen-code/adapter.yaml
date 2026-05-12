@@ -27,6 +27,7 @@ capabilities:
   hooks: false
   mcp_inline_in_settings: true         # .qwen/settings.json mcpServers
   skills_directory_format: true        # Anthropic-style skill format
+  skills: true                         # runner discovers / loads skills on demand
   slash_commands: true
 
 settings_template: settings.json.template

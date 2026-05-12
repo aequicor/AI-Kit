@@ -4,7 +4,7 @@ Generates AI agent configuration files for [Claude Code](https://claude.ai/code)
 
 The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits files for each enabled target (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc.).
 
-The bundle ships the v3 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → single-shot Fix targeting one commit — one `summary-format` skill defining the bullet-only CONTEXT / PLAN / STEP / FIX block shapes, and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
+The bundle ships the v3 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → single-shot Fix targeting one commit — four on-demand skills — `summary-format` (bullet-only CONTEXT / PLAN / STEP / FIX block shapes), `agent-failure-modes` (six diff-level patterns to catch a green build that's actually broken), `verify-by-hand-tiers` (per-tier rules for the Human-required section), `aikit-plan-artifact` (frozen `.aikit/plans/<id>.md` format + `Verify`-verb vocabulary), and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
 
 ---
 
@@ -80,7 +80,7 @@ Without an explicit `ok` (or a pasted manifest) the agent will not generate.
    | `target_output_collision` | Two targets write to the same path; consolidate or rename |
 
 5. **Generate.** Run `kit-setup generate .aikit/manifest.yaml`. On `{"ok": true, "generated": [...]}` the agent reports the file count and paths. On failure it stops and shows the errors verbatim.
-6. **Hand-off.** The agent posts a final message in the chosen language listing the generated files, the three slash commands (`/kit`, `/kit-do`, `/kit-fix`), the `summary-format` skill, the two sub-agents (`Main`, `Researcher`), and the entry point: `> /kit <one-sentence description>` in a new chat.
+6. **Hand-off.** The agent posts a final message in the chosen language listing the generated files, the three slash commands (`/kit`, `/kit-do`, `/kit-fix`), the four skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`), the two sub-agents (`Main`, `Researcher`), and the entry point: `> /kit <one-sentence description>` in a new chat.
 
 The agent will **not**:
 
@@ -211,7 +211,7 @@ These are the rules that show up most often as a `kit-setup verify` failure:
 
 A common mistake is trying to add v2-era top-level fields. The verifier silently accepts them (the schema uses `additionalProperties: true`) but the generator ignores them:
 
-- **`commands:`** and **`skills:`** — the generator walks `kit-setup/templates/commands/` and `kit-setup/templates/skills/` and emits everything found. There is no per-manifest filter. The v3 commands (`kit`, `kit-do`, `kit-fix`) and the `summary-format` skill come along for free.
+- **`commands:`** and **`skills:`** — the generator walks `kit-setup/templates/commands/` and `kit-setup/templates/skills/` and emits everything found. There is no per-manifest filter. The v3 commands (`kit`, `kit-do`, `kit-fix`) and the four v3 skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) come along for free.
 - **v2 agents** (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — removed in v3. Listing them as agent IDs fails with `unknown_agent_id`.
 
 ### How profiles compose into the manifest

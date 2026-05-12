@@ -206,6 +206,10 @@ If the diff turns out to be larger than a single conceptual fix, STOP and tell t
 
 ### `.aikit/plans/<id>.md`
 
+{{#if cap.skills}}
+The plan-file template and the `Verify` verb vocabulary live in the `aikit-plan-artifact` skill. Load it when authoring the plan (Session 1 Stage 2) or when re-reading it on entry (Session 2 Initialization, Session 3 step 2). The skill carries: the full section layout with frozen-after-Session-1 semantics, per-step fields (Goal / DoD / Review / What would be wrong / Verify / Expect / Shape / Assumptions), the three-verb `compile` / `test` / `lint` vocabulary with `[module]` substitution, and the `shell: "<cmd>"` escape hatch.
+{{/if}}
+{{#unless cap.skills}}
 ```markdown
 # <Task title>
 
@@ -265,6 +269,7 @@ Any `[module]` placeholder in a profile command is substituted with the manifest
 Escape hatch — `shell: "<command>"` runs the literal command verbatim. Use sparingly; a step that's mostly `shell:` indicates either a missing profile field or that the verb vocabulary needs expanding.
 
 The `verify` field on step format is consumed by Session 2's per-step verify run (Stage 3 step 4) and by Session 3's post-fix verify (Session 3 step 6). Session 2's gate decision (Stage 3 step 7) blocks `next` on `BUILD: red` until `/kit-fix` resolves it or `--keep-red` overrides explicitly.
+{{/unless}}
 
 ### CONTEXT SUMMARY (Session 1, end of Stage 1)
 
@@ -374,6 +379,10 @@ after a fix lands elsewhere, paste its FIX SUMMARY here and `next`
 
 ### Verify-by-hand by tier (filling the Human-required section)
 
+{{#if cap.skills}}
+Tier-scaled rules for the Human-required `Verify by hand:` block live in the `verify-by-hand-tiers` skill. Load it when filling that section — it carries the per-tier shape (one line for `light`, file:line targets for `standard`, explicit STOP cue + failure-mode cross-reference for `heavy`) and the anti-pattern list ("run the tests" is not a Human-required check, the build covers it).
+{{/if}}
+{{#unless cap.skills}}
 Write only checks the human must perform that the agent cannot. Do not restate what is in the Agent-verified section.
 
 - **`light`** — one short scope-check line.
@@ -384,6 +393,7 @@ Write only checks the human must perform that the agent cannot. Do not restate w
   Example: `STOP. Read full diff. Explain to yourself why each public API change is intentional. Re-read risk-antipattern above. Check against agent-failure-modes items #1 (test deletion) and #4 (silent dependency).`
 
 Never substitute "run the tests" or "check it compiles" for Human-required content. Those belong in the Agent-verified `BUILD:` block, which Session 2 fills automatically after each step's verify run. Human-required is for judgments the build cannot make.
+{{/unless}}
 
 ### FIX SUMMARY (Session 3, end)
 
@@ -479,6 +489,10 @@ When a fix or external commit invalidates an assumption of the remaining plan:
 
 ## Agent failure modes — what to look for when reviewing a step
 
+{{#if cap.skills}}
+Load the `agent-failure-modes` skill before approving any `standard` / `heavy` step (and before the Stage 4 backstop diff review). It carries the six-pattern catalogue — deleted/weakened tests, fabricated imports, scope creep, silent dependency additions, error-swallowing try/catch, static-check suppression — with the regex hints to look for in the diff. On a `light` step, any pattern hit means the step is mistyped → escalate to `standard` and reject the step with `/kit-fix`, not `next`.
+{{/if}}
+{{#unless cap.skills}}
 Tests passing and the build being green ("Agent-verified" section in STEP SUMMARY) does not catch these. Read the diff with them in mind, especially on `standard` and `heavy` tiers. On `light`, any one of these means the step is mistyped — escalate it.
 
 1. **Tests deleted or weakened.** In the diff, look for:
@@ -499,6 +513,7 @@ Tests passing and the build being green ("Agent-verified" section in STEP SUMMAR
 6. **Suppression of static checks.** New `@Suppress(...)`, `// @ts-ignore`, `# type: ignore`, `// eslint-disable`, `// noinspection ...` — these bypass checks, not pass them. Each one needs a justification in the step's Plan deviations or Uncertain section.
 
 If any of these appear in the diff → `/kit-fix`, not `next`.
+{{/unless}}
 
 ## Tools you may use
 
@@ -506,6 +521,7 @@ If any of these appear in the diff → `/kit-fix`, not `next`.
 - Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
 - Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
+- **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker) — allowed at **non-binding gates only**: task clarification before CONTEXT SUMMARY; `y/n` confirmations such as `revert!` and the reflection-quiz mismatch; Stage 4 `ok / keep / cancel` and `push / local` pickers; baseline retry / replan-or-continue decisions. **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages).
 
 Tools you may NOT use:
 - `--no-verify` on any git command.

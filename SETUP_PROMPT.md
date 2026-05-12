@@ -250,7 +250,7 @@ Setup complete. Generated <N> files for <runner>, committed as <short-sha>:
 
 What you got:
 - 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
-- 1 skill: summary-format — defines the bullet-only CONTEXT/PLAN/STEP/FIX block shapes.
+- 4 skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary).
 - 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
 - User-prompts under .claude/prompts/ — manual helpers you can paste into a chat
   when needed (e.g. explore-module). The Main agent does NOT invoke them
@@ -282,5 +282,5 @@ DONE. End the session.
 - NEVER write `kit-setup verify` errors as paraphrased prose — they're machine output. Quote the JSON; translate only the underlying problem when needed.
 - NEVER write API keys, tokens, or secrets into the manifest. The verifier scans for them; if found, it'll fail with `secret_pattern_match`.
 - NEVER touch files outside `.aikit/` and the binary location during setup.
-- The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and skill (`summary-format`) are auto-emitted from the templates tree; do NOT add them as manifest fields.
+- The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are auto-emitted from the templates tree; do NOT add them as manifest fields.
 - NEVER promise the user "no more setup needed" — the v3 pipeline is per-task, not autonomous. The kit files are scaffolding; the human-in-the-loop is the design, not a workaround.

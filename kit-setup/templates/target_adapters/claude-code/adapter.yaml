@@ -37,6 +37,7 @@ capabilities:
   hooks: true                                # .claude/hooks/<event>.mjs
   mcp_inline_in_settings: true               # .claude/settings.json mcpServers
   skills_directory_format: true              # skill = directory containing SKILL.md
+  skills: true                               # runner discovers / loads skills on demand
   slash_commands: true
 
 # Optional global config rendered into settings_file.

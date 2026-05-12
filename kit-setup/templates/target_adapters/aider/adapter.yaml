@@ -22,6 +22,7 @@ capabilities:
   scoped_rules: false
   hooks: false
   mcp_inline_in_settings: false        # MCP not natively supported
+  skills: false                        # no skills mechanism — content must be inlined
   slash_commands: false
 
 settings_template: aider.conf.yml.template

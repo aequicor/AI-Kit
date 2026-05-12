@@ -22,6 +22,7 @@ capabilities:
   scoped_rules: true                   # globs + alwaysApply
   hooks: false
   mcp_inline_in_settings: true
+  skills: false                        # no skills mechanism — content must be inlined
   slash_commands: false
 
 settings_template: mcp.json.template

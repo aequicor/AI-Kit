@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v3.3 · Apache 2.0",
+      "badge": "v3.4 · Apache 2.0",
       "title": "Всё для AI-агента",
       "lead": "Набор инструментов для разных AI-агентов, которые формируют пайплайны разработки качественных продуктов.",
       "ctaStart": "Поставить за минуту",
@@ -241,7 +241,7 @@
         { "path": "CLAUDE.md", "purpose": "Главная инструкция: конвенции проекта, запретные паттерны, тело Main-агента (он управляет циклом). Claude Code читает этот файл в каждой сессии." },
         { "path": ".claude/agents/*.md", "purpose": "Субагенты — изолированные одноразовые контексты, которые Main вызывает через Task tool. По умолчанию — Researcher." },
         { "path": ".claude/commands/*.md", "purpose": "Слэш-команды /kit, /kit-do, /kit-fix. Тело каждой — промпт, который Claude Code подставляет при вызове." },
-        { "path": ".claude/skills/*/SKILL.md", "purpose": "Навыки с автотриггерами по описанию. По умолчанию — summary-format (формат CONTEXT/PLAN/STEP/FIX блоков)." },
+        { "path": ".claude/skills/*/SKILL.md", "purpose": "Навыки с автотриггерами по описанию. По умолчанию — summary-format (формат блоков), agent-failure-modes (паттерны для ревью диффа), verify-by-hand-tiers (правила Human-required по тирам), aikit-plan-artifact (формат plan-файла)." },
         { "path": ".claude/prompts/*.md", "purpose": "Пользовательские промпты-помощники. Не вызываются автоматически — копируете в чат вручную, когда нужно." },
         { "path": ".claude/settings.json", "purpose": "Пермишены, allowlist для Bash, конфигурация MCP-серверов. Шаблон с разумными дефолтами." },
         { "path": ".claude/hooks/*.mjs", "purpose": "Опционально. Авто-проверки на события PreToolUse / PostToolUse / Stop. Например, блокировать Edit вне разрешённых директорий." }

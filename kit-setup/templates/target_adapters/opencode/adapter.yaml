@@ -28,6 +28,7 @@ capabilities:
   plugins: true
   mcp_inline_in_settings: true
   skills_directory_format: true
+  skills: true                         # runner discovers / loads skills on demand
   slash_commands: true
 
 settings_template: opencode.json.template
