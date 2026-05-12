@@ -1,6 +1,6 @@
-> AI-Kit pipeline — v3 baseline.
+> AI-Kit pipeline — v4.
 > Multi-runner kit (Claude Code / Cursor / OpenCode / Aider / Qwen Code).
-> 3 commands × 3 sessions. Auto-commit per step. Human validates every commit. Git is the source of truth.
+> 3 commands × 3 sessions. /kit-do auto-commits per step; /kit-fix gates **before** commit (Stage 4 AWAIT). Human validates every change. Git is the source of truth.
 
 ## Role
 
@@ -10,7 +10,7 @@ These are the AI-Kit v3 pipeline instructions for this project. Each user task m
 |---|---|---|
 | `/kit <task>` | **Plan** | Stage 1 (Context) → Stage 2 (Plan). Output: `.aikit/plans/<id>.md` + commit. End. |
 | `/kit-do <plan-id> [--resume]` | **Execute** | Stage 3 (Steps with auto-commit) → Stage 4 (Ship: squash + push gates). |
-| `/kit-fix <commit-hash> <desc>` | **Fix** | Single-step fix targeting one commit. Output: FIX SUMMARY for paste-back. End. |
+| `/kit-fix <commit-hash> <desc>` | **Fix** | Diagnostic 5-stage recovery: Анамнез → Варианты причины → Варианты фикса → Реализация (AWAIT перед commit'ом) → Commit + verify. Output: FIX SUMMARY for paste-back. End. |
 
 You do not write code outside the session you were entered into. You do not invent extra commands. You do not chain tasks across sessions.
 
@@ -191,16 +191,168 @@ The session ends after Stage 4. Do not start a new task in the same session.
 
 ## Session 3 — Fix (`/kit-fix <commit-hash> <description>`)
 
-1. `git show <commit-hash>` — read the targeted commit's diff.
-2. Find the plan-commit by walking back from the target: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. If the search returns empty, STOP. Output: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do, which lays down a plan-commit upstream. If this is a manual commit, fix it through normal git workflow instead.` Otherwise, read the matching `.aikit/plans/<id>.md`.
-3. Read related source files to understand context.
-4. Make the fix.
-5. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`.
-6. **Run verify.** Resolve the `Verify` field from the target step in the plan (or default `[compile, test]`) via the active language profile. Run each command. Capture per-verb result. If the fix did not turn the build green, the fix is not done — return to step 4 unless the structural intent of the fix is to land a `--keep-red` carry; if so, document the reason in the FIX SUMMARY's `Verify:` explanation field.
-7. Output `FIX SUMMARY` (format below). The `Verify:` block reflects step 6's results verbatim.
-8. END. Do not loop, do not run ship, do not push.
+Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot patch. Five stages, four AWAIT gates (Stage 4 is mandatory, Stages 1–3 may auto-advance under documented conditions).
 
-If the diff turns out to be larger than a single conceptual fix, STOP and tell the user: `This fix needs more than one step. Recommend opening a new feature plan with /kit instead.` Do not silently expand scope.
+### Pre-checks (run before Stage 1)
+
+1. `git cat-file -e <commit-hash> 2>&1` — if it fails, STOP: `Commit <hash> does not exist in this repository.`
+2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash.`
+3. `git status --porcelain` — if non-empty, STOP: `Working tree is dirty. Stash or commit other work first; Session 3 needs a clean tree to attribute the new fix-commit cleanly.`
+4. `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~` — if empty, STOP: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do. If this is a manual commit, fix it through normal git workflow instead.`
+
+### Stage 1 — Анамнез (Anamnesis)
+
+1. `git show <commit-hash>` to read the target diff.
+2. Read `.aikit/plans/<plan-id>.md` from the plan-commit located in pre-check 4.
+3. Read related source files needed to understand the defect.
+{{#if cap.skills}}
+4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**.
+5. Emit **DIAGNOSIS** block per the `debug-loop` skill's Output format.
+{{/if}}
+{{#unless cap.skills}}
+4. Produce three findings: **Repro** (one-line copy-pasteable failing command / test / input; if not reproducible write `Repro: (none yet)` and STOP), **Localize** (smallest `path:line-range` span where the defect lives — not a module, a span), **Reduce** (one paragraph stating the defect in prose, citing the span).
+5. Emit DIAGNOSIS:
+   ```
+   ## DIAGNOSIS · commit `<target-hash>`
+
+   **Repro:** <one-line>
+   **Localize:** <path:line-range>
+   **Reduce:** <one paragraph citing the span>
+
+   **Plan-step context:** <slug from `kit: step N/M — <slug>` of the target>
+   **Out-of-scope:** <areas touched only to verify repro; omit line if none>
+
+   ---
+   Reply: `ok` · `<correction>` · `abort`
+   ```
+{{/unless}}
+6. **AWAIT.** Reply tokens:
+   - `ok` → advance to Stage 2
+   - `<any other text>` → context correction; redo Stage 1 with the new constraint; re-emit DIAGNOSIS
+   - `abort` → Session 3 END without commit (tree is already clean)
+
+### Stage 2 — Варианты причины (Cause options)
+
+{{#if cap.skills}}
+1. Run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to DIAGNOSIS evidence.
+2. Emit **CAUSE OPTIONS** block per the skill's Output format.
+{{/if}}
+{{#unless cap.skills}}
+1. Generate 2–4 root-cause hypotheses. Each follows: *If H were true, we'd expect to see X. Current observation: Y. Therefore H is supports | refutes | undetermined.* Hypotheses must be **mutually distinct** (different layer / invariant / file) and **falsifiable from Stage 1 evidence alone**.
+2. Emit CAUSE OPTIONS:
+   ```
+   ## CAUSE OPTIONS · commit `<target-hash>`
+
+   1. **<one-line cause name>**
+      - **If true, we'd expect:** <observable>
+      - **Current observation:** <evidence from DIAGNOSIS>
+      - **Assessment:** supports | refutes | undetermined
+      - **Need to know:** <missing evidence; omit if supports/refutes>
+   2. ...
+
+   ---
+   Reply: `<N>` · `другая: <text>` · `копай ещё` · `abort`
+   ```
+{{/unless}}
+3. **Adaptive fast-path:**
+   - 1 plausible cause → header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip AWAIT**, advance to Stage 3. User override: `стоп` within the next message forces AWAIT.
+   - 0 plausible causes → STOP: `Cannot diagnose: no root-cause hypothesis is supported by Stage 1 evidence. Reproduce again, expand the anamnesis, then re-invoke /kit-fix.`
+   - ≥2 → AWAIT.
+4. **AWAIT** (unless fast-path skipped it). Reply tokens:
+   - `<N>` → cause selected; advance to Stage 3
+   - `другая: <text>` → user-supplied cause; advance to Stage 3 with it
+   - `копай ещё [: <hint>]` → research pass (read more code, expand evidence); re-emit CAUSE OPTIONS. DIAGNOSIS itself is frozen.
+   - `abort` → Session 3 END without commit
+
+### Stage 3 — Варианты фикса (Fix options)
+
+{{#if cap.skills}}
+1. Run the `fix-options` skill: 2–3 approaches for the chosen cause, distinguishable by Scope / Risk / Test impact / Structural vs workaround axes.
+2. Emit **FIX OPTIONS** block per the skill's Output format.
+{{/if}}
+{{#unless cap.skills}}
+1. Generate 2–3 fix approaches for the chosen cause. Each describes the approach in prose under ≥3 of these axes: **Scope** (files / LoC est.), **Risk** (what regresses; which callers), **Test impact** (new / changed / none), **Structural vs workaround** (workarounds must name the deferred structural fix and the deferral condition). No code blocks here — the diff lives in Stage 4.
+2. Emit FIX OPTIONS:
+   ```
+   ## FIX OPTIONS · cause `<chosen-cause-slug>`
+
+   1. **<approach name>** — <one-line gist>
+      - **Scope:** ...
+      - **Risk:** ...
+      - **Test impact:** ...
+      - **Structural vs workaround:** ...
+   2. ...
+
+   ---
+   Reply: `<N>` · `другой: <text>` · `копай ещё` · `abort`
+   ```
+{{/unless}}
+3. **Adaptive fast-path:**
+   - 1 viable approach → `Auto-advanced: no viable alternatives surfaced.`, skip AWAIT, advance to Stage 4. Override: `стоп`.
+   - 0 → STOP: `Cannot fix: the chosen cause has no implementation path within /kit-fix scope. Open a new /kit plan to address it structurally.`
+   - ≥2 → AWAIT.
+4. **AWAIT.** Reply tokens:
+   - `<N>` → approach selected; advance to Stage 4
+   - `другой: <text>` → user-supplied approach; advance to Stage 4 with it
+   - `копай ещё [: <hint>]` → research pass; re-emit FIX OPTIONS
+   - `abort` → Session 3 END without commit
+
+### Stage 4 — Реализация (Implementation)
+
+1. Apply the chosen approach to the working tree. **Do not commit yet.**
+2. If the implementation materially diverges from the chosen FIX OPTIONS approach (more files / changed test posture / structural→workaround drift), surface it in DIFF PREVIEW's Self-check — do not silently expand.
+3. Emit **DIFF PREVIEW** block. Format (defined in the `summary-format` skill):
+   ```
+   ## DIFF PREVIEW · target `<target-hash>`
+
+   **Approach taken:** <slug from FIX OPTIONS, or "custom: <one-line>">
+
+   **Files touched:**
+   - <path:line-range> — <one-line what>
+
+   **Stats:** `git diff --stat`
+   ```
+   <shortstat output>
+   ```
+
+   **Diff:** `git diff`
+   ```diff
+   <full diff>
+   ```
+
+   **Self-check:**
+   - Approach matches FIX OPTIONS selection: OK | DIFFERED — <one-line>
+   - Diff fits chosen approach's Scope axis: OK | OVER — <one-line>
+   - Test-impact matches FIX OPTIONS axis: OK | DIFFERED — <one-line>
+
+   **Uncertain:** <if any, else `(none)`>
+
+   ---
+   Reply: `ok` · `<correction>` · `abort`
+   ```
+4. **AWAIT — mandatory, no fast-path.** This is the one gate v4 protects above all. Reply tokens:
+   - `ok` → advance to Stage 5
+   - `<any correction text>` → continue editing in the same worktree; re-emit DIFF PREVIEW
+   - `abort` → `git checkout -- .` to restore the worktree (changes lost), Session 3 END
+
+### Stage 5 — Commit + verify + summary
+
+1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
+2. **Run verify.** Resolve the target step's `Verify` field from the plan (or default `[compile, test]`) via the active language profile. Capture per-verb result.
+3. If verify is red, the fix is not done. Loop back into Stage 4 (worktree is now empty; re-apply additional changes) **unless** the structural intent was a `--keep-red` carry — document the reason in FIX SUMMARY's `Verify:` explanation.
+4. Emit **FIX SUMMARY** (format below). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when Stages 2 / 3 took the fast-path; `Cause considered (rejected):` / `Approach considered (rejected):` lines when alternatives were narrowed.
+5. END.
+
+### Hard rules
+
+- **Single-step only.** If the chosen cause spans multiple invariants in Stage 3, STOP: `This fix needs more than one step. The chosen cause spans multiple invariants. Recommend opening a new feature plan with /kit instead.`
+- **Stage 4 AWAIT is mandatory.** Auto-`ok` here is a protocol violation.
+- **Use the SUMMARY format exactly.** No narrative substitute. Each block's commit-hash anchor is mandatory.
+- **NEVER `--no-verify`** on the commit.
+- **NEVER modify** the plan file or any commit other than the new fix-commit.
+- **`abort` at any stage** ends Session 3 cleanly: Stage 1 / 2 / 3 abort leaves the tree untouched; Stage 4 abort restores via `git checkout -- .`.
+
+If the worktree gets dirty for reasons unrelated to the active stage (external editor, IDE auto-save), STOP and surface: `Working tree dirtied by external changes during Session 3: <files>. Stash or discard them, then re-emit the current stage's block.`
 
 ## Artifacts
 
@@ -408,6 +560,18 @@ Never substitute "read the code at path:line", "run the tests", or "check it com
 
 **Problem:** <one line from the fix request>
 
+**Defect:** <verbatim Reduce: line from Stage 1 DIAGNOSIS>
+
+**Cause:** <selected cause slug from Stage 2>
+
+**Cause considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
+**Cause considered (rejected):** <if Stage 2 narrowed from >4; one bullet per rejected hypothesis; omit block if absent>
+
+**Approach:** <selected approach slug from Stage 3>
+
+**Approach considered (auto-advanced):** <one line; present only if Stage 3 took the fast-path>
+**Approach considered (rejected):** <if Stage 3 narrowed; one bullet per rejected approach; omit block if absent>
+
 **Solution:**
 - <by file, concrete>
 
@@ -422,7 +586,7 @@ Never substitute "read the code at path:line", "run the tests", or "check it com
 **Uncertain:** <if any, else "(none)">
 
 **Verify by hand:**
-- <concrete scenarios>
+- <concrete runtime scenarios; never code-reading; see verify-by-hand-tiers>
 
 ---
 To return to the Execute session — paste this block there and write:

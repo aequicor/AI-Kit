@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v3.5 · Apache 2.0",
+      "badge": "v4.0 · Apache 2.0",
       "title": "Всё для AI-агента",
       "lead": "Набор инструментов для разных AI-агентов, которые формируют пайплайны разработки качественных продуктов.",
       "ctaStart": "Поставить за минуту",
@@ -169,8 +169,8 @@
         },
         {
           "name": "/kit-fix",
-          "subtitle": "Точечный фикс",
-          "body": "Когда баг — отдельная сессия с чистым контекстом. Триаж → дебаг → фикс → ре-верификация. Не засоряет основной план."
+          "subtitle": "Диагностический recovery",
+          "body": "Пять этапов: анамнез (repro / localize / reduce) → варианты причины → варианты фикса → DIFF PREVIEW → commit. Adaptive fast-path пропускает тривиальные выборы; AWAIT перед commit'ом — обязательный."
         }
       ]
     },
@@ -241,7 +241,7 @@
         { "path": "CLAUDE.md", "purpose": "Главная инструкция: конвенции проекта, запретные паттерны, тело Main-агента (он управляет циклом). Claude Code читает этот файл в каждой сессии." },
         { "path": ".claude/agents/*.md", "purpose": "Субагенты — изолированные одноразовые контексты, которые Main вызывает через Task tool. По умолчанию — Researcher." },
         { "path": ".claude/commands/*.md", "purpose": "Слэш-команды /kit, /kit-do, /kit-fix. Тело каждой — промпт, который Claude Code подставляет при вызове." },
-        { "path": ".claude/skills/*/SKILL.md", "purpose": "Навыки с автотриггерами по описанию. Базовые (всегда): summary-format (формат блоков), agent-failure-modes (паттерны для ревью диффа), verify-by-hand-tiers (правила Human-required по тирам), aikit-plan-artifact (формат plan-файла). Опциональные (включаются в policies.optional_skills): debug-loop, tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
+        { "path": ".claude/skills/*/SKILL.md", "purpose": "Навыки с автотриггерами по описанию. Базовые (всегда): summary-format (формат блоков), agent-failure-modes (паттерны для ревью диффа), verify-by-hand-tiers (правила Human-required по тирам), aikit-plan-artifact (формат plan-файла), doubt-triage (классификация static/mechanical/runtime), debug-loop (Stage 1 анамнез: repro/localize/reduce), cause-hypotheses (Stage 2 варианты причины), fix-options (Stage 3 варианты фикса). Опциональные (включаются в policies.optional_skills): tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
         { "path": ".claude/prompts/*.md", "purpose": "Пользовательские промпты-помощники. Не вызываются автоматически — копируете в чат вручную, когда нужно." },
         { "path": ".claude/settings.json", "purpose": "Пермишены, allowlist для Bash, конфигурация MCP-серверов. Шаблон с разумными дефолтами." },
         { "path": ".claude/hooks/*.mjs", "purpose": "Опционально. Авто-проверки на события PreToolUse / PostToolUse / Stop. Например, блокировать Edit вне разрешённых директорий." }

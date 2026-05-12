@@ -63,14 +63,13 @@ AWAIT the user reply. Do not proceed without it.
 
 ### 1.4 Recommend optional skills
 
-After the runner + family reply lands, show the bundled optional skills and ask which to enable. The 4 core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are always emitted and not listed here.
+After the runner + family reply lands, show the bundled optional skills and ask which to enable. The 8 core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`, `doubt-triage`, `debug-loop`, `cause-hypotheses`, `fix-options`) are always emitted and not listed here.
 
 Output (translate the prose into the detected language; keep the ids in English):
 
 ```
-The kit ships 6 optional skills. They are recommended for the v3 pipeline but you can opt out per item. Reply with the IDs you want enabled (space- or comma-separated), or `all` (default), or `none`.
+The kit ships 5 optional skills. They are recommended for the v4 pipeline but you can opt out per item. Reply with the IDs you want enabled (space- or comma-separated), or `all` (default), or `none`.
 
-- debug-loop — 5-step root-cause triage for /kit-fix (reproduce → localize → reduce → fix → guard).
 - tdd-cycle — Red-Green-Refactor cycle + test pyramid for `standard` / `heavy` steps.
 - security-checklist — 8 OWASP-style red-flag patterns for steps touching input / auth / secrets / SQL.
 - doubt-driven-review — Adversarial fresh-context self-review before replying `next` on a step.
@@ -80,7 +79,7 @@ The kit ships 6 optional skills. They are recommended for the v3 pipeline but yo
 Default: all enabled.
 ```
 
-If the user is unsure or sends `ok` / empty / `default`, enable all six. The chosen IDs land in `policies.optional_skills: [...]` in Phase 2.1. Use `kit-setup schema` (Phase 3.1 once the binary is on disk) to confirm available IDs if the user objects.
+If the user is unsure or sends `ok` / empty / `default`, enable all five. The chosen IDs land in `policies.optional_skills: [...]` in Phase 2.1. Use `kit-setup schema` (Phase 3.1 once the binary is on disk) to confirm available IDs if the user objects.
 
 AWAIT the user reply. Do not proceed without it.
 
@@ -147,7 +146,7 @@ target_adapters:
 agents:
   - id: Main
     role: orchestrator                # drives the main loop — body is inlined into CLAUDE.md / AGENTS.md / CONVENTIONS.md
-    description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
+    description: "AI-Kit v4 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
     prompt: { include: prompts/Main.md }
     tools: [Read, Edit, Write, Glob, Grep, Bash]
   - id: Researcher                    # subagent — emitted as a separate file the orchestrator dispatches via Task
@@ -160,7 +159,6 @@ policies:
     - "<convention violation 1>"
     - "<convention violation 2>"
   optional_skills:                   # opt-in IDs from Phase 1.4 — omit the key if `none`
-    - debug-loop
     - tdd-cycle
     - security-checklist
     - doubt-driven-review
@@ -173,7 +171,7 @@ knowledge: {}                        # empty for default flow; user can attach d
 Notes for the orchestrator (do NOT include in the manifest itself):
 
 - `commands` is NOT a top-level manifest field. The generator scans `templates/commands/` and emits everything found.
-- `skills` is NOT a top-level manifest field either. The 4 core skills are always emitted. Optional skills (marked with `<!-- aikit:optional -->` inside their `SKILL.md` body) are emitted **only** when their ID appears under `policies.optional_skills`. Don't try a top-level `skills:` list — the verifier accepts it silently but it has no effect.
+- `skills` is NOT a top-level manifest field either. The 8 core skills are always emitted. Optional skills (marked with `<!-- aikit:optional -->` inside their `SKILL.md` body) are emitted **only** when their ID appears under `policies.optional_skills`. Don't try a top-level `skills:` list — the verifier accepts it silently but it has no effect.
 - `agents` MUST be a list of objects with `id`, `description`, `prompt.include`, `tools`. A bare list of strings (`agents: [Main, Researcher]`) fails with `missing_agent_prompt`.
 - The pipeline-driving agent MUST declare `role: orchestrator` (see Main above). Its body is inlined into the runner's main-loop prompt (`CLAUDE.md` / `AGENTS.md` / `CONVENTIONS.md`, or an `alwaysApply: true` rule for Cursor) — subagent files are isolated one-shot contexts and structurally cannot drive multi-turn AWAIT gates. Exactly one orchestrator per manifest; declaring two fails with `multiple_orchestrators`. Legacy back-compat: an agent with `id: Main` and no `role` is auto-promoted to orchestrator.
 - `prompt_dialects` and `target_adapters` MUST have both `id` and `path`.
@@ -281,7 +279,7 @@ Setup complete. Generated <N> files for <runner>, committed as <short-sha>:
 
 What you got:
 - 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
-- 4 core skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary).
+- 8 core skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 anamnesis: repro/localize/reduce), cause-hypotheses (Stage 2 root-cause options), fix-options (Stage 3 approach options).
 - <N> optional skills you enabled in Phase 1.4 (list each by id, one per line).
 - 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
 - User-prompts under .claude/prompts/ — manual helpers you can paste into a chat

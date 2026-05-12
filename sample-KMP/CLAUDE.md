@@ -79,9 +79,9 @@ Communicate with the user in Russian (ru). All prose — questions, explanations
 
 
 <instructions>
-> AI-Kit pipeline — v3 baseline.
+> AI-Kit pipeline — v4.
 > Multi-runner kit (Claude Code / Cursor / OpenCode / Aider / Qwen Code).
-> 3 commands × 3 sessions. Auto-commit per step. Human validates every commit. Git is the source of truth.
+> 3 commands × 3 sessions. /kit-do auto-commits per step; /kit-fix gates **before** commit (Stage 4 AWAIT). Human validates every change. Git is the source of truth.
 
 ## Role
 
@@ -91,7 +91,7 @@ These are the AI-Kit v3 pipeline instructions for this project. Each user task m
 |---|---|---|
 | `/kit <task>` | **Plan** | Stage 1 (Context) → Stage 2 (Plan). Output: `.aikit/plans/<id>.md` + commit. End. |
 | `/kit-do <plan-id> [--resume]` | **Execute** | Stage 3 (Steps with auto-commit) → Stage 4 (Ship: squash + push gates). |
-| `/kit-fix <commit-hash> <desc>` | **Fix** | Single-step fix targeting one commit. Output: FIX SUMMARY for paste-back. End. |
+| `/kit-fix <commit-hash> <desc>` | **Fix** | Diagnostic 5-stage recovery: Анамнез → Варианты причины → Варианты фикса → Реализация (AWAIT перед commit'ом) → Commit + verify. Output: FIX SUMMARY for paste-back. End. |
 
 You do not write code outside the session you were entered into. You do not invent extra commands. You do not chain tasks across sessions.
 
@@ -183,7 +183,7 @@ For each step from current to last:
    - `no-test-changes: true` — any test-path match (project-specific; typical: `**/test/**`, `**/*Test.kt`, `**/*.test.ts`, `tests/**`) is a violation.
 
    If any constraint is violated AND the step was `light`, render the SUMMARY header's tier as `standard (escalated from light)`. State out loud: `Shape violated on light step: <constraints>. Escalating tier to standard for AWAIT.`
-6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line.
+6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line. Before filling the Human-required section, run doubt-triage (see `Verify-by-hand by tier` below) — only runtime-evidence items reach `Verify by hand:`.
 7. **Gate decision** — determines whether to AWAIT or auto-advance:
    - `BUILD: green` AND step's planned tier is `light` AND `Shape: OK` AND all invariants `OK` → **auto-`next`**. Append to the SUMMARY:
      ```
@@ -267,16 +267,111 @@ The session ends after Stage 4. Do not start a new task in the same session.
 
 ## Session 3 — Fix (`/kit-fix <commit-hash> <description>`)
 
-1. `git show <commit-hash>` — read the targeted commit's diff.
-2. Find the plan-commit by walking back from the target: `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~`. If the search returns empty, STOP. Output: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do, which lays down a plan-commit upstream. If this is a manual commit, fix it through normal git workflow instead.` Otherwise, read the matching `.aikit/plans/<id>.md`.
-3. Read related source files to understand context.
-4. Make the fix.
-5. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`.
-6. **Run verify.** Resolve the `Verify` field from the target step in the plan (or default `[compile, test]`) via the active language profile. Run each command. Capture per-verb result. If the fix did not turn the build green, the fix is not done — return to step 4 unless the structural intent of the fix is to land a `--keep-red` carry; if so, document the reason in the FIX SUMMARY's `Verify:` explanation field.
-7. Output `FIX SUMMARY` (format below). The `Verify:` block reflects step 6's results verbatim.
-8. END. Do not loop, do not run ship, do not push.
+Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot patch. Five stages, four AWAIT gates (Stage 4 is mandatory, Stages 1–3 may auto-advance under documented conditions).
 
-If the diff turns out to be larger than a single conceptual fix, STOP and tell the user: `This fix needs more than one step. Recommend opening a new feature plan with /kit instead.` Do not silently expand scope.
+### Pre-checks (run before Stage 1)
+
+1. `git cat-file -e <commit-hash> 2>&1` — if it fails, STOP: `Commit <hash> does not exist in this repository.`
+2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash.`
+3. `git status --porcelain` — if non-empty, STOP: `Working tree is dirty. Stash or commit other work first; Session 3 needs a clean tree to attribute the new fix-commit cleanly.`
+4. `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~` — if empty, STOP: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do. If this is a manual commit, fix it through normal git workflow instead.`
+
+### Stage 1 — Анамнез (Anamnesis)
+
+1. `git show <commit-hash>` to read the target diff.
+2. Read `.aikit/plans/<plan-id>.md` from the plan-commit located in pre-check 4.
+3. Read related source files needed to understand the defect.
+4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**.
+5. Emit **DIAGNOSIS** block per the `debug-loop` skill's Output format.
+6. **AWAIT.** Reply tokens:
+   - `ok` → advance to Stage 2
+   - `<any other text>` → context correction; redo Stage 1 with the new constraint; re-emit DIAGNOSIS
+   - `abort` → Session 3 END without commit (tree is already clean)
+
+### Stage 2 — Варианты причины (Cause options)
+
+1. Run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to DIAGNOSIS evidence.
+2. Emit **CAUSE OPTIONS** block per the skill's Output format.
+3. **Adaptive fast-path:**
+   - 1 plausible cause → header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip AWAIT**, advance to Stage 3. User override: `стоп` within the next message forces AWAIT.
+   - 0 plausible causes → STOP: `Cannot diagnose: no root-cause hypothesis is supported by Stage 1 evidence. Reproduce again, expand the anamnesis, then re-invoke /kit-fix.`
+   - ≥2 → AWAIT.
+4. **AWAIT** (unless fast-path skipped it). Reply tokens:
+   - `<N>` → cause selected; advance to Stage 3
+   - `другая: <text>` → user-supplied cause; advance to Stage 3 with it
+   - `копай ещё [: <hint>]` → research pass (read more code, expand evidence); re-emit CAUSE OPTIONS. DIAGNOSIS itself is frozen.
+   - `abort` → Session 3 END without commit
+
+### Stage 3 — Варианты фикса (Fix options)
+
+1. Run the `fix-options` skill: 2–3 approaches for the chosen cause, distinguishable by Scope / Risk / Test impact / Structural vs workaround axes.
+2. Emit **FIX OPTIONS** block per the skill's Output format.
+3. **Adaptive fast-path:**
+   - 1 viable approach → `Auto-advanced: no viable alternatives surfaced.`, skip AWAIT, advance to Stage 4. Override: `стоп`.
+   - 0 → STOP: `Cannot fix: the chosen cause has no implementation path within /kit-fix scope. Open a new /kit plan to address it structurally.`
+   - ≥2 → AWAIT.
+4. **AWAIT.** Reply tokens:
+   - `<N>` → approach selected; advance to Stage 4
+   - `другой: <text>` → user-supplied approach; advance to Stage 4 with it
+   - `копай ещё [: <hint>]` → research pass; re-emit FIX OPTIONS
+   - `abort` → Session 3 END without commit
+
+### Stage 4 — Реализация (Implementation)
+
+1. Apply the chosen approach to the working tree. **Do not commit yet.**
+2. If the implementation materially diverges from the chosen FIX OPTIONS approach (more files / changed test posture / structural→workaround drift), surface it in DIFF PREVIEW's Self-check — do not silently expand.
+3. Emit **DIFF PREVIEW** block. Format (defined in the `summary-format` skill):
+   ```
+   ## DIFF PREVIEW · target `<target-hash>`
+
+   **Approach taken:** <slug from FIX OPTIONS, or "custom: <one-line>">
+
+   **Files touched:**
+   - <path:line-range> — <one-line what>
+
+   **Stats:** `git diff --stat`
+   ```
+   <shortstat output>
+   ```
+
+   **Diff:** `git diff`
+   ```diff
+   <full diff>
+   ```
+
+   **Self-check:**
+   - Approach matches FIX OPTIONS selection: OK | DIFFERED — <one-line>
+   - Diff fits chosen approach's Scope axis: OK | OVER — <one-line>
+   - Test-impact matches FIX OPTIONS axis: OK | DIFFERED — <one-line>
+
+   **Uncertain:** <if any, else `(none)`>
+
+   ---
+   Reply: `ok` · `<correction>` · `abort`
+   ```
+4. **AWAIT — mandatory, no fast-path.** This is the one gate v4 protects above all. Reply tokens:
+   - `ok` → advance to Stage 5
+   - `<any correction text>` → continue editing in the same worktree; re-emit DIFF PREVIEW
+   - `abort` → `git checkout -- .` to restore the worktree (changes lost), Session 3 END
+
+### Stage 5 — Commit + verify + summary
+
+1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
+2. **Run verify.** Resolve the target step's `Verify` field from the plan (or default `[compile, test]`) via the active language profile. Capture per-verb result.
+3. If verify is red, the fix is not done. Loop back into Stage 4 (worktree is now empty; re-apply additional changes) **unless** the structural intent was a `--keep-red` carry — document the reason in FIX SUMMARY's `Verify:` explanation.
+4. Emit **FIX SUMMARY** (format below). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when Stages 2 / 3 took the fast-path; `Cause considered (rejected):` / `Approach considered (rejected):` lines when alternatives were narrowed.
+5. END.
+
+### Hard rules
+
+- **Single-step only.** If the chosen cause spans multiple invariants in Stage 3, STOP: `This fix needs more than one step. The chosen cause spans multiple invariants. Recommend opening a new feature plan with /kit instead.`
+- **Stage 4 AWAIT is mandatory.** Auto-`ok` here is a protocol violation.
+- **Use the SUMMARY format exactly.** No narrative substitute. Each block's commit-hash anchor is mandatory.
+- **NEVER `--no-verify`** on the commit.
+- **NEVER modify** the plan file or any commit other than the new fix-commit.
+- **`abort` at any stage** ends Session 3 cleanly: Stage 1 / 2 / 3 abort leaves the tree untouched; Stage 4 abort restores via `git checkout -- .`.
+
+If the worktree gets dirty for reasons unrelated to the active stage (external editor, IDE auto-save), STOP and surface: `Working tree dirtied by external changes during Session 3: <files>. Stash or discard them, then re-emit the current stage's block.`
 
 ## Artifacts
 
@@ -392,7 +487,9 @@ after a fix lands elsewhere, paste its FIX SUMMARY here and `next`
 
 ### Verify-by-hand by tier (filling the Human-required section)
 
-Tier-scaled rules for the Human-required `Verify by hand:` block live in the `verify-by-hand-tiers` skill. Load it when filling that section — it carries the per-tier shape (one line for `light`, file:line targets for `standard`, explicit STOP cue + failure-mode cross-reference for `heavy`) and the anti-pattern list ("run the tests" is not a Human-required check, the build covers it).
+**Precondition — doubt triage.** Every candidate item for `Verify by hand:` is first classified: **static** (a fresh reader of the diff + docs answers it) → resolve before SUMMARY; **mechanical** (a tool's exit code answers it) → run the tool, record in `BUILD:`; **runtime** (real execution required) → keep, format per tier below. Code-reading is never a valid Human-required check — re-reading produces no new evidence and fatigues the reviewer.
+
+The full triage flow lives in the `doubt-triage` skill — load it before drafting Human-required. Tier-scaled rules for the surviving runtime-evidence items live in the `verify-by-hand-tiers` skill — load it to set each item's depth (one sentence for `light`, device/input/signal triples for `standard`, explicit STOP cue + multi-scenario coverage for `heavy`).
 
 ### FIX SUMMARY (Session 3, end)
 
@@ -402,6 +499,18 @@ Tier-scaled rules for the Human-required `Verify by hand:` block live in the `ve
 `git show <new-hash>`
 
 **Problem:** <one line from the fix request>
+
+**Defect:** <verbatim Reduce: line from Stage 1 DIAGNOSIS>
+
+**Cause:** <selected cause slug from Stage 2>
+
+**Cause considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
+**Cause considered (rejected):** <if Stage 2 narrowed from >4; one bullet per rejected hypothesis; omit block if absent>
+
+**Approach:** <selected approach slug from Stage 3>
+
+**Approach considered (auto-advanced):** <one line; present only if Stage 3 took the fast-path>
+**Approach considered (rejected):** <if Stage 3 narrowed; one bullet per rejected approach; omit block if absent>
 
 **Solution:**
 - <by file, concrete>
@@ -417,7 +526,7 @@ Tier-scaled rules for the Human-required `Verify by hand:` block live in the `ve
 **Uncertain:** <if any, else "(none)">
 
 **Verify by hand:**
-- <concrete scenarios>
+- <concrete runtime scenarios; never code-reading; see verify-by-hand-tiers>
 
 ---
 To return to the Execute session — paste this block there and write:
@@ -495,6 +604,7 @@ Load the `agent-failure-modes` skill before approving any `standard` / `heavy` s
 - File operations within the project: read, write, edit, glob, grep.
 - Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
+- `Verifier` subagent (Session 2 Stage 3 / Session 3, static-doubt resolution) — fresh-context resolver for code-analysis doubts so they do not reach the human as "verify by hand"; see `doubt-triage` skill.
 - Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
 - **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker) — allowed at **non-binding gates only**: task clarification before CONTEXT SUMMARY; `y/n` confirmations such as `revert!` and the reflection-quiz mismatch; Stage 4 `ok / keep / cancel` and `push / local` pickers; baseline retry / replan-or-continue decisions. **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages).
 

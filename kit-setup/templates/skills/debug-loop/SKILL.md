@@ -1,49 +1,61 @@
-<!-- aikit:optional -->
-Five-step root-cause triage — reproduce, localize, reduce, fix, guard — for Session 3 (`/kit-fix`) defects whose source line is not obvious.
+Stage 1 anamnesis for Session 3 (`/kit-fix`) — reproduce, localize, reduce. Produces the DIAGNOSIS block that feeds Stage 2 hypotheses.
 
 # When to invoke
 
 | Stage | Trigger |
 |---|---|
-| Session 3 Stage 1 | reading the defect description before locating the upstream commit |
-| Session 3 Stage 3 | drafting the fix after the commit-walk found the right step |
-| Session 3 Stage 6 | building the regression guard before END |
+| Session 3 Stage 1 | after `git show <target>` and reading the plan; before emitting DIAGNOSIS |
 
-Reach for this loop when the defect surface (stack trace, observed behavior) does not point at one obvious line. If the bug is one-line obvious, the loop is overhead — skip it and patch directly.
+In v4 this skill is core (always emits). Earlier versions had it `<!-- aikit:optional -->` because the linear `/kit-fix` flow patched directly. In the diagnostic flow, no Session 3 can skip Stage 1.
 
 # Procedure
 
-Each step has one deliverable. Do not skip steps; do not collapse two into one.
+Three deliverables, in order. Each produces one line of the DIAGNOSIS block.
 
 ## 1. Reproduce
 
-A failing command, test, click-path, or input. One line, copy-pasteable. If you cannot produce a repro, do not proceed — write `Repro: (none yet)` in the FIX SUMMARY and stop. A fix without a repro is a guess.
+A failing command, test, click-path, or input. One line, copy-pasteable.
 
-> *Example:* `Repro: ./gradlew :shared:test --tests "ViewerStateTest.scale_recovers_after_rotation" fails on master @5b611eb`
+> *Example:* `./gradlew :shared:test --tests "ViewerStateTest.scale_recovers_after_rotation" fails on master @5b611eb`
+
+If you cannot produce a repro, write `Repro: (none yet)` and STOP. Output: `Cannot diagnose without repro. /kit-fix is a single-step recovery; if reaching the defect requires multi-step setup that does not fit a one-line command, open /kit instead.` A fix without a repro is a guess — Stage 2 hypotheses would have no observation to refute against.
 
 ## 2. Localize
 
-Name the smallest `path:line-range` span where the defect lives. Not a module, not a function — a span. If localizing changed your mind about which commit is upstream, restart from Session 3 Stage 1 with the new commit.
+The smallest `path:line-range` span where the defect lives. Not a module, not a function — a span.
+
+> *Example:* `Localize: shared/src/commonMain/kotlin/io/aequicor/viewer/ViewerState.kt:42-58`
+
+If localizing changed your mind about which commit is upstream (the defect lives in code earlier than `<target-hash>`), STOP and surface: `Localized defect lives at <new-hash> upstream of <target-hash>. Re-invoke /kit-fix <new-hash> with the same description.`
 
 ## 3. Reduce
 
-State the defect in plain prose, citing the localized span. One paragraph maximum. The wording lands verbatim in the FIX SUMMARY's `Defect:` line and the guard test's docstring — write it once, well.
+State the defect in plain prose, one paragraph maximum, citing the localized span. This wording will appear verbatim in FIX SUMMARY's `Defect:` line and in any regression test's docstring — write it once, well.
 
-## 4. Fix
-
-Apply the minimal change that flips the repro from red to green. Bigger fixes are out of scope for `/kit-fix` — escalate to a new `/kit` plan. If you find yourself touching more than the localized span, stop and re-evaluate scope before continuing.
-
-## 5. Guard
-
-Add or modify ONE test that fails on the pre-fix code and passes on the post-fix code. The guard's name surfaces the regression in human terms (`scale_recovers_after_rotation`, not `test_bug_42`). Without a guard, the fix is provisional — FIX SUMMARY must surface this in the Uncertain section.
+> *Example:* `Reduce: ViewerState.scale survives a rotation event because the rotation handler at ViewerState.kt:52 resets viewBox but not scale; the scale field is decoupled from the recomputed bounds and retains the pre-rotation value.`
 
 ## Anti-patterns
 
-- "I know what's wrong, let me just patch it" — skipping step 1 means no proof the fix worked.
-- Fixing in step 4 and skipping step 5 — a fix without a guard regresses the next time someone edits the area.
-- Localizing to a module ("auth subsystem") instead of a span — too vague to act on.
-- A repro that requires manual setup ("first log in, then …") — encode the setup in the test, otherwise the guard is unreliable.
+- **Skipping repro** ("I know what's wrong, let me just localize") — Stage 2 hypotheses cannot be refuted without a concrete observation.
+- **Localizing to a module** ("auth subsystem", "viewer code") — too vague to anchor a span. Get to lines.
+- **Repro that requires manual setup** ("first log in, then …") — encode the setup in the test, otherwise the regression guard for this defect (if added in Stage 5) is unreliable.
+- **Reduce that names a fix** ("Defect: viewport doesn't preserve scale because `onRotate` should reset both viewBox and scale together") — the "should reset both together" is a fix proposal, not a defect description. Save it for Stage 3.
 
 # Output format
 
-The five deliverables (Repro / Localize / Reduce / Fix / Guard lines) fold into the FIX SUMMARY's `Plan deviations` or `Verify by hand:` sections — whichever fits the artifact. The skill produces no separate file.
+```
+## DIAGNOSIS · commit `<target-hash>`
+
+**Repro:** <one-line, copy-pasteable; `(none yet)` if not reproducible>
+**Localize:** <path:line-range>
+**Reduce:** <one-paragraph prose citing the span>
+
+**Plan-step context:** <slug from plan that this commit implemented; from `kit: step N/M — <slug>` of the target>
+**Out-of-scope:** <areas touched only to verify repro, not to fix; omit line if none>
+
+---
+Reply:
+- `ok` — переходим к Stage 2 (CAUSE OPTIONS)
+- `<correction>` — поправить контекст диагностики и переотрисовать DIAGNOSIS
+- `abort` — выйти из Session 3 без commit'а
+```

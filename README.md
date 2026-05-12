@@ -4,7 +4,7 @@ Generates AI agent configuration files for [Claude Code](https://claude.ai/code)
 
 The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits files for each enabled target (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc.).
 
-The bundle ships the v3 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → single-shot Fix targeting one commit — four on-demand core skills — `summary-format` (bullet-only CONTEXT / PLAN / STEP / FIX block shapes), `agent-failure-modes` (six diff-level patterns to catch a green build that's actually broken), `verify-by-hand-tiers` (per-tier rules for the Human-required section), `aikit-plan-artifact` (frozen `.aikit/plans/<id>.md` format + `Verify`-verb vocabulary), six opt-in skills — `debug-loop`, `tdd-cycle`, `security-checklist`, `doubt-driven-review`, `simplification-pass`, `adr-on-decision` — and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
+The bundle ships the v4 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → **diagnostic 5-stage Fix** targeting one commit (Анамнез → Варианты причины → Варианты фикса → Реализация with AWAIT before commit → Commit + verify) — eight on-demand core skills — `summary-format` (bullet-only block shapes for every stage), `agent-failure-modes` (six diff-level patterns to catch a green build that's actually broken), `verify-by-hand-tiers` (per-tier rules for the Human-required section), `aikit-plan-artifact` (frozen `.aikit/plans/<id>.md` format + `Verify`-verb vocabulary), `doubt-triage` (static / mechanical / runtime classification before Human-required), `debug-loop` (Stage 1 anamnesis — repro / localize / reduce), `cause-hypotheses` (Stage 2 root-cause options with adaptive fast-path), `fix-options` (Stage 3 approach options with adaptive fast-path), five opt-in skills — `tdd-cycle`, `security-checklist`, `doubt-driven-review`, `simplification-pass`, `adr-on-decision` — and 12 stack profiles across language × framework × capability axes. Human validates every commit; git is the source of truth.
 
 ---
 
@@ -175,7 +175,7 @@ target_adapters:                    # tells the renderer where to find adapter c
 agents:                             # required, min 1 — v3 fixes the roster at exactly two
   - id: Main
     role: orchestrator                # inlined into CLAUDE.md / AGENTS.md (main-loop prompt)
-    description: "AI-Kit v3 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
+    description: "AI-Kit v4 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
     prompt: { include: prompts/Main.md }
     tools: [Read, Edit, Write, Glob, Grep, Bash]
   - id: Researcher                    # subagent — separate artifact file the orchestrator dispatches
@@ -188,7 +188,6 @@ policies:                           # folded into the generated CLAUDE.md / AGEN
     - "No platform-specific code (android/ios/jvm/js) in commonMain source sets"
     - "No hardcoded API keys or secrets in source files or config"
   optional_skills:                  # opt-in list — only these `<!-- aikit:optional -->` skills emit
-    - debug-loop                    # 5-step root-cause triage for /kit-fix
     - tdd-cycle                     # Red-Green-Refactor + test pyramid
     - security-checklist            # 8 OWASP-style red-flag patterns
     - doubt-driven-review           # adversarial fresh-context self-review
@@ -218,8 +217,8 @@ These are the rules that show up most often as a `kit-setup verify` failure:
 
 A common mistake is trying to add v2-era top-level fields. The verifier silently accepts them (the schema uses `additionalProperties: true`) but the generator ignores them:
 
-- **`commands:`** — the generator walks `kit-setup/templates/commands/` and emits everything found. The v3 commands (`kit`, `kit-do`, `kit-fix`) come along for free; the manifest field is silently ignored.
-- **`skills:`** — the four core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) emit unconditionally. Optional skills (marked with `<!-- aikit:optional -->` in their `SKILL.md` body) emit only when their id is listed under **`policies.optional_skills:`** — a top-level `skills:` field has no effect.
+- **`commands:`** — the generator walks `kit-setup/templates/commands/` and emits everything found. The v4 pipeline's three commands (`kit`, `kit-do`, `kit-fix`) come along for free; the manifest field is silently ignored.
+- **`skills:`** — the eight core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`, `doubt-triage`, `debug-loop`, `cause-hypotheses`, `fix-options`) emit unconditionally. Optional skills (marked with `<!-- aikit:optional -->` in their `SKILL.md` body) emit only when their id is listed under **`policies.optional_skills:`** — a top-level `skills:` field has no effect.
 - **v2 agents** (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — removed in v3. Listing them as agent IDs fails with `unknown_agent_id`.
 
 ### How profiles compose into the manifest
