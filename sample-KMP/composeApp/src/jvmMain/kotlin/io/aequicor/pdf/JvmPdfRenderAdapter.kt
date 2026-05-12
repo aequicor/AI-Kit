@@ -4,6 +4,7 @@ import io.aequicor.domain.model.PdfDocument
 import io.aequicor.domain.model.PdfPage
 import io.aequicor.domain.model.PdfPageSize
 import io.aequicor.domain.port.PdfRenderPort
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.pdfbox.Loader
@@ -11,12 +12,14 @@ import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.awt.image.BufferedImage
 
-class JvmPdfRenderAdapter : PdfRenderPort {
+class JvmPdfRenderAdapter(
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : PdfRenderPort {
 
     private var document: PDDocument? = null
     private var pdfRenderer: PDFRenderer? = null
 
-    override suspend fun openDocument(bytes: ByteArray): PdfDocument = withContext(Dispatchers.IO) {
+    override suspend fun openDocument(bytes: ByteArray): PdfDocument = withContext(ioDispatcher) {
         closeDocumentInternal()
 
         val doc = Loader.loadPDF(bytes)
@@ -33,7 +36,7 @@ class JvmPdfRenderAdapter : PdfRenderPort {
     }
 
     override suspend fun renderPage(pageIndex: Int, targetSize: PdfPageSize): ByteArray =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val renderer = checkNotNull(pdfRenderer) { "No document open" }
             val doc = checkNotNull(document) { "No document open" }
             val page = doc.getPage(pageIndex)
@@ -43,7 +46,7 @@ class JvmPdfRenderAdapter : PdfRenderPort {
             argb8888Bytes(image)
         }
 
-    override suspend fun closeDocument() = withContext(Dispatchers.IO) {
+    override suspend fun closeDocument() = withContext(ioDispatcher) {
         closeDocumentInternal()
     }
 
