@@ -83,7 +83,7 @@ fun PdfViewerScreen() {
                             offsetY += pan.y
                         }
                     }
-                    // Mouse: wheel → scroll; Ctrl+wheel → zoom.
+                    // Mouse wheel → scroll (pan).
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -91,13 +91,8 @@ fun PdfViewerScreen() {
                                 if (event.type == PointerEventType.Scroll) {
                                     val delta = event.changes.firstOrNull()?.scrollDelta
                                         ?: continue
-                                    if (event.keyboardModifiers.isCtrlPressed) {
-                                        val factor = if (delta.y > 0) 0.9f else 1.1f
-                                        scale = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
-                                    } else {
-                                        offsetX -= delta.x * 30f
-                                        offsetY -= delta.y * 30f
-                                    }
+                                    offsetX -= delta.x * 30f
+                                    offsetY -= delta.y * 30f
                                     event.changes.forEach { it.consume() }
                                 }
                             }
