@@ -69,7 +69,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
       - name: Rename artifacts
@@ -79,7 +79,7 @@ jobs:
           cp artifacts/macos-arm64/kit-setup.kexe kit-setup-macos-arm64
           cp artifacts/macos-x64/kit-setup.kexe   kit-setup-macos-x64
           chmod +x kit-setup-linux-x64 kit-setup-macos-arm64 kit-setup-macos-x64
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             kit-setup-windows-x64.exe
