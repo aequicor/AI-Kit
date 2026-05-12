@@ -110,6 +110,8 @@ gradlew.bat linkReleaseExecutableMingwX64
 
 The freshly built binary lands in `build/bin/<target>/releaseExecutable/kit-setup.kexe` (`.exe` on Windows).
 
+**Rebuild after editing any template.** Files under `kit-setup/templates/` (agent prompts, slash commands, target adapters, profiles, snippets) are embedded into the binary at compile time via the `generateTemplates` Gradle task — Kotlin/Native has no runtime resource lookup. After any template change, re-run `linkReleaseExecutable<Target>` for your host; an old binary will keep using the pre-edit templates. Downstream users always pull a fresh binary from the Releases page; this only affects you while developing locally.
+
 ---
 
 ## License
