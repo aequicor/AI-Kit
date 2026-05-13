@@ -53,6 +53,20 @@ data class Policies(
      * is the default — only core skills emit.
      */
     val optionalSkills: List<String> = emptyList(),
+    /**
+     * Extra runner-permission entries in Claude Code grammar
+     * (e.g. `AskUserQuestion`, `Bash(git status:*)`, `mcp__serena__*`).
+     * Generated alongside the built-in kit defaults the resolver always emits.
+     * Per-runner adapters (OpenCode, Qwen Code) translate them to their own
+     * permission grammar.
+     */
+    val permissionsAllow: List<String> = emptyList(),
+    /**
+     * Hard-deny rules — applied on top of [permissionsAllow]; deny wins over
+     * allow at the runner level. Use for runner-level safety nets the prompt
+     * cannot enforce (e.g. `Bash(git push --force *)`).
+     */
+    val permissionsDeny: List<String> = emptyList(),
 )
 
 /**

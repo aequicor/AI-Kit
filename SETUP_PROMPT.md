@@ -164,6 +164,14 @@ policies:
     - doubt-driven-review
     - simplification-pass
     - adr-on-decision
+  # permissions:                     # optional — overrides on top of the kit's built-in
+  #   allow:                         # always-allowed pipeline tools. Use Claude Code grammar
+  #     - "Bash(docker:*)"           # (`Bash(prefix:*)`, `mcp__server__*`, `Read(/**)`).
+  #     - "mcp__playwright__*"       # Generator translates to OpenCode's nested form
+  #   deny:                          # automatically. Deny wins over allow.
+  #     - "Bash(curl:*)"             # Defaults already cover AskUserQuestion, all kit-
+  #     - "Bash(wget:*)"             # pipeline git verbs, stack-derived Bash patterns,
+                                     # and the security-baseline profile's denies.
 
 knowledge: {}                        # empty for default flow; user can attach docs later
 ```

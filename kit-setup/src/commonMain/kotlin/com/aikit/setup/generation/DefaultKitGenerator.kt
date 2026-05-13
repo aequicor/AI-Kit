@@ -719,10 +719,12 @@ class DefaultKitGenerator(
         }
         val mcp = mcpServersJson(manifest)
         val provider = manifest.providers.firstOrNull()
+        val permissions = PermissionResolver(manifest)
         val variables = baseVariables(manifest) + mapOf(
             "MCP_SERVERS_JSON" to mcp,
-            "PERMISSIONS_DENY_JSON" to "[]",
-            "PERMISSIONS_ALLOW_JSON" to "[]",
+            "PERMISSIONS_ALLOW_JSON" to permissions.claudeCodeAllowJson(),
+            "PERMISSIONS_DENY_JSON" to permissions.claudeCodeDenyJson(),
+            "OPENCODE_PERMISSION_JSON" to permissions.opencodePermissionJson(),
             "PROVIDER_ID" to (provider?.id ?: ""),
             "PROVIDER_BASE_URL" to (provider?.baseUrl ?: ""),
             "PROVIDER_API_KEY_ENV" to (provider?.apiKeyEnv ?: ""),

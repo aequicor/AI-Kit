@@ -67,6 +67,7 @@ internal object AxisFieldRegistry {
                 "auto_commit_per_step",
                 "allow_internal_steps",
                 "auto_approve",
+                "permissions",
             ),
         ),
     )

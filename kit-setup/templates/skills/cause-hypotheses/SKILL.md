@@ -76,4 +76,37 @@ Single-hypothesis fast-path variant (replaces the block above; the `ok` token be
 Proceeding to Stage 2 (fix options) without user selection. Override: reply `стоп` to force AWAIT and refine; reply `ok` to confirm the auto-selected cause explicitly.
 ```
 
-When the runner supports a native interactive picker (AskUserQuestion or equivalent), prefer it for the cause-pick: render the numbered options as ranked rows with the one-line cause name + assessment, keep the free-text input enabled, and parse any free-text reply as `другая: <text>` / `копай ещё [: <hint>]` / `<correction>` / `abort` by prefix. The picker never replaces or expands the reply-token contract; it just removes one round-trip of typing.
+## Native picker invocation (Stage 1 AWAIT)
+
+After CAUSE OPTIONS is emitted, if the runner exposes a native multiple-choice picker, call it **in addition to** the text block — the block remains the durable audit trail, the picker is the input mechanism. Per-runner mechanics (the kit's permission resolver auto-allows these tools so the call doesn't trigger a prompt):
+
+**Claude Code / Qwen Code** — `AskUserQuestion` (built-in tool). Schema:
+
+```json
+{
+  "questions": [
+    {
+      "question": "Какую root-cause гипотезу берём?",
+      "header": "CAUSE pick",
+      "multiSelect": false,
+      "options": [
+        { "label": "1. <cause #1 name>", "description": "<one-line gist + assessment>" },
+        { "label": "2. <cause #2 name>", "description": "<one-line gist + assessment>" },
+        { "label": "Другая", "description": "Описать свою root-cause гипотезу" },
+        { "label": "Копай ещё", "description": "Доп. research-проход, переотрисовать CAUSE OPTIONS" },
+        { "label": "Abort", "description": "Закрыть Session 3 без commit'а" }
+      ]
+    }
+  ]
+}
+```
+
+`questions` MUST be an array — wrapping a single question in `{...}` instead of `[{...}]` is the most common misuse (see [qwen-code#2329](https://github.com/QwenLM/qwen-code/issues/2329)).
+
+When the user picks `Другая` / `Копай ещё`, follow up with a plain-text turn to capture the free-form `<text>` / `<hint>` payload — the picker itself doesn't surface free-form input.
+
+**OpenCode** — `question` tool. Same conceptual shape (header + question text + options[]), invoked through OpenCode's tool API; permission grant in `opencode.json` → `permission: { question: "allow" }` (the kit's generator already wires this).
+
+**Cursor / Aider** — no native picker. The text Reply: footer is the only mechanism; user types `1`, `другая: …`, etc.
+
+The picker is a UX layer over the documented Reply: tokens. It never replaces or expands them — every option the picker exposes maps 1:1 to a token the user could have typed.

@@ -128,7 +128,14 @@
             "session_isolation": { "type": "object" },
             "auto_commit_per_step": { "type": "boolean" },
             "allow_internal_steps": { "type": "boolean" },
-            "auto_approve": {}
+            "auto_approve": {},
+            "permissions": {
+              "type": "object",
+              "properties": {
+                "allow": { "type": "array", "items": { "type": "string" } },
+                "deny": { "type": "array", "items": { "type": "string" } }
+              }
+            }
           }
         }
       },

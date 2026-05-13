@@ -8,5 +8,6 @@
       }
     }
   },
+  "permission": {{OPENCODE_PERMISSION_JSON}},
   "mcp": {{MCP_SERVERS_JSON}}
 }

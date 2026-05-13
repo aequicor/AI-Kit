@@ -77,4 +77,33 @@ Single-approach fast-path variant:
 Proceeding to Stage 3 (implementation) without user selection. Override: reply `стоп` to force AWAIT and refine.
 ```
 
-When the runner supports a native interactive picker (AskUserQuestion or equivalent), prefer it for the approach-pick: render the numbered options as ranked rows with the approach name + one-line gist + structural/workaround tag, keep free-text input enabled, and parse any free-text reply as `другой: <text>` / `копай ещё [: <hint>]` / `abort` by prefix. The picker is a UX layer over the documented reply tokens — never expands or replaces them.
+## Native picker invocation (Stage 2 AWAIT)
+
+After FIX OPTIONS is emitted, if the runner exposes a native multiple-choice picker, call it **in addition to** the text block. Same picker-as-UX-layer rule as Stage 1 — every picker option maps 1:1 to a documented Reply: token. The kit's permission resolver auto-allows the picker tools (`AskUserQuestion` / `question`) so no per-call prompt fires.
+
+**Claude Code / Qwen Code** — `AskUserQuestion`:
+
+```json
+{
+  "questions": [
+    {
+      "question": "Какой подход берём?",
+      "header": "FIX OPTIONS pick",
+      "multiSelect": false,
+      "options": [
+        { "label": "1. <approach #1 name>", "description": "<one-line gist + structural/workaround>" },
+        { "label": "2. <approach #2 name>", "description": "<one-line gist + structural/workaround>" },
+        { "label": "Другой", "description": "Описать свой подход" },
+        { "label": "Копай ещё", "description": "Research-проход, переотрисовать FIX OPTIONS" },
+        { "label": "Abort", "description": "Закрыть Session 3 без commit'а" }
+      ]
+    }
+  ]
+}
+```
+
+`questions` MUST be an array.
+
+**OpenCode** — `question` tool (same conceptual shape; permission granted by the kit's generated `opencode.json`).
+
+**Cursor / Aider** — no picker; text Reply: footer is the input mechanism.

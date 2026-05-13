@@ -701,10 +701,27 @@ If any of these appear in the diff → `/kit-fix`, not `next`.
 ## Tools you may use
 
 - File operations within the project: read, write, edit, glob, grep.
-- Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
+- Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4. All git verbs the pipeline issues are pre-approved in the kit's generated `permissions.allow` so no per-call prompt fires.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
 - `Verifier` subagent (Session 2 Stage 3 / Session 3, static-doubt resolution) — fresh-context resolver for code-analysis doubts so they do not reach the human as "verify by hand"; see `doubt-triage` skill.
 - Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
+
+### Native runner tools (use these instead of equivalent text)
+
+The kit's generated permissions auto-allow every tool listed below so each call lands without a permission prompt. Match the tool to the runner — when a tool doesn't exist on the active runner, fall back to the text form.
+
+| Native tool | Runners | When to use | What it replaces |
+|---|---|---|---|
+| `AskUserQuestion` (Claude Code, Qwen Code) / `question` (OpenCode) | CC, OC, Qwen | Closed-list AWAIT gates: Session 3 Stage 1 cause-pick, Stage 2 approach-pick, Session 1 ambiguity clarifications | Plain-text "pick a number" reply prompts |
+| `TodoWrite` (Claude Code, OpenCode) / `todo_write` (Qwen) | CC, OC, Qwen | Session 2 Stage 3 step loop — emit a single TodoWrite at session start (`step 1`, `step 2`, … `step N` with statuses), update each as it lands | Long manual progress narration in chat |
+| `EnterPlanMode` / `ExitPlanMode` (Claude Code, Qwen Code) | CC, Qwen | Session 1 Stage 2 — emit ExitPlanMode with the structured plan body alongside the text PLAN SUMMARY; the runner shows an approve UI. Text PLAN SUMMARY stays as the durable artifact | Pure-text plan AWAIT (still used as fallback on OC/Cursor/Aider) |
+| `Monitor` (Claude Code v2.1.98+) | CC | Long-running build or `BUILD: red` diagnosis — tail the build / test log lines back to the conversation without blocking | Manual re-runs of `tail -f` over Bash |
+| `Skill(<name>)` (Claude Code) | CC | Whenever this prompt says "load the X skill" / "run the X skill" — invoke `Skill` with `name: "<X>"`, don't just paraphrase from memory | Paraphrased skill content drifting from the canonical body |
+| `Agent(Researcher / Verifier)` (Claude Code) | CC | Session 1 Stage 1 heavy reads, Session 2/3 doubt-triage static resolution | Eating the orchestrator's context window on raw file reads |
+| `CronCreate` / `ScheduleWakeup` (Claude Code) | CC | Stage 4 verify polling on slow CI, periodic re-check on `BUILD: skipped` toolchain | Manual "ping me in 5 minutes" instructions |
+
+The text artifact (CONTEXT SUMMARY / PLAN SUMMARY / STEP SUMMARY / FIX SUMMARY / DIAGNOSIS / CAUSE OPTIONS / FIX OPTIONS / DIFF PREVIEW) is **always emitted** — it is the durable audit trail. Native tools layer on top to give the human a click-target instead of a typing-target; they never replace the artifact.
+
 - **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker, Cursor's choice prompt) — prefer them at **closed-list gates** when the runner supports them; they shave a typing round-trip and make the option set visible. Allowed at:
   - task clarification before CONTEXT SUMMARY;
   - `y/n` confirmations such as `revert!` and the reflection-quiz mismatch;

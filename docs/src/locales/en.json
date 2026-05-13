@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v4.0 · Apache 2.0",
+      "badge": "v4.1 · Apache 2.0",
       "title": "Everything your AI agent needs",
       "lead": "A toolkit for different AI agents that build development pipelines for quality products.",
       "ctaStart": "Set up in a minute",
@@ -170,7 +170,7 @@
         {
           "name": "/kit-fix",
           "subtitle": "Diagnostic recovery",
-          "body": "5-stage flow: anamnesis (repro / localize / reduce) → cause options → fix options → diff preview → commit. Adaptive fast-path skips trivial picks; the AWAIT before commit is mandatory."
+          "body": "4-stage flow: anamnesis + cause options (combined; no AWAIT between them) → fix options → diff preview → commit. Adaptive fast-path skips trivial picks; the AWAIT before commit is mandatory."
         }
       ]
     },
@@ -241,7 +241,7 @@
         { "path": "CLAUDE.md", "purpose": "Main instruction file: project conventions, forbidden patterns, the body of the Main agent (it drives the loop). Claude Code reads this in every session." },
         { "path": ".claude/agents/*.md", "purpose": "Sub-agents — isolated one-shot contexts that Main dispatches via the Task tool. Default: Researcher." },
         { "path": ".claude/commands/*.md", "purpose": "Slash commands /kit, /kit-do, /kit-fix. Each file's body is the prompt Claude Code substitutes when invoked." },
-        { "path": ".claude/skills/*/SKILL.md", "purpose": "Skills with auto-triggers driven by their descriptions. Core (always emitted): summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 anamnesis: repro/localize/reduce), cause-hypotheses (Stage 2 root-cause options), fix-options (Stage 3 approach options). Optional (opt-in via policies.optional_skills): tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
+        { "path": ".claude/skills/*/SKILL.md", "purpose": "Skills with auto-triggers driven by their descriptions. Core (always emitted): summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 first half — anamnesis: repro/localize/reduce), cause-hypotheses (Stage 1 second half — cause options, fused with anamnesis under one AWAIT), fix-options (Stage 2 approach options). Optional (opt-in via policies.optional_skills): tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
         { "path": ".claude/prompts/*.md", "purpose": "User-facing helper prompts. Not auto-invoked — paste them into chat manually when needed." },
         { "path": ".claude/settings.json", "purpose": "Permissions, Bash allowlist, MCP server config. Ships with sensible defaults." },
         { "path": ".claude/hooks/*.mjs", "purpose": "Optional. Auto-checks on PreToolUse / PostToolUse / Stop. E.g. block Edit outside permitted directories." }

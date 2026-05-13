@@ -10,5 +10,9 @@
     ]
   },
   "model": { "name": "{{RESOLVED_MODEL}}" },
+  "permissions": {
+    "allow": {{PERMISSIONS_ALLOW_JSON}},
+    "deny": {{PERMISSIONS_DENY_JSON}}
+  },
   "mcpServers": {{MCP_SERVERS_JSON}}
 }

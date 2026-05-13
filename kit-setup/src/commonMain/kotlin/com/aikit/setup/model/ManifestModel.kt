@@ -241,6 +241,8 @@ object ManifestModel {
         sliceCaps = node?.field("slice_caps")?.asMap()?.mapValues { (_, v) -> v.stringOr("") }.orEmpty(),
         modelConstraints = readModelConstraints(node?.field("model_constraints")),
         optionalSkills = node?.field("optional_skills")?.asStringList().orEmpty(),
+        permissionsAllow = node?.field("permissions")?.field("allow")?.asStringList().orEmpty(),
+        permissionsDeny = node?.field("permissions")?.field("deny")?.asStringList().orEmpty(),
     )
 
     private fun readModelConstraints(node: RawNode?): Map<String, ModelConstraint> {
