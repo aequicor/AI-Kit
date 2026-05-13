@@ -4,10 +4,10 @@ plugins {
     application
 }
 
-group = "io.aequicor"
+group = "io.aeqicor.aikit"
 version = "1.0.0"
 application {
-    mainClass.set("io.aequicor.ApplicationKt")
+    mainClass.set("io.aeqicor.aikit.ApplicationKt")
     
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")

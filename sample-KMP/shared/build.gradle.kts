@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -18,15 +17,6 @@ kotlin {
     
     jvm()
     
-    js {
-        browser()
-    }
-    
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
-    
     sourceSets {
         commonMain.dependencies {
             // put your Multiplatform dependencies here
@@ -38,7 +28,7 @@ kotlin {
 }
 
 android {
-    namespace = "io.aequicor.shared"
+    namespace = "io.aeqicor.aikit.shared"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
