@@ -53,10 +53,15 @@ fun PdfViewerScreen(
         path?.let { viewModel.openPdf(it) }
     }
 
-    // Track current page from scroll position
+    // Track current page from scroll position + request render for visible items
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .collect { viewModel.setCurrentPage(it) }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.index } }
+            .collect { visibleIndices -> viewModel.setDesiredPages(visibleIndices) }
     }
 
     // Handle scroll-to-page signal
@@ -108,9 +113,6 @@ fun PdfViewerScreen(
                 ) {
                     items(state.pageCount) { pageIndex ->
                         val bitmap = state.renderedPages[pageIndex]
-                        LaunchedEffect(pageIndex) {
-                            viewModel.renderPageIfNeeded(pageIndex)
-                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
