@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+private const val MAX_RENDER_WIDTH = 1400
+
 class PdfViewerViewModel : ViewModel() {
     private var document: PdfDocument? = null
 
@@ -23,7 +25,7 @@ class PdfViewerViewModel : ViewModel() {
     private var renderJob: Job? = null
 
     fun setViewportWidth(width: Int) {
-        _uiState.update { it.copy(viewportWidth = width) }
+        _uiState.update { it.copy(viewportWidth = minOf(width, MAX_RENDER_WIDTH)) }
     }
 
     fun setCurrentPage(page: Int) {
