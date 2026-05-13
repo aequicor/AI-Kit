@@ -1,14 +1,14 @@
-Tier-scaled rules for the Human-required `Verify by hand:` section of STEP / FIX SUMMARY — depth of **runtime evidence** scaled to the step's review tier. Runs after `doubt-triage` has filtered everything except runtime-evidence items.
+Tier-scaled rules for the `Verify by hand:` section of STEP / FIX SUMMARY — depth of **runtime evidence** scaled to the step's review tier. Runs after `doubt-triage` has filtered everything except runtime-evidence items.
 
 # When to invoke
 
 | Stage | Trigger |
 |---|---|
-| Session 2 | filling the Human-required `Verify by hand:` section after a step commit, after `doubt-triage` |
+| Session 2 | filling the `Verify by hand:` section after a step commit, after `doubt-triage` |
 | Session 3 | filling the same section in a FIX SUMMARY before END |
 | Session 1 Stage 2 | (optional) anticipating per-tier runtime scenarios while drafting the plan |
 
-**Precondition.** Every item in `Verify by hand:` is a runtime-evidence task (per `doubt-triage`). Code-reading items, static-analysis items, and "run the tests" items must have been resolved upstream — not deepened here. The rule of separation: anything the build can decide (`compile` / `test` / `lint` exit codes) belongs in the **Agent-verified** `BUILD:` block; anything a fresh-context subagent or honest re-read could decide belongs nowhere in the SUMMARY (resolved or filed as `Uncertain`); only what requires real execution belongs here.
+**Precondition.** Every item in `Verify by hand:` is a runtime-evidence task (per `doubt-triage`). Code-reading items, static-analysis items, and "run the tests" items must have been resolved upstream — not deepened here. The rule of separation: anything the build can decide (`compile` / `test` / `lint` exit codes) belongs in the SUMMARY's status header (`build green` / `build red: <verbs>` / `build skipped: <verbs>`); anything a fresh-context subagent or honest re-read could decide belongs nowhere in the SUMMARY (resolved or filed as `Uncertain`); only what requires real execution belongs here.
 
 # Procedure
 
@@ -34,12 +34,12 @@ Starts with the literal word `STOP.`. Then: re-state the step's intent in your o
 
 # Anti-patterns this section prevents
 
-- **"read code at path:line"** as a Human-required check. Code-reading is the agent's job (own context, or a fresh-context Verifier subagent — see `doubt-triage`). Never the human's. The user already saw the diff at AWAIT; re-reading produces no new evidence and compounds fatigue.
-- **"run the tests"** as a Human-required check. Tests are in BUILD. If the reviewer needs to run something the build did not, name the exact command and what to look for in the output.
+- **"read code at path:line"** as a `Verify by hand:` item. Code-reading is the agent's job (own context, or a fresh-context Verifier subagent — see `doubt-triage`). Never the human's. The user already saw the diff at AWAIT; re-reading produces no new evidence and compounds fatigue.
+- **"run the tests"** as a `Verify by hand:` item. Tests are reflected in the SUMMARY's status header. If the reviewer needs to run something the build did not, name the exact command and what to look for in the output.
 - **"check it works"** as `standard` / `heavy` — name the device, the input, the signal.
 - Skipping the section on `heavy` because "the build covers it". The build never covers public-API intent or device-class behavior.
 - Copy-pasting the same `Verify by hand` line across steps. If the check is identical every step, either the steps are mistyped or the runtime evidence is too generic — narrow the scenario.
 
 # Output format
 
-A bulleted `Verify by hand:` block inside the Human-required section of STEP SUMMARY or FIX SUMMARY. One bullet per scenario. Each bullet names device / OS / input / signal — never an abstraction. `heavy` steps additionally start with `STOP.` and require a re-statement of intent.
+A bulleted `Verify by hand:` block in STEP SUMMARY or FIX SUMMARY. One bullet per scenario. Each bullet names device / OS / input / signal — never an abstraction. `heavy` steps additionally start with `STOP.` and require a re-statement of intent.

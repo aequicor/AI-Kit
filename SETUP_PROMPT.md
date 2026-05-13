@@ -35,6 +35,7 @@ Use focused globs and greps. Never run a full recursive directory walk on a proj
 - **Stack** — primary language, framework, build tool, test runner, lint/format. Sources to check: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `build.gradle.kts`, `Makefile`, `composer.json`. Note exact versions if pinned.
 - **Modules** — clear sub-folders that look like modules (`src/auth`, `packages/api`, `apps/web`). List up to 10.
 - **Existing AI-runner configs** — check for `.claude/`, `.cursor/`, `.opencode/`, `AGENTS.md`, `.aider.conf.yml`, `.qwen/`. If any exist, note which runner.
+- **MCP signals** — glob the repo root for `*docker-compose*.y*ml`, `.mcp.json`. Grep each hit for `knowledge-os`, `knowledgeos`, `mcpServers`, `mcp-stdio`, `mcp-http`, `serena`. If a `docker-compose*.yml` mentions KnowledgeOS / `knowledge-os` service, the user already runs a knowledge backend — remember the file path and the service's exposed HTTP URL for Phase 1.5. If an existing `.mcp.json` is present, list every server id + transport — they will be re-declared in `tools[]` so the kit's `.mcp.json` doesn't quietly drop them. (Older Claude Code setups may have `mcpServers` inside `.claude/settings.json`; current Claude Code ignores it — flag the entries to the user and migrate them into `.mcp.json` via `tools[]`.)
 - **Git state** — `git status --porcelain` to confirm clean tree. If dirty → STOP. Tell the user: `Working tree is dirty. Commit or stash first; setup writes files and needs a clean baseline.`
 
 Do NOT read full source files in this phase. The goal is to map, not to study.
@@ -82,6 +83,34 @@ Default: all enabled.
 If the user is unsure or sends `ok` / empty / `default`, enable all five. The chosen IDs land in `policies.optional_skills: [...]` in Phase 2.1. Use `kit-setup schema` (Phase 3.1 once the binary is on disk) to confirm available IDs if the user objects.
 
 AWAIT the user reply. Do not proceed without it.
+
+### 1.5 Recommend MCP servers
+
+MCP servers extend the runner with extra tools (project-wide code intelligence, hosted knowledge stores, browser drivers, etc.). They land in `manifest.tools[]` with `kind: mcp-stdio` / `mcp-http` / `mcp-sse`. Per runner: Claude Code reads project-scoped MCP from `.mcp.json` at the repo root (the kit generates it here); OpenCode bundles them into `opencode.json → mcp`; Cursor uses `.cursor/mcp.json`; Qwen Code uses `.qwen/settings.json → mcpServers`. If you skip this section, the runner gets no MCP servers — `.mcp.json` is only emitted when `tools[]` has at least one enabled `mcp-*` entry.
+
+Compose a short menu based on what Phase 1.2 detected. Show it in the chosen language; keep the YAML field names in English.
+
+- **KnowledgeOS (`knowledge-os`)** — recommend **automatically** if Phase 1.2 found a `docker-compose*.y*ml` mentioning KnowledgeOS or `knowledge-os`. Use the exact HTTP URL the compose file exposes (typical default: `http://localhost:8765/mcp`). The id `knowledge-os` is well-known — it flips the `KNOWLEDGE_OS_ENABLED` template flag, so kit prompts use MCP-backed memory instead of the filesystem fallback. Skip it if no compose file was detected; never invent a URL.
+- **Serena (`serena`)** — recommend for projects in Kotlin / Java / TypeScript / Python / Go / Rust / C# / Ruby. Stdio transport, command `uvx`, args `["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "ide-assistant", "--project", "."]`. Use it when the user wants LSP-grade symbol search, refactor previews, and reference walks beyond `Grep`. Don't push it on tiny single-file projects.
+- **Pre-existing MCP servers** — if Phase 1.2 found entries already wired in `.claude/settings.json → mcpServers` or `.mcp.json`, propose carrying them over verbatim (same id, transport, command/url) so the new manifest doesn't drop working integrations.
+
+Render the menu and ask:
+
+```
+The kit can wire MCP servers into the runner. Based on the scan I recommend:
+
+- knowledge-os — <only if detected>, mcp-http at <URL from compose>
+- serena      — <only for supported languages>, mcp-stdio for code intelligence
+- <carry-over server id> — already configured in <where>, mcp-<transport>
+
+Reply with the IDs you want enabled (space- or comma-separated), `all` (default
+if anything is recommended), or `none`. You can also add a custom one as
+`id=<id> kind=<mcp-stdio|mcp-http|mcp-sse> command|url=<…>`.
+```
+
+If nothing was detected and the stack doesn't match a recommendation, skip the question entirely and emit `tools: []` in Phase 2.1 — don't fabricate MCP servers.
+
+AWAIT the user reply. Do not proceed without it. Save the chosen MCP servers for Phase 2.1's `tools:` block.
 
 ---
 
@@ -154,6 +183,32 @@ agents:
     prompt: { include: prompts/Researcher.md }
     tools: [Read, Glob, Grep, WebFetch]
 
+tools:                                # MCP / LSP servers picked in Phase 1.5. Omit the
+                                      # whole key when none were chosen. For Claude Code
+                                      # the generator writes a project-root `.mcp.json`
+                                      # with these entries (the documented project-scope
+                                      # location); for OpenCode it inlines them in
+                                      # `opencode.json → mcp`. The well-known id
+                                      # `knowledge-os` additionally flips the
+                                      # KNOWLEDGE_OS_ENABLED template flag.
+  - id: knowledge-os                  # well-known id — only set when KnowledgeOS was detected in Phase 1.2
+    kind: mcp-http
+    url: "http://localhost:8765/mcp"  # whatever the detected docker-compose exposes
+    enabled: true
+  - id: serena                        # LSP-grade code intelligence; recommended for Kotlin/Java/TS/Python/Go/Rust
+    kind: mcp-stdio
+    command: uvx
+    args:
+      - "--from"
+      - "git+https://github.com/oraios/serena"
+      - "serena"
+      - "start-mcp-server"
+      - "--context"
+      - "ide-assistant"
+      - "--project"
+      - "."
+    enabled: true
+
 policies:
   forbidden_patterns:                # optional but recommended; goes into CLAUDE.md
     - "<convention violation 1>"
@@ -173,7 +228,13 @@ policies:
   #     - "Bash(wget:*)"             # pipeline git verbs, stack-derived Bash patterns,
                                      # and the security-baseline profile's denies.
 
-knowledge: {}                        # empty for default flow; user can attach docs later
+# knowledge:                         # OPTIONAL — totally distinct from `tools:` above.
+                                      # Shape is `constitution / specs / session`, NOT
+                                      # an `- id/path` list. Omit unless you are wiring
+                                      # an authored constitution. To plug in a
+                                      # KnowledgeOS / MCP backend use `tools:` above
+                                      # instead — that is what produces `.mcp.json` for
+                                      # Claude Code.
 ```
 
 Notes for the orchestrator (do NOT include in the manifest itself):
@@ -184,6 +245,7 @@ Notes for the orchestrator (do NOT include in the manifest itself):
 - The pipeline-driving agent MUST declare `role: orchestrator` (see Main above). Its body is inlined into the runner's main-loop prompt (`CLAUDE.md` / `AGENTS.md` / `CONVENTIONS.md`, or an `alwaysApply: true` rule for Cursor) — subagent files are isolated one-shot contexts and structurally cannot drive multi-turn AWAIT gates. Exactly one orchestrator per manifest; declaring two fails with `multiple_orchestrators`. Legacy back-compat: an agent with `id: Main` and no `role` is auto-promoted to orchestrator.
 - `prompt_dialects` and `target_adapters` MUST have both `id` and `path`.
 - For Claude Code: `providers[].auth: subscription` (the runner handles login). Use `api_key` only if you have an `api_key_env` variable to wire.
+- `tools:` is the **only** way MCP servers reach the runner. Each entry with `kind: mcp-stdio` / `mcp-http` / `mcp-sse` is rendered into a runner-specific MCP file: `.mcp.json` at repo root for Claude Code, `.cursor/mcp.json` for Cursor, `opencode.json → mcp` for OpenCode, `.qwen/settings.json → mcpServers` for Qwen Code. For Claude Code the file is **only** emitted when at least one MCP tool is enabled — projects without MCP get no `.mcp.json` at all. The `knowledge:` top-level block is a different feature (authored constitution / specs / session stores) and does **not** produce any MCP wiring — putting `id: knowledge-os` under `knowledge:` is a misconfiguration the verifier silently ignores. Omit `tools:` entirely if Phase 1.5 produced no servers.
 
 Keep the YAML under 100 lines. The point is one screen of YAML the user can read and approve.
 
@@ -287,7 +349,7 @@ Setup complete. Generated <N> files for <runner>, committed as <short-sha>:
 
 What you got:
 - 3 slash commands: /kit, /kit-do, /kit-fix — entry points for Session 1/2/3.
-- 8 core skills: summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 anamnesis: repro/localize/reduce), cause-hypotheses (Stage 2 root-cause options), fix-options (Stage 3 approach options).
+- 8 core skills: summary-format (compressed block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier `Verify by hand:` rules), aikit-plan-artifact (plan-file format + Verify-verb vocabulary), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 anamnesis: repro/localize/reduce), cause-hypotheses (Stage 2 root-cause options), fix-options (Stage 3 approach options).
 - <N> optional skills you enabled in Phase 1.4 (list each by id, one per line).
 - 2 sub-agents: Main (pipeline driver), Researcher (Session 1 Stage 1 helper).
 - User-prompts under .claude/prompts/ — manual helpers you can paste into a chat
@@ -321,4 +383,5 @@ DONE. End the session.
 - NEVER write API keys, tokens, or secrets into the manifest. The verifier scans for them; if found, it'll fail with `secret_pattern_match`.
 - NEVER touch files outside `.aikit/` and the binary location during setup.
 - The manifest MUST declare exactly the two v3 agents (`Main`, `Researcher`) as full agent objects with `id` / `description` / `prompt.include` / `tools` — see Phase 2.1 for the shape. Do NOT add v2 agent IDs (`BugFixer`, `Architect`, `CodeWriter`, `Verifier`) — they no longer exist in v3 and the verifier will reject them. The v3 commands (`kit`, `kit-do`, `kit-fix`) and core skills (`summary-format`, `agent-failure-modes`, `verify-by-hand-tiers`, `aikit-plan-artifact`) are auto-emitted from the templates tree; do NOT add them as manifest fields. Optional skills (Phase 1.4) go under `policies.optional_skills` — never as a top-level `skills:` list.
+- NEVER skip Phase 1.5 MCP discovery without showing the user the result. If Phase 1.2 found a `docker-compose*.yml` mentioning KnowledgeOS / `knowledge-os`, raise it in 1.5 even when you think the user "already knows". MCP servers belong in `tools:` (kind `mcp-stdio` / `mcp-http` / `mcp-sse`), never in the `knowledge:` block — the latter ignores the wrong shape silently and the user ends up without a `.mcp.json` at all.
 - NEVER promise the user "no more setup needed" — the v3 pipeline is per-task, not autonomous. The kit files are scaffolding; the human-in-the-loop is the design, not a workaround.

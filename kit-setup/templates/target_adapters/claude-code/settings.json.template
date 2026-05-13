@@ -3,7 +3,6 @@
     "deny": {{PERMISSIONS_DENY_JSON}},
     "allow": {{PERMISSIONS_ALLOW_JSON}}
   },
-  "mcpServers": {{MCP_SERVERS_JSON}},
   "env": {
     "KIT_LANG": "{{LANGUAGE_CODE}}"
   }

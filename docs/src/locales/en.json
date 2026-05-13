@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v4.1 · Apache 2.0",
+      "badge": "v4.2 · Apache 2.0",
       "title": "Everything your AI agent needs",
       "lead": "A toolkit for different AI agents that build development pipelines for quality products.",
       "ctaStart": "Set up in a minute",
@@ -243,7 +243,8 @@
         { "path": ".claude/commands/*.md", "purpose": "Slash commands /kit, /kit-do, /kit-fix. Each file's body is the prompt Claude Code substitutes when invoked." },
         { "path": ".claude/skills/*/SKILL.md", "purpose": "Skills with auto-triggers driven by their descriptions. Core (always emitted): summary-format (block shapes), agent-failure-modes (diff-review patterns), verify-by-hand-tiers (per-tier Human-required rules), aikit-plan-artifact (plan-file format), doubt-triage (static/mechanical/runtime classification), debug-loop (Stage 1 first half — anamnesis: repro/localize/reduce), cause-hypotheses (Stage 1 second half — cause options, fused with anamnesis under one AWAIT), fix-options (Stage 2 approach options). Optional (opt-in via policies.optional_skills): tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
         { "path": ".claude/prompts/*.md", "purpose": "User-facing helper prompts. Not auto-invoked — paste them into chat manually when needed." },
-        { "path": ".claude/settings.json", "purpose": "Permissions, Bash allowlist, MCP server config. Ships with sensible defaults." },
+        { "path": ".claude/settings.json", "purpose": "Permissions, Bash allowlist, env. Ships with sensible defaults." },
+        { "path": ".mcp.json", "purpose": "Project-scoped MCP servers — the documented Claude Code location for MCP config. Only emitted when manifest tools[] has an enabled mcp-* entry." },
         { "path": ".claude/hooks/*.mjs", "purpose": "Optional. Auto-checks on PreToolUse / PostToolUse / Stop. E.g. block Edit outside permitted directories." }
       ]
     },
@@ -264,8 +265,8 @@
           "body": "PreToolUse can block a tool call (e.g. Bash with rm -rf), PostToolUse can add a check after Edit, Stop can do a final validation. All hooks are plain .mjs files inside the project."
         },
         {
-          "title": "Permissions and MCP in settings.json",
-          "body": "Bash allowlist, explicit write permissions, MCP server configuration. One file, lives with the project — reviewable like any other code."
+          "title": "Permissions in settings.json, MCP in .mcp.json",
+          "body": "Bash allowlist and explicit write permissions live in .claude/settings.json. Project-scoped MCP servers live in .mcp.json at the repo root — the documented Claude Code location. Both are plain files reviewable like any other code."
         }
       ]
     },

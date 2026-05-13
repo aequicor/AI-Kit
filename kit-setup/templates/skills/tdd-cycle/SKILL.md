@@ -54,4 +54,4 @@ Run the test after each move. The cycle's invariant is: tests stay green from no
 
 # Output format
 
-Three commit-grade artifacts inside the step's single auto-commit: the new test (red moment captured in commit message body if useful), the production change (green), the small cleanup (refactor). The STEP SUMMARY's Agent-verified `BUILD:` line covers all three.
+Three commit-grade artifacts inside the step's single auto-commit: the new test (red moment captured in commit message body if useful), the production change (green), the small cleanup (refactor). The STEP SUMMARY's `build green` header verdict covers all three.

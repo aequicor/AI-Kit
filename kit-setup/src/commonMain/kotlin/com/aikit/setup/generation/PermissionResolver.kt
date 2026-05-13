@@ -8,8 +8,14 @@ import com.aikit.setup.output.Json
  *
  * Input layers (merged in order, deduplicated, later wins on conflict):
  *  1. **Kit pipeline essentials** — git verbs `/kit`, `/kit-do`, `/kit-fix` invoke,
- *     plus the native interactive tools the prompt asks the agent to use
- *     (`AskUserQuestion`, `TodoWrite`, `ExitPlanMode`, …).
+ *     plus the native side-effect tools the prompt asks the agent to use
+ *     (`TodoWrite`, `ExitPlanMode`, `Skill`, `Agent`, file ops, …). Tools that
+ *     are UX/AWAIT mechanisms rather than side-effect calls — `AskUserQuestion`
+ *     and `EnterPlanMode` — are deliberately **not** listed. Current Claude Code
+ *     auto-allows them and its settings.json schema actively rejects them in
+ *     `permissions.allow` (their names are absent from the recognised tool
+ *     regex), so emitting them used to make every generated settings.json fail
+ *     schema validation.
  *  2. **Stack-derived patterns** — first token of each `stack.{compile,test,lint,
  *     format,run,build}_command` becomes a `Bash(<token>:*)` allow pattern, so a
  *     Kotlin project gets `Bash(./gradlew:*)`, a TS project `Bash(npm:*)`, etc.
@@ -195,17 +201,21 @@ internal class PermissionResolver(private val manifest: TypedManifest) {
 
     companion object {
         /**
-         * Always-allowed entries. These cover every shell command the AI-Kit
-         * pipeline body issues, plus the native interactive tools the prompt
-         * asks the agent to use. Without them the agent gets prompted on every
-         * step's `git commit` / `git show` / `AskUserQuestion`, which is the
-         * UX hole this resolver exists to close.
+         * Always-allowed entries. These cover every side-effect tool the
+         * AI-Kit pipeline body issues, plus the shell commands invoked by
+         * Session 2 / Session 3. Without them the agent gets prompted on every
+         * step's `git commit` / `git show` / `Read`, which is the UX hole this
+         * resolver exists to close.
+         *
+         * Deliberately **excluded**: `AskUserQuestion` and `EnterPlanMode`.
+         * They are UX/AWAIT primitives (the very mechanism by which Claude
+         * Code blocks for user input), auto-allowed at runtime, and rejected
+         * by the current `.claude/settings.json` schema regex — listing them
+         * here made every generated settings.json fail validation.
          */
         private val KIT_PIPELINE_ALLOW = listOf(
-            // Native interactive / orchestration tools the prompt body uses.
-            "AskUserQuestion",
+            // Native side-effect / orchestration tools the prompt body uses.
             "ExitPlanMode",
-            "EnterPlanMode",
             "TodoWrite",
             "Skill",
             "Agent",

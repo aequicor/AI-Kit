@@ -42,6 +42,8 @@ class PackageLoader(
             artifactFrontmatter = artifactFrontmatter,
             capabilities = capabilities,
             settingsTemplate = raw.field("settings_template").stringOrNull(),
+            mcpFile = raw.field("mcp_file").stringOrNull(),
+            mcpTemplate = raw.field("mcp_template").stringOrNull(),
         )
     }
 

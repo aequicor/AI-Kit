@@ -1,4 +1,4 @@
-Catalogue of six diff-level failure modes a v3 step can hide even when BUILD is green — read before approving any `standard` / `heavy` step.
+Catalogue of six diff-level failure modes a v3 step can hide even when the build is green — read before approving any `standard` / `heavy` step.
 
 # When to invoke
 
@@ -9,7 +9,7 @@ Catalogue of six diff-level failure modes a v3 step can hide even when BUILD is 
 | Session 3, after fix commit | sanity-checking that the fix didn't introduce a new failure mode |
 | Any session, on a `light` step | one matching pattern means the step is mistyped — escalate to `standard` |
 
-Tests passing and `BUILD: green` in the Agent-verified section **do not** catch these. Read the diff with this catalogue in mind.
+Tests passing and `build green` in the STEP SUMMARY header **do not** catch these. Read the diff with this catalogue in mind.
 
 # Procedure
 
@@ -42,8 +42,8 @@ A new `try { … } catch (_) { }`, `try: … except: pass`, `catch (e) { }` with
 
 ## 6. Suppression of static checks
 
-New `@Suppress(...)`, `// @ts-ignore`, `# type: ignore`, `// eslint-disable`, `// noinspection ...` — these bypass checks, not pass them. Each one needs a justification in the step's Plan deviations or Uncertain section.
+New `@Suppress(...)`, `// @ts-ignore`, `# type: ignore`, `// eslint-disable`, `// noinspection ...` — these bypass checks, not pass them. Each one needs a justification in the step's `Plan deviations:` or `Uncertain:` section.
 
 # Output format
 
-This skill produces no artifact of its own. When invoked it shapes the human-required side of the next STEP SUMMARY or FIX SUMMARY: if any pattern fires, list the matching pattern number and a one-line pointer to the offending line in the Uncertain section of that summary. Example: `Uncertain: pattern #1 — assertEquals(x, x) added at src/Foo.kt:42`.
+This skill produces no artifact of its own. When invoked it shapes the next STEP SUMMARY or FIX SUMMARY: if any pattern fires, list the matching pattern number and a one-line pointer to the offending line in the `Uncertain:` section of that summary. Example: `pattern #1 — assertEquals(x, x) added at src/Foo.kt:42`.

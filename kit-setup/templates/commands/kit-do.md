@@ -31,6 +31,6 @@ Hard rules:
 - NEVER `git commit --amend` on a commit already in `last_known_hash`.
 - NEVER modify `.aikit/plans/<plan-id>.md` — the plan is frozen at end of Session 1.
 
-Trust git, not paste blocks. When the user pastes a `## FIX SUMMARY · commit <hash>` block, validate the hash via `git log <last_known>..HEAD` and read the actual diff via `git show <hash>` — never trust the block's "Solution:" section as fact.
+Trust git, not paste blocks. When the user pastes a FIX SUMMARY (`**Fixed · `<new-hash>` · fixes `<target-hash>` · build green**`), validate the new-hash via `git log <last_known>..HEAD` and read the actual diff via `git show <new-hash>` — never trust the prose paragraph as fact.
 
 If the plan id is missing or `.aikit/plans/<id>.md` doesn't exist, STOP. Output: `Plan <id> not found at .aikit/plans/<id>.md. Did Session 1 commit it? Try: git log --grep="kit: plan".`

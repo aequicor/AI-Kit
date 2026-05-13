@@ -55,7 +55,7 @@ data class Policies(
     val optionalSkills: List<String> = emptyList(),
     /**
      * Extra runner-permission entries in Claude Code grammar
-     * (e.g. `AskUserQuestion`, `Bash(git status:*)`, `mcp__serena__*`).
+     * (e.g. `Bash(docker:*)`, `WebFetch(domain:internal.corp)`, `mcp__serena__*`).
      * Generated alongside the built-in kit defaults the resolver always emits.
      * Per-runner adapters (OpenCode, Qwen Code) translate them to their own
      * permission grammar.

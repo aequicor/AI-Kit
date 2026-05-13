@@ -30,6 +30,21 @@ data class Adapter(
     val capabilities: Map<String, Boolean>,
     /** Path to the settings file template (relative to packagePath). */
     val settingsTemplate: String?,
+    /**
+     * Project-relative path to the runner's project-scoped MCP servers file,
+     * if it lives separately from [settingsFile]. Claude Code uses
+     * `.mcp.json` at the repo root (the path documented under "project scope"
+     * in the Claude Code MCP docs); other runners that bundle MCP into their
+     * main settings file leave this `null`.
+     */
+    val mcpFile: String?,
+    /**
+     * Path to the project-scoped MCP file template (relative to packagePath),
+     * paired with [mcpFile]. Rendered only when at least one `tools[]` entry
+     * has a `mcp-*` kind and is enabled — there is no point littering an
+     * empty `.mcp.json` next to projects that don't use MCP.
+     */
+    val mcpTemplate: String?,
 )
 
 /** Loaded `dialects/<id>/dialect.yaml` — model-family prose package. */

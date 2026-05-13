@@ -26,15 +26,35 @@ You do not write code outside the session you were entered into. You do not inve
 
 ### Stage 1 — Context
 
-1. Identify what needs to be understood: relevant code, docs, external sources.
+1. **Scan the user's brief for ambiguity — ask BEFORE any reads.** The brief is ambiguous when any of these cannot be answered from it alone: target scope (which module / file / feature), acceptance criteria (what "done" looks like), in-vs-out-of-scope edges, or load-bearing terms that could mean different things ("port the picker" — which picker? "make it faster" — faster on what dimension? "fix the bug" — which symptom?). If yes → **you MUST ask** before reading any code; reading first wastes the orchestrator's context on the wrong files.
+
+   - **Closed-list questions only** (2–4 options + a free-form "other" option). Cap at 3 questions per round; if you have more than 3, batch the top-3 first and revisit after.
+{{#if target.id == "claude-code"}}
+   - **Invoke `AskUserQuestion`** — do not paraphrase as plain text. The runtime handles it as a UX primitive (no permission prompt, no schema entry needed). Schema per question: `{"question": "<one sentence>", "header": "<≤12-char tag>", "multiSelect": false, "options": [{"label": "<≤30 chars>", "description": "<≤1 sentence on the consequence>"}, …]}`. Always include an `{"label": "Other", "description": "Free-form answer in chat"}` option as the last entry — this preserves the free-text escape hatch.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+   - **Invoke `AskUserQuestion`** — same schema as Claude Code (Qwen adopted the same primitive). Always include an `Other` option as the free-text escape hatch.
+{{/if}}
+{{#if target.id == "opencode"}}
+   - **Invoke the `question` tool** with the same shape (closed list + free-form fallback). The kit's permission resolver auto-allows it.
+{{/if}}
+{{#if target.id == "cursor"}}
+   - This runner has no native picker — emit a numbered plain-text question block and AWAIT a `<N>` reply (or free-form for "other").
+{{/if}}
+{{#if target.id == "aider"}}
+   - This runner has no native picker — emit a numbered plain-text question block and AWAIT a `<N>` reply (or free-form for "other").
+{{/if}}
+
+   Skip this step **only** when the brief is concrete enough that target module, behavior, and DoD shape are all unambiguous. Default to asking — a 30-second clarification beats a 10-minute wrong read.
+2. Identify what needs to be understood: relevant code, docs, external sources.
 {{#if cap.subagents}}
-2. Dispatch the Researcher subagent with a focused brief: "Investigate <topic>. Return a 2-screen digest covering <bullet points>." Receive the digest. Do not pull raw reads into your own context.
+3. Dispatch the Researcher subagent with a focused brief: "Investigate <topic>. Return a 2-screen digest covering <bullet points>." Receive the digest. Do not pull raw reads into your own context.
 {{/if}}
 {{#unless cap.subagents}}
-2. Do the reads yourself but be ruthlessly selective. Avoid full-file reads when grep + targeted lines suffice. No subagent is available on this runner.
+3. Do the reads yourself but be ruthlessly selective. Avoid full-file reads when grep + targeted lines suffice. No subagent is available on this runner.
 {{/unless}}
-3. Output `CONTEXT SUMMARY` (format below).
-4. AWAIT.
+4. Output `CONTEXT SUMMARY` (format below).
+5. AWAIT.
 
 When the user replies, parse:
 - `ok` → advance to Stage 2.
@@ -49,7 +69,7 @@ When the user replies, parse:
    - `touch only files under <path>/**` — bounds the work geographically
    - `no schema migration` — defers a known-risky concern
 
-   Each invariant is re-asserted in every STEP SUMMARY; violating one is allowed only with rationale in the step's `Plan deviations` field. Pick invariants that the task implicitly requires — do not over-constrain.
+   Each invariant is re-checked against every step's diff before emitting its STEP SUMMARY. A clean run produces no output; an intentional relaxation surfaces as a bullet under `Plan deviations:` with rationale; an unintentional violation means the step is broken. Pick invariants that the task implicitly requires — do not over-constrain.
 2. Compose 3–10 MVP-style steps. Each step must be:
    - **Runnable** — produces a state where some user-visible behavior or test can be checked.
    - **Independently committable** — no half-finished steps.
@@ -107,17 +127,23 @@ For each step from current to last:
    - `no-test-changes: true` — any test-path match (project-specific; typical: `**/test/**`, `**/*Test.kt`, `**/*.test.ts`, `tests/**`) is a violation.
 
    If any constraint is violated AND the step was `light`, render the SUMMARY header's tier as `standard (escalated from light)`. State out loud: `Shape violated on light step: <constraints>. Escalating tier to standard for AWAIT.`
-6. Output `STEP SUMMARY` (format below). The Agent-verified section must populate `BUILD`, `Shape`, and reaffirm **each** plan-level invariant against this step's diff (`OK` or `VIOLATED`); any `VIOLATED` entry must point at a matching `Plan deviations` line. Before filling the Human-required section, run doubt-triage (see `Verify-by-hand by tier` below) — only runtime-evidence items reach `Verify by hand:`.
+6. **Pre-summary self-check, then emit STEP SUMMARY** (format below). Before writing the summary, verify against this step's diff: every verb in `verify:` returned exit 0 (`BUILD: green`); the diff respects the step's `Shape:` block (files-glob / max-diff-lines / no-test-changes); every plan-level invariant still holds. These checks do **not** appear as OK/VIOLATED lines in the output — a clean run produces no shape/invariant section at all. Branch on the result:
+   - All clean and `BUILD: green` → emit the green-path template.
+   - `BUILD: red` → emit the red-path template; do not advance. The red-path summary lists each failing verb in the header.
+   - Shape constraint or invariant intentionally relaxed → emit the green-path template and declare each relaxation as one bullet under `Plan deviations:` with rationale.
+   - Shape constraint or invariant **unintentionally** violated → the step is broken. Do not emit a green-path summary. Either re-do the step before commit, or `revert` and re-plan. Emitting a "green" summary that hides a real violation is a contract breach.
+
+   Then run `doubt-triage` on candidate uncertainties: runtime-evidence items go to `Verify by hand:` (depth per `verify-by-hand-tiers`); static items resolve before the summary or surface under `Uncertain:`. If `Uncertain:` is empty, omit the block.
 7. **Gate decision** — determines whether to AWAIT or auto-advance:
-   - `BUILD: green` AND step's planned tier is `light` AND `Shape: OK` AND all invariants `OK` → **auto-`next`**. Append to the SUMMARY:
+   - `BUILD: green` AND step's planned tier is `light` AND step 6's self-check found no Shape violation AND no invariant violation → **auto-`next`**. Append to the SUMMARY:
      ```
      Auto-approved (light, shape-OK). Full diff is reviewed at Ship-stage.
      Proceeding to step <N+1>.
      ```
      Skip the AWAIT below. Do not increment the cadence-break counter (the human was not asked anything).
    - `BUILD: green` AND tier is `standard` / `heavy` / `standard (escalated from light)` → AWAIT, with the standard prompt (`next` / `revert` / FIX SUMMARY + `next`).
-   - `BUILD: red` → AWAIT with: `Cannot proceed: this step's verify is red (<failing verbs>). Resolve with: /kit-fix <commit-hash> "<one-line desc>". Or override with: next --keep-red "<reason>"`. The next reply must be a pasted FIX SUMMARY + `next`, or `next --keep-red "<reason>"`. Anything else is parsed as a clarifying instruction; re-prompt.
-   - `BUILD: skipped` → AWAIT with: `Verify could not run for: <verbs and reasons>. Cannot auto-gate. Resolve toolchain access and reply 'retry-verify', paste a manual FIX SUMMARY if you ran the gate yourself, or reply 'next --skip-verify "<reason>"' to acknowledge no automatic gate is possible.`
+   - `BUILD: red` → emit the red-path template (which embeds the gate language and the `/kit-fix` copy block) and AWAIT. The next reply must be a pasted FIX SUMMARY + `next`, or `next --keep-red "<reason>"`. Anything else is parsed as a clarifying instruction; re-prompt.
+   - `BUILD: skipped` → emit the skipped-path template (which embeds the gate language) and AWAIT.
 8. AWAIT (skipped when step 7 ran auto-`next`).
 
    **Reflection quiz** prepends the AWAIT prompt when EITHER:
@@ -138,10 +164,10 @@ For each step from current to last:
 
 When the user replies (or after auto-`next` ran in step 7), **first action is always rehydration** (see Behavioral contracts below). Then parse:
 - `next` → advance to next step. Allowed only when the previous step's `BUILD: green` (or `red` was resolved by a pasted FIX SUMMARY whose re-verification turned green). Counter: increment `<standard-streak>` if the completed step's rendered tier was `standard` or `standard (escalated from light)`; reset to `0` if it was `heavy`.
-- `next --keep-red "<reason>"` → advance; record `Carried red — step <N>: <reason>` in every subsequent STEP SUMMARY's `Carried overrides` block until the build returns to green. Counter: same as plain `next`.
-- `next --skip-verify "<reason>"` → advance; record `Carried skip-verify — step <N>: <reason>` similarly. Counter: same as plain `next`.
-- `next --no-quiz "<reason>"` → opt out of the current quiz; advance and record `Skipped reflection at step <N>: <reason>` in the next SUMMARY's `Carried overrides`. Counter: reset `<standard-streak>` to `0`.
-- `retry-verify` → re-run the previous step's verify. Render an updated SUMMARY with the new BUILD block. Re-gate. Counter: unchanged.
+- `next --keep-red "<reason>"` → advance; record `step <N>: keep-red — <reason>` as a bullet in every subsequent STEP SUMMARY's `Plan deviations:` block until the build returns to green. Counter: same as plain `next`.
+- `next --skip-verify "<reason>"` → advance; record `step <N>: skip-verify — <reason>` similarly under `Plan deviations:`. Counter: same as plain `next`.
+- `next --no-quiz "<reason>"` → opt out of the current quiz; advance and record `skipped reflection at step <N>: <reason>` under the next SUMMARY's `Plan deviations:`. Counter: reset `<standard-streak>` to `0`.
+- `retry-verify` → re-run the previous step's verify. Render an updated SUMMARY whose header reflects the new build verdict (`build green` / `build red: <verbs>` / `build skipped: <verbs>`). Re-gate. Counter: unchanged.
 - `revert` → confirm once: `Revert will run "git reset --hard HEAD~1" and discard the commit. Confirm with "revert!"`. Only on `revert!` proceed: `git reset --hard HEAD~1`, set `last_known_hash = HEAD`, ask user how to proceed (retry / replan / abort). Counter: decrement `<standard-streak>` by `1` (floor at `0`) since the step is undone.
 - A pasted `## FIX SUMMARY` block + `next` → run paste-validation contract (Behavioral contracts), then **re-run the step's verify on the current HEAD**. If still red, output: `Fix did not turn the build green. Verify still failing: <verbs>. Run another /kit-fix or accept with --keep-red.` and AWAIT. Counter: unchanged (this is the same AWAIT being re-gated).
 - Anything else → treat as a clarifying instruction; if it implies replanning, propose replan and AWAIT decision. Counter: unchanged.
@@ -198,25 +224,25 @@ Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot pat
 The description after the commit hash may be free-form text **or** the structured template emitted by STEP SUMMARY:
 
 ```
-Дефект: <name>
-Шаги:
-1) <шаг 1>
-n) <шаг n>
-ФР: <фактический результат>
-ОР: <Ожидаемый результат>
+Defect: <name>
+Steps:
+1) <step 1>
+n) <step n>
+Expected: <what should have happened>
+Got: <what actually happened>
 ```
 
 When the template is present:
-- `Дефект:` seeds DIAGNOSIS's `Reduce` line.
-- `Шаги:` seeds DIAGNOSIS's `Repro` line (collapse the numbered steps into one copy-pasteable command or test when possible; otherwise carry them verbatim).
-- `ФР:` and `ОР:` together describe the observed-vs-expected contrast — every Stage 1 hypothesis must explain why ФР ≠ ОР.
+- `Defect:` seeds DIAGNOSIS's `Reduce` line.
+- `Steps:` seeds DIAGNOSIS's `Repro` line (collapse the numbered steps into one copy-pasteable command or test when possible; otherwise carry them verbatim).
+- `Expected:` and `Got:` together describe the observed-vs-expected contrast — every Stage 1 hypothesis must explain why `Got` ≠ `Expected`.
 
-Missing fields are not a hard error.
+Missing fields are not a hard error. Equivalent labels in the user's session language (e.g. `Дефект:` / `Шаги:` / `Ожидал:` / `Получил:` for a Russian session) parse the same way.
 
 ### Pre-checks (run before Stage 1)
 
 1. `git cat-file -e <commit-hash> 2>&1` — if it fails, STOP: `Commit <hash> does not exist in this repository.`
-2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash. Use the template from STEP SUMMARY: "Дефект: … / Шаги: … / ФР: … / ОР: …".`
+2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash. Use the template from STEP SUMMARY: "Defect: … / Steps: … / Expected: … / Got: …" (localized labels accepted).`
 3. `git status --porcelain` — if non-empty, STOP: `Working tree is dirty. Stash or commit other work first; Session 3 needs a clean tree to attribute the new fix-commit cleanly.`
 4. `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~` — if empty, STOP: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do. If this is a manual commit, fix it through normal git workflow instead.`
 
@@ -228,20 +254,20 @@ Goal: in **one uninterrupted pass** gather defect context (DIAGNOSIS) and propos
 2. Read `.aikit/plans/<plan-id>.md` from the plan-commit located in pre-check 4.
 3. Read related source files needed to understand the defect.
 {{#if cap.skills}}
-4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**. If the user supplied the structured template, fold `Шаги:` into Repro and the ФР / ОР contrast into Reduce.
-5. **Without pausing**, run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to the evidence just collected. Each hypothesis must be able to explain why ФР ≠ ОР when the structured template was supplied.
+4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**. If the user supplied the structured template, fold `Steps:` into Repro and the `Expected:` / `Got:` contrast into Reduce.
+5. **Without pausing**, run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to the evidence just collected. Each hypothesis must be able to explain why `Got` ≠ `Expected` when the structured template was supplied.
 6. Emit **DIAGNOSIS** block, then **CAUSE OPTIONS** block, then **one combined Reply: footer** (drop the per-block footers — they would be ambiguous when stacked).
 {{/if}}
 {{#unless cap.skills}}
-4. Produce three findings: **Repro** (one-line copy-pasteable failing command / test / input; if the user supplied `Шаги:` in the structured template, fold them in here; if not reproducible write `Repro: (none yet)` and STOP), **Localize** (smallest `path:line-range` span — not a module, a span), **Reduce** (one paragraph stating the defect in prose, citing the span and the ФР vs ОР contrast verbatim when supplied).
-5. **Without pausing**, generate 2–4 root-cause hypotheses. Each follows: *If H were true, we'd expect to see X. Current observation: Y. Therefore H is supports | refutes | undetermined.* Hypotheses must be **mutually distinct** (different layer / invariant / file) and **falsifiable from Stage 1 evidence alone**. Each must explain the ФР ≠ ОР contrast when supplied.
+4. Produce three findings: **Repro** (one-line copy-pasteable failing command / test / input; if the user supplied `Steps:` in the structured template, fold them in here; if not reproducible write `Repro: (none yet)` and STOP), **Localize** (smallest `path:line-range` span — not a module, a span), **Reduce** (one paragraph stating the defect in prose, citing the span and the `Expected:` vs `Got:` contrast verbatim when supplied).
+5. **Without pausing**, generate 2–4 root-cause hypotheses. Each follows: *If H were true, we'd expect to see X. Current observation: Y. Therefore H is supports | refutes | undetermined.* Hypotheses must be **mutually distinct** (different layer / invariant / file) and **falsifiable from Stage 1 evidence alone**. Each must explain the `Got` ≠ `Expected` contrast when supplied.
 6. Emit DIAGNOSIS, then CAUSE OPTIONS, then a single combined Reply footer:
    ```
    ## DIAGNOSIS · commit `<target-hash>`
 
    **Repro:** <one-line>
    **Localize:** <path:line-range>
-   **Reduce:** <one paragraph citing the span; cite ФР/ОР contrast verbatim when supplied>
+   **Reduce:** <one paragraph citing the span; cite the Expected / Got contrast verbatim when supplied>
 
    **Plan-step context:** <slug from `kit: step N/M — <slug>` of the target>
    **Out-of-scope:** <areas touched only to verify repro; omit line if none>
@@ -269,7 +295,23 @@ Goal: in **one uninterrupted pass** gather defect context (DIAGNOSIS) and propos
    - 1 plausible cause → CAUSE OPTIONS header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip AWAIT**, advance to Stage 2 with that cause selected. User override: `стоп` within the next message forces AWAIT.
    - 0 plausible causes → STOP: `Cannot diagnose: no root-cause hypothesis is supported by Stage 1 evidence. Reproduce again, expand the anamnesis, then re-invoke /kit-fix.`
    - ≥2 → AWAIT.
-8. **AWAIT** (unless fast-path skipped it). Prefer the native interactive picker (`AskUserQuestion` or the runner's equivalent) when available — the cause list is closed (`<N>`) with a free-form fallback (`другая`), which is the picker's intended shape. If the runner has no picker, fall back to plain text. Reply tokens are listed in the combined footer above. `копай ещё` re-emits CAUSE OPTIONS only — DIAGNOSIS is frozen unless the user issues a free-form `<correction>`.
+8. **AWAIT** (unless fast-path skipped it). The cause-pick gate uses the native picker — mandatory on runners that have one.
+{{#if target.id == "claude-code"}}
+   **Invoke `AskUserQuestion`** with closed-list `<N>` options + `{"label": "Other"}` last as the free-form fallback. The runtime parses free-text input as the `другая` / `копай ещё` / `<correction>` / `abort` tokens per the combined footer. Do NOT emit a plain-text "reply with N" prompt — the picker is mandatory here.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+   **Invoke `AskUserQuestion`** (same schema as Claude Code) with closed-list options + `{"label": "Other"}` last. Mandatory.
+{{/if}}
+{{#if target.id == "opencode"}}
+   **Invoke the `question` tool** with closed-list options + free-form `Other`. Mandatory.
+{{/if}}
+{{#if target.id == "cursor"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+{{#if target.id == "aider"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+   Reply tokens are listed in the combined footer above. `копай ещё` re-emits CAUSE OPTIONS only — DIAGNOSIS is frozen unless the user issues a free-form `<correction>`.
 
 ### Stage 2 — Варианты фикса (Fix options)
 
@@ -298,7 +340,23 @@ Goal: in **one uninterrupted pass** gather defect context (DIAGNOSIS) and propos
    - 1 viable approach → `Auto-advanced: no viable alternatives surfaced.`, skip AWAIT, advance to Stage 3. Override: `стоп`.
    - 0 → STOP: `Cannot fix: the chosen cause has no implementation path within /kit-fix scope. Open a new /kit plan to address it structurally.`
    - ≥2 → AWAIT.
-4. **AWAIT.** Prefer the native picker here too — same closed-list-with-free-form-fallback shape. Reply tokens:
+4. **AWAIT.** The approach-pick gate uses the native picker — mandatory on runners that have one.
+{{#if target.id == "claude-code"}}
+   **Invoke `AskUserQuestion`** with closed-list approach options + `{"label": "Other"}` last for `другой` / `копай ещё` / `abort`.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+   **Invoke `AskUserQuestion`** (same schema as Claude Code) with closed-list options + `{"label": "Other"}` last.
+{{/if}}
+{{#if target.id == "opencode"}}
+   **Invoke the `question` tool** with closed-list options + free-form `Other`.
+{{/if}}
+{{#if target.id == "cursor"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+{{#if target.id == "aider"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+   Reply tokens:
    - `<N>` → approach selected; advance to Stage 3
    - `другой: <text>` → user-supplied approach; advance to Stage 3 with it
    - `копай ещё [: <hint>]` → research pass; re-emit FIX OPTIONS
@@ -344,9 +402,9 @@ Goal: in **one uninterrupted pass** gather defect context (DIAGNOSIS) and propos
 
 ### Stage 4 — Commit + verify + summary
 
-1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words; prefer `Дефект:` when the structured template was used). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
+1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words; prefer `Defect:` — or its localized equivalent — when the structured template was used). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
 2. **Run verify.** Resolve the target step's `Verify` field from the plan (or default `[compile, test]`) via the active language profile. Capture per-verb result.
-3. If verify is red, the fix is not done. Loop back into Stage 3 (worktree is now empty; re-apply additional changes) **unless** the structural intent was a `--keep-red` carry — document the reason in FIX SUMMARY's `Verify:` explanation.
+3. If verify is red, the fix is not done. Loop back into Stage 3 (re-apply additional changes) or `abort`. Do not emit a FIX SUMMARY with a red header — the parent Execute session treats a FIX SUMMARY as evidence the fix is good, and a red one would lie about that. If the user truly wants to land a red commit, that decision belongs to /kit-do via `next --keep-red`, not to /kit-fix.
 4. Emit **FIX SUMMARY** (format below). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when Stages 1 / 2 took the fast-path; `Cause considered (rejected):` / `Approach considered (rejected):` lines when alternatives were narrowed.
 5. END.
 
@@ -383,7 +441,7 @@ The plan-file template and the `Verify` verb vocabulary live in the `aikit-plan-
 
 ## Invariants
 
-<3–5 plan-level boundary statements; each is re-asserted in every STEP SUMMARY. Violating one requires rationale in the step's Plan deviations.>
+<3–5 plan-level boundary statements; each is re-checked against every step's diff by the agent before emitting STEP SUMMARY. A clean run produces no output. An intentional relaxation must surface as a bullet under the step's `Plan deviations:`; an unintentional violation means the step is broken (fix or revert).>
 
 - <invariant 1>
 - <invariant 2>
@@ -479,82 +537,95 @@ Open a new session and run:
 
 ### STEP SUMMARY (Session 2, after every step)
 
+Plain text, not a fenced block. Compressed: header + one prose paragraph + verify-by-hand + only-non-empty alert sections + one copyable defect template at the bottom.
+
+Use the **green** variant when every verb in `verify:` returned exit 0. Use the **red** variant when any verb was non-zero. Use the **skipped** variant when none failed and at least one could not run (toolchain absent, credentials missing).
+
+**Green-path template:**
+
 ```
-## SUMMARY · STEP <N>/<total> · commit `<hash>` · review `<tier>`
+**Done · `<hash>` · build green** (`git show <hash>` — diff)
 
-`git show <hash>`
-
-### Agent-verified (automatic)
-
-**BUILD:** green | red | skipped
-- compile: green | red (exit <code>) | skipped (<reason>)
-- test:    green | red (<N> failures) | skipped (<reason>)
-- lint:    green | red (<N> findings) | skipped (<reason>)
-- shell:   green | red | skipped     (if a shell-override verb was used)
-
-**Shape:** OK | violated | (n/a — no Shape declared)
-- files-glob:      OK | violated (touched outside glob: <path>)
-- max-diff-lines:  OK | violated (<actual> > <cap>)
-- no-test-changes: OK | violated (touched test path: <path>)
-
-**Done:**
-- <by file, concrete>
-
-**NOT done (from plan):**
-- <with reason; "(none)" if everything in the step is done>
-
-**Plan deviations:**
-- <a planned signature or approach you intentionally changed during execution and why; "(none)" if you executed the plan as written>
-
-**Invariants:** (one entry per plan-level invariant, checked against this step's diff)
-- <invariant 1>: OK | VIOLATED — <if violated, one-line pointer to the matching Plan deviations entry>
-- <invariant 2>: OK | VIOLATED — <...>
-- ...
-
-**Carried overrides:** (propagated from prior `--keep-red` / `--skip-verify`; omit the block entirely if there are none)
-- step <N>: keep-red — <reason>
-- step <M>: skip-verify — <reason>
-
-### Human-required (cognitive)
-
-**Risk-antipattern:** <verbatim "What would be wrong" from the plan; `(n/a — light)` if the plan declared light>
+<1–3 prose sentences. Describe what the step changed at the semantic level — what now behaves differently, and why. Reference files by name where it helps the reader anchor; do not list per-line changes (`git show` is one click away). No persuasive words ("successfully", "perfectly", "comprehensive"). The tier is implicit in the depth of `Verify by hand:` below — do not state it in the header.>
 
 **Verify by hand:**
-- <tier-specific cognitive checks the agent cannot do; see "Verify-by-hand by tier" below>
+- <runtime check; depth scaled per tier — see verify-by-hand-tiers>
+
+<The four blocks below are present only when non-empty. If a block has nothing to say, omit the header along with it — absence carries the OK message.>
 
 **Uncertain:**
-- <specific lines / decisions you suspect; "(none)" if confident>
+- <specific lines / decisions you suspect>
 
----
+**Not done (from plan):**
+- <plan item this step was meant to cover but did not, with reason>
 
-If a fix is needed — open a new session and paste the structured defect template after `/kit-fix <hash>`. The template separates the four pieces Session 3 Stage 1 needs (Reduce, Repro, ФР, ОР) so the agent doesn't have to guess which sentence is which:
+**Plan deviations:**
+- <intentional difference from the planned signature / approach, with reason>
+- step <N>: keep-red — <reason>     (carried from a prior `--keep-red`)
+- step <M>: skip-verify — <reason>  (carried from a prior `--skip-verify`)
+- skipped reflection at step <N>: <reason>  (carried from a prior `--no-quiz`)
 
-> /kit-fix <hash>
-> Дефект: <короткое имя дефекта>
-> Шаги:
-> 1) <шаг 1>
-> n) <шаг n>
-> ФР: <фактический результат — то, что произошло на самом деле>
-> ОР: <ожидаемый результат — то, что должно было произойти>
+If you find a defect — copy this block and fill it in:
 
-Free-form text after `/kit-fix <hash>` still works; the template is recommended when there are concrete reproduction steps. The fix session reads the plan and the commit's diff itself — repeating those in the defect description is not needed.
-
----
-Reply `next` for step <N+1> · `revert` to drop this commit ·
-after a fix lands elsewhere, paste its FIX SUMMARY here and `next`
+```
+/kit-fix <hash>
+Defect: <short name>
+Steps:
+1) <step 1>
+n) <step n>
+Expected: <what should have happened>
+Got: <what actually happened>
 ```
 
-### Verify-by-hand by tier (filling the Human-required section)
+Reply `next` for step <N+1> · `revert` to drop this commit · paste a FIX SUMMARY here and `next` after a fix lands
+```
 
-**Precondition — doubt triage.** Every candidate item for `Verify by hand:` is first classified: **static** (a fresh reader of the diff + docs answers it) → resolve before SUMMARY; **mechanical** (a tool's exit code answers it) → run the tool, record in `BUILD:`; **runtime** (real execution required) → keep, format per tier below. Code-reading is never a valid Human-required check — re-reading produces no new evidence and fatigues the reviewer.
+**Red-path template** (any verb in `verify:` was non-zero):
+
+```
+**Build red · `<hash>` · <failing verbs, comma-separated>** (`git show <hash>` — diff)
+
+<1–3 prose sentences. Say what the step tried to do, name each failing verb, and give a one-line summary of the failure for each verb. Do not claim partial success.>
+
+Cannot proceed: this step's verify is red (<failing verbs>). Resolve with `/kit-fix <hash> "<one-line desc>"`, or override with `next --keep-red "<reason>"`.
+
+```
+/kit-fix <hash>
+Defect: <short name>
+Steps:
+1) <step 1>
+n) <step n>
+Expected: <what should have happened>
+Got: <what actually happened>
+```
+```
+
+**Skipped-path template** (no verb failed, at least one could not run):
+
+```
+**Build skipped · `<hash>` · could not run: <verbs (reasons)>** (`git show <hash>` — diff)
+
+<1–3 prose sentences. Say what the step changed at the semantic level, then which verbs could not run and why (toolchain absent, credentials missing, etc.).>
+
+Cannot auto-gate: at least one verify verb could not run. Reply `retry-verify` after resolving toolchain access, or paste a manual FIX SUMMARY if you ran the gate yourself, or `next --skip-verify "<reason>"` to acknowledge no automatic gate is possible.
+```
+
+Notes:
+- The three header forms (`Done · ... · build green` / `Build red · ... · <verbs>` / `Build skipped · ... · could not run: <verbs>`) carry the verify result at a glance. Per-verb breakdowns (compile / test / lint) live in `git show`'s commit message or the build log — do not restate them in the summary.
+- Shape constraints (files-glob / max-diff-lines / no-test-changes) and plan-level invariants are agent-internal checks (see step 6 of the procedure). A clean run produces no output for them; an intentional relaxation surfaces as a `Plan deviations:` bullet; an unintentional violation means the step is broken — fix or revert, do not emit a misleading green summary.
+- Reply tokens stay English (`next`, `revert`, `next --keep-red "<reason>"`, etc.) — they are part of the parser contract.
+
+### Verify-by-hand by tier (filling the `Verify by hand:` section)
+
+**Precondition — doubt triage.** Every candidate item for `Verify by hand:` is first classified: **static** (a fresh reader of the diff + docs answers it) → resolve before SUMMARY; **mechanical** (a tool's exit code answers it) → run the tool, record in the build verdict reflected in the header; **runtime** (real execution required) → keep, format per tier below. Code-reading is never a valid `Verify by hand:` check — re-reading produces no new evidence and fatigues the reviewer.
 
 {{#if cap.skills}}
-The full triage flow lives in the `doubt-triage` skill — load it before drafting Human-required. Tier-scaled rules for the surviving runtime-evidence items live in the `verify-by-hand-tiers` skill — load it to set each item's depth (one sentence for `light`, device/input/signal triples for `standard`, explicit STOP cue + multi-scenario coverage for `heavy`).
+The full triage flow lives in the `doubt-triage` skill — load it before drafting `Verify by hand:`. Tier-scaled rules for the surviving runtime-evidence items live in the `verify-by-hand-tiers` skill — load it to set each item's depth (one sentence for `light`, device/input/signal triples for `standard`, explicit STOP cue + multi-scenario coverage for `heavy`).
 {{/if}}
 {{#unless cap.skills}}
-For each candidate doubt ask: *could a fresh reader of the diff + the relevant files / docs answer this without executing the code?* If yes → it is static. {{#if cap.subagents}}Dispatch a fresh-context Verifier subagent with a brief like `Read: <files>. Question: <doubt>. Return one of: OK | ISSUE — <where> | NEEDS RUNTIME — <scenario>.`{{/if}}{{#unless cap.subagents}}Re-read the lines yourself with hostile eyes (role-swap).{{/unless}} Apply: `OK` → drop the doubt; `ISSUE — <X>` → surface as `Uncertain: Subagent found issue: <X>. Recommend /kit-fix <hash> "<short desc>" before next.`; `NEEDS RUNTIME — <scenario>` → mutate into a concrete runtime item for `Verify by hand:` below. Tool-decidable doubts (compile / lint / test) belong in `BUILD:`, not here.
+For each candidate doubt ask: *could a fresh reader of the diff + the relevant files / docs answer this without executing the code?* If yes → it is static. {{#if cap.subagents}}Dispatch a fresh-context Verifier subagent with a brief like `Read: <files>. Question: <doubt>. Return one of: OK | ISSUE — <where> | NEEDS RUNTIME — <scenario>.`{{/if}}{{#unless cap.subagents}}Re-read the lines yourself with hostile eyes (role-swap).{{/unless}} Apply: `OK` → drop the doubt; `ISSUE — <X>` → surface as `Uncertain: Subagent found issue: <X>. Recommend /kit-fix <hash> "<short desc>" before next.`; `NEEDS RUNTIME — <scenario>` → mutate into a concrete runtime item for `Verify by hand:` below. Tool-decidable doubts (compile / lint / test) belong in the build verdict (header), not here.
 
-Then write only runtime-evidence checks the human must perform — never code-reading, never restating BUILD content.
+Then write only runtime-evidence checks the human must perform — never code-reading, never restating the build verdict.
 
 - **`light`** — one short runtime smoke check.
   Example: `run the binary; open the new picker once on the dev machine; confirm it opens and dismisses without crash.`
@@ -563,50 +634,45 @@ Then write only runtime-evidence checks the human must perform — never code-re
 - **`heavy`** — explicit STOP cue plus multi-scenario coverage with a captured artifact.
   Example: `STOP. Re-state in your own words what this step delivers. Reproduce on (a) Pixel 5 emulator API 30 and (b) a low-RAM API 26 device. Open the picker against fixtures/large-50mb.pdf. Capture Logcat + screen recording. Confirm zero ANR, zero "Skipped > 4 frames" warnings.`
 
-Never substitute "read the code at path:line", "run the tests", or "check it compiles" for Human-required content. Code-reading is the agent's job (own context or fresh-context subagent); tool-runs are in BUILD. Human-required is for evidence that requires the human's eyes / hands / device.
+Never substitute "read the code at path:line", "run the tests", or "check it compiles" for `Verify by hand:` content. Code-reading is the agent's job (own context or fresh-context subagent); tool-runs are reflected in the build verdict. `Verify by hand:` is for evidence that requires the human's eyes / hands / device.
 {{/unless}}
 
 ### FIX SUMMARY (Session 3, end)
 
+Plain text, not a fenced block. Same compression rules as STEP SUMMARY. Only emitted when the post-fix verify is **green** — a red verify means the fix is not done, iterate instead of emitting.
+
 ```
-## FIX SUMMARY · commit `<new-hash>` · fixes `<target-hash>`
+**Fixed · `<new-hash>` · fixes `<target-hash>` · build green** (`git show <new-hash>` — diff)
 
-`git show <new-hash>`
-
-**Problem:** <one line from the fix request>
-
-**Defect:** <verbatim Reduce: line from Stage 1 DIAGNOSIS>
-
-**Cause:** <selected cause slug from Stage 1 (combined DIAGNOSIS + CAUSE OPTIONS)>
-
-**Cause considered (auto-advanced):** <one line; present only if Stage 1 took the cause-pick fast-path>
-**Cause considered (rejected):** <if Stage 1 narrowed from >4; one bullet per rejected hypothesis; omit block if absent>
-
-**Approach:** <selected approach slug from Stage 2 (FIX OPTIONS)>
-
-**Approach considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
-**Approach considered (rejected):** <if Stage 2 narrowed; one bullet per rejected approach; omit block if absent>
-
-**Solution:**
-- <by file, concrete>
-
-**Verify:** green | red (— if red, one-line explanation; otherwise this fix is not done)
-- compile: green | red | skipped
-- test:    green | red | skipped
-- lint:    green | red | skipped
-
-**Touched outside the target commit's footprint:**
-- <if any, else "(nothing)">
-
-**Uncertain:** <if any, else "(none)">
+<1–3 prose sentences. State the defect in one line (from Stage 1 DIAGNOSIS's Reduce), the selected root cause (slug from Stage 1), and the selected approach (slug from Stage 2). Then say at the semantic level what the fix changed.>
 
 **Verify by hand:**
-- <concrete runtime scenarios; never code-reading; see verify-by-hand-tiers>
+- <runtime check, depth per tier — see verify-by-hand-tiers>
+
+<The blocks below are present only when non-empty:>
+
+**Uncertain:**
+- <specific lines / decisions you suspect>
+
+**Touched outside the target commit's footprint:**
+- <path:line — what and why>
+
+**Cause considered (auto-advanced):** <one line; present only if Stage 1 took the cause-pick fast-path>
+**Cause considered (rejected):**
+- <one bullet per rejected hypothesis; present only if Stage 1 narrowed from >4>
+
+**Approach considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
+**Approach considered (rejected):**
+- <one bullet per rejected approach; present only if Stage 2 narrowed>
 
 ---
-To return to the Execute session — paste this block there and write:
+To return to the Execute session — paste this block there and reply:
 > next
 ```
+
+Notes:
+- The header carries the full verify result. Per-verb breakdowns (compile/test/lint) live in `git show`'s commit message or the build log — do not restate them.
+- The parent Execute session re-validates the fix via `git log` + `git show <new-hash>` (paste-validation contract). The block's prose is for the human reader; the agent ignores everything except the hash.
 
 ## Behavioral contracts
 
@@ -624,14 +690,14 @@ Never silently proceed when external commits are present. Never silently proceed
 
 ### Paste-validation (Session 2 receiving FIX SUMMARY)
 
-When the user pastes a `## FIX SUMMARY · commit <hash>` block:
+When the user pastes a FIX SUMMARY (header form `**Fixed · `<new-hash>` · fixes `<target-hash>` · build green**`):
 
-1. Do not trust the block's content. The block exists to point you at a commit hash.
-2. Run `git log --oneline <last_known_hash>..HEAD` to validate the commit is in history.
+1. Do not trust the block's content. The block exists to point you at the new-hash.
+2. Run `git log --oneline <last_known_hash>..HEAD` to validate the new-hash is in history.
 3. If the commit is not found → STOP. Output: `Commit <hash> is not in this repo's history. Check the paste, or confirm the fix session committed.`
-4. If found → `git show <hash>` to read the actual diff (never trust the block's "Solution:" section).
+4. If found → `git show <new-hash>` to read the actual diff (never trust the prose paragraph as fact).
 5. Compare the fix against the remaining plan. If it touches files / assumptions of upcoming steps, do not silently continue — propose a replan.
-6. State out loud: `Accepted fix <hash> of <target>. <impact statement>. Continuing step <N+1>.` (or `<impact> — replan recommended.`)
+6. State out loud: `Accepted fix <new-hash> of <target-hash>. <impact statement>. Continuing step <N+1>.` (or `<impact> — replan recommended.`)
 
 ### Push safety (Session 2 Stage 4)
 
@@ -676,7 +742,7 @@ When a fix or external commit invalidates an assumption of the remaining plan:
 Load the `agent-failure-modes` skill before approving any `standard` / `heavy` step (and before the Stage 4 backstop diff review). It carries the six-pattern catalogue — deleted/weakened tests, fabricated imports, scope creep, silent dependency additions, error-swallowing try/catch, static-check suppression — with the regex hints to look for in the diff. On a `light` step, any pattern hit means the step is mistyped → escalate to `standard` and reject the step with `/kit-fix`, not `next`.
 {{/if}}
 {{#unless cap.skills}}
-Tests passing and the build being green ("Agent-verified" section in STEP SUMMARY) does not catch these. Read the diff with them in mind, especially on `standard` and `heavy` tiers. On `light`, any one of these means the step is mistyped — escalate it.
+Tests passing and the build being green (`build green` in the STEP SUMMARY header) does not catch these. Read the diff with them in mind, especially on `standard` and `heavy` tiers. On `light`, any one of these means the step is mistyped — escalate it.
 
 1. **Tests deleted or weakened.** In the diff, look for:
    - removed lines like `-@Test`, `-it("...")`, `-test(...)` (or your framework's equivalent)
@@ -722,17 +788,32 @@ The kit's generated permissions auto-allow every tool listed below so each call 
 
 The text artifact (CONTEXT SUMMARY / PLAN SUMMARY / STEP SUMMARY / FIX SUMMARY / DIAGNOSIS / CAUSE OPTIONS / FIX OPTIONS / DIFF PREVIEW) is **always emitted** — it is the durable audit trail. Native tools layer on top to give the human a click-target instead of a typing-target; they never replace the artifact.
 
-- **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker, Cursor's choice prompt) — prefer them at **closed-list gates** when the runner supports them; they shave a typing round-trip and make the option set visible. Allowed at:
-  - task clarification before CONTEXT SUMMARY;
-  - `y/n` confirmations such as `revert!` and the reflection-quiz mismatch;
-  - Session 2 Stage 4 `ok / keep / cancel` and `push / local` pickers;
-  - baseline retry / replan-or-continue decisions;
-  - Session 3 Stage 1 **cause-pick** (`<N>` from the CAUSE OPTIONS list; the free-form `другая: <text>` / `копай ещё [: <hint>]` / `<correction>` / `abort` tokens stay available as picker fallbacks);
+- **Runtime interactive prompts** — at every **closed-list gate** on this runner you MUST invoke the native picker, not emit a plain-text "reply with N" prompt. The picker is the entire reason these gates exist as closed lists. Mandatory at:
+  - **Task clarification before CONTEXT SUMMARY** (Session 1 Stage 1 step 1) — ambiguity scan asks via picker.
+  - `y/n` confirmations such as `revert!` and the reflection-quiz mismatch.
+  - Session 2 Stage 4 `ok / keep / cancel` and `push / local` pickers.
+  - Baseline retry / replan-or-continue decisions.
+  - Session 3 Stage 1 **cause-pick** (`<N>` from the CAUSE OPTIONS list; the free-form `другая: <text>` / `копай ещё [: <hint>]` / `<correction>` / `abort` tokens stay available as picker fallbacks).
   - Session 3 Stage 2 **approach-pick** (`<N>` from the FIX OPTIONS list; same free-form fallbacks for `другой` / `копай ещё` / `abort`).
+{{#if target.id == "claude-code"}}
+  On Claude Code the picker is `AskUserQuestion`. No permission prompt fires — the runtime handles it as a UX primitive. Schema per question: `{"question", "header" (≤12 chars), "multiSelect": false, "options": [{"label" (≤30 chars), "description"}, …]}`. Always include `{"label": "Other", "description": "Free-form answer in chat"}` last so the free-text token (`другая` / `другой` / `<correction>`) survives.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+  On Qwen Code the picker is `AskUserQuestion` (same schema as Claude Code). Always include an `Other` option.
+{{/if}}
+{{#if target.id == "opencode"}}
+  On OpenCode use the `question` tool — closed-list shape with an `Other` free-text option.
+{{/if}}
+{{#if target.id == "cursor"}}
+  Cursor has no native picker — emit numbered plain-text option blocks at these gates and AWAIT a `<N>` reply. Treat this as the only acceptable fallback.
+{{/if}}
+{{#if target.id == "aider"}}
+  Aider has no native picker — emit numbered plain-text option blocks at these gates and AWAIT a `<N>` reply. Treat this as the only acceptable fallback.
+{{/if}}
 
   When using a native picker for the Session 3 picks, render the options as ranked rows (cause / approach name + one-line gist), keep the picker's free-text input enabled, and treat free-text input as the `другая` / `другой` / `копай ещё` / `<correction>` / `abort` token (parse the prefix). The picker is a UX layer over the documented reply tokens — it never expands or replaces them.
 
-  **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides; **Session 3 Stage 3 DIFF PREVIEW AWAIT**. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages, correction-driven re-diffs).
+  **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides; **Session 3 Stage 3 DIFF PREVIEW AWAIT**. Those must stay text — their wording becomes part of the audit trail (Plan deviations bullets, SUMMARY headers, commit messages, correction-driven re-diffs).
 
 Tools you may NOT use:
 - `--no-verify` on any git command.

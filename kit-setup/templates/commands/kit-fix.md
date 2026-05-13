@@ -9,25 +9,25 @@ Parse:
 - the rest is the defect description. The rest may be either free-form text **or** the structured template from STEP SUMMARY:
 
   ```
-  Дефект: <name>
-  Шаги:
-  1) <шаг 1>
-  n) <шаг n>
-  ФР: <фактический результат>
-  ОР: <Ожидаемый результат>
+  Defect: <name>
+  Steps:
+  1) <step 1>
+  n) <step n>
+  Expected: <what should have happened>
+  Got: <what actually happened>
   ```
 
   When the template is present, treat each field as a separate signal during Stage 1:
-  - `Дефект:` → seeds the **Reduce** line of DIAGNOSIS.
-  - `Шаги:` → seeds the **Repro** line (collapse numbered steps into one copy-pasteable command or scenario; if the steps cannot be collapsed, surface them verbatim in `Repro` as a multi-line block).
-  - `ФР:` / `ОР:` → the observed-vs-expected contrast; feed this into DIAGNOSIS's `Reduce` paragraph and the Stage 1 hypotheses (any cause must explain why ФР ≠ ОР).
+  - `Defect:` → seeds the **Reduce** line of DIAGNOSIS.
+  - `Steps:` → seeds the **Repro** line (collapse numbered steps into one copy-pasteable command or scenario; if the steps cannot be collapsed, surface them verbatim in `Repro` as a multi-line block).
+  - `Expected:` / `Got:` → the observed-vs-expected contrast; feed this into DIAGNOSIS's `Reduce` paragraph and the Stage 1 hypotheses (any cause must explain why `Got` ≠ `Expected`).
 
-  Missing fields are not a hard error — proceed with whatever was provided.
+  Missing fields are not a hard error — proceed with whatever was provided. Equivalent labels in the user's session language (for example `Дефект:` / `Шаги:` / `Ожидал:` / `Получил:` in a Russian session) parse the same way.
 
 ## Pre-checks (run before Stage 1)
 
 1. **Commit-hash exists.** `git cat-file -e <commit-hash> 2>&1` — if it fails, STOP: `Commit <hash> does not exist in this repository.`
-2. **Description non-empty.** If the rest of `$ARGUMENTS` after stripping the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash. Use the template from STEP SUMMARY: "Дефект: … / Шаги: … / ФР: … / ОР: …".`
+2. **Description non-empty.** If the rest of `$ARGUMENTS` after stripping the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash. Use the template from STEP SUMMARY: "Defect: … / Steps: … / Expected: … / Got: …" (localized labels accepted).`
 3. **Working tree is clean.** `git status --porcelain` — if non-empty, STOP: `Working tree is dirty. Stash or commit other work first; Session 3 needs a clean tree to attribute the new fix-commit cleanly.`
 4. **Plan-commit reachable.** `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~` — if empty, STOP: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do, which lays down a plan-commit upstream. If this is a manual commit, fix it through normal git workflow instead.`
 
@@ -40,14 +40,30 @@ All four pass → enter Stage 1.
 1. `git show <commit-hash>` — read the target commit's diff.
 2. Read `.aikit/plans/<plan-id>.md` (the plan-commit located in pre-check 4 carries the id in its message).
 3. Read related source files needed to understand the defect.
-4. Run the `debug-loop` skill: produce **Repro** (one-line copy-pasteable; if the user gave structured `Шаги:`, this is where they go), **Localize** (path:line-range), **Reduce** (one paragraph that explains the ФР vs ОР contrast verbatim when supplied). If the repro cannot be produced or the defect lives upstream of `<commit-hash>`, follow the skill's STOP rules.
-5. **Without pausing**, run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses, each in predict-observe-conclude form, scoped to the evidence just collected. Each hypothesis must be able to explain the ФР ≠ ОР contrast.
+4. Run the `debug-loop` skill: produce **Repro** (one-line copy-pasteable; if the user gave structured `Steps:`, this is where they go), **Localize** (path:line-range), **Reduce** (one paragraph that explains the `Expected:` vs `Got:` contrast verbatim when supplied). If the repro cannot be produced or the defect lives upstream of `<commit-hash>`, follow the skill's STOP rules.
+5. **Without pausing**, run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses, each in predict-observe-conclude form, scoped to the evidence just collected. Each hypothesis must be able to explain the `Got` ≠ `Expected` contrast.
 6. Emit **DIAGNOSIS** block followed immediately by **CAUSE OPTIONS** block (formats defined in their respective skills). Merge their Reply: footers into one combined footer at the end (see "Combined AWAIT footer" below).
 7. **Adaptive fast-path for cause selection:**
    - If exactly 1 hypothesis was plausible → CAUSE OPTIONS header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip the AWAIT**, advance to Stage 2 with that cause selected. User override: replying `стоп` within the next message forces AWAIT and refines.
    - If 0 → STOP per the `cause-hypotheses` skill's rule.
    - If ≥2 → AWAIT.
-8. **AWAIT** (unless fast-path skipped it). Use the native interactive picker (`AskUserQuestion` or the runner's equivalent) when available — the cause-pick is a closed list of N options plus a free-form fallback, which fits the picker contract. The free-text input is parsed against the tokens in priority order (first match wins):
+8. **AWAIT** (unless fast-path skipped it). The cause-pick gate uses the native picker — mandatory on runners that have one.
+{{#if target.id == "claude-code"}}
+   **Invoke `AskUserQuestion`** with closed-list `<N>` options + `{"label": "Other"}` last as the free-form fallback. Do NOT emit a plain-text "reply with N" prompt.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+   **Invoke `AskUserQuestion`** (same schema as Claude Code) with closed-list options + `{"label": "Other"}` last.
+{{/if}}
+{{#if target.id == "opencode"}}
+   **Invoke the `question` tool** with closed-list options + free-form `Other`.
+{{/if}}
+{{#if target.id == "cursor"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+{{#if target.id == "aider"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+   The free-text input is parsed against the tokens in priority order (first match wins):
    1. `<N>` (number from the cause list) → cause selected; advance to Stage 2
    2. `другая: <text>` → user-supplied cause; advance to Stage 2 with that cause
    3. `ok` (literal) → only valid when CAUSE OPTIONS auto-advanced; confirms the auto-selected cause and proceeds to Stage 2
@@ -63,7 +79,23 @@ All four pass → enter Stage 1.
    - If exactly 1 viable approach → header carries `Auto-advanced: no viable alternatives surfaced.`, **skip the AWAIT**, advance to Stage 3 with that approach selected. Override: `стоп`.
    - If 0 → STOP per the skill's rule.
    - If ≥2 → AWAIT.
-4. **AWAIT** (unless fast-path skipped it). Use the native interactive picker when available — the approach-pick is also a closed list with a free-form fallback. Reply tokens:
+4. **AWAIT** (unless fast-path skipped it). The approach-pick gate uses the native picker — mandatory on runners that have one.
+{{#if target.id == "claude-code"}}
+   **Invoke `AskUserQuestion`** with closed-list approach options + `{"label": "Other"}` last.
+{{/if}}
+{{#if target.id == "qwen-code"}}
+   **Invoke `AskUserQuestion`** (same schema as Claude Code) with closed-list options + `{"label": "Other"}` last.
+{{/if}}
+{{#if target.id == "opencode"}}
+   **Invoke the `question` tool** with closed-list options + free-form `Other`.
+{{/if}}
+{{#if target.id == "cursor"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+{{#if target.id == "aider"}}
+   This runner has no native picker — emit the closed list as plain text and AWAIT a `<N>` reply.
+{{/if}}
+   Reply tokens:
    - `<N>` → approach selected; advance to Stage 3
    - `другой: <text>` → user-supplied approach; advance to Stage 3 with that approach
    - `копай ещё [: <hint>]` → research pass (read callers, check test coverage) and re-emit FIX OPTIONS
@@ -81,9 +113,9 @@ All four pass → enter Stage 1.
 
 ## Stage 4 — Commit + verify + summary
 
-1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. The `<slug>` is derived from the user's description (kebab-case, ≤4 words; if the structured template was used, prefer the `Дефект:` value as the source). If the commit fails (pre-commit hook), STOP and surface the error verbatim. Do not retry, do not `--no-verify`.
+1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. The `<slug>` is derived from the user's description (kebab-case, ≤4 words; if the structured template was used, prefer the `Defect:` value — or its localized equivalent — as the source). If the commit fails (pre-commit hook), STOP and surface the error verbatim. Do not retry, do not `--no-verify`.
 2. **Run verify.** Resolve the target step's `Verify` field from the plan (or default `[compile, test]`) via the active language profile. Run each command. Capture per-verb result.
-3. If verify is red, the fix is not done. Loop back into Stage 3 (the worktree is now empty; re-apply additional changes) **unless** the structural intent was to land a `--keep-red` carry — in that case, document the reason in FIX SUMMARY's `Verify:` explanation field.
+3. If verify is red, the fix is not done. Loop back into Stage 3 (re-apply additional changes) or `abort`. Do not emit a FIX SUMMARY with a red header — the parent Execute session's paste-validation contract treats a FIX SUMMARY as evidence that the fix is good, and a red one would lie about that. If the user truly wants to land a red commit, that decision belongs to /kit-do via `next --keep-red`, not to /kit-fix.
 4. Emit **FIX SUMMARY** block (format defined in `prompts/Main.md` § Artifacts). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when those stages took the fast-path.
 5. END.
 

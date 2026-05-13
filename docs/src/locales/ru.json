@@ -25,7 +25,7 @@
   },
   "home": {
     "hero": {
-      "badge": "v4.1 · Apache 2.0",
+      "badge": "v4.2 · Apache 2.0",
       "title": "Всё для AI-агента",
       "lead": "Набор инструментов для разных AI-агентов, которые формируют пайплайны разработки качественных продуктов.",
       "ctaStart": "Поставить за минуту",
@@ -243,7 +243,8 @@
         { "path": ".claude/commands/*.md", "purpose": "Слэш-команды /kit, /kit-do, /kit-fix. Тело каждой — промпт, который Claude Code подставляет при вызове." },
         { "path": ".claude/skills/*/SKILL.md", "purpose": "Навыки с автотриггерами по описанию. Базовые (всегда): summary-format (формат блоков), agent-failure-modes (паттерны для ревью диффа), verify-by-hand-tiers (правила Human-required по тирам), aikit-plan-artifact (формат plan-файла), doubt-triage (классификация static/mechanical/runtime), debug-loop (Stage 1 первая половина — анамнез: repro/localize/reduce), cause-hypotheses (Stage 1 вторая половина — варианты причины, объединены с анамнезом одним AWAIT'ом), fix-options (Stage 2 варианты фикса). Опциональные (включаются в policies.optional_skills): tdd-cycle, security-checklist, doubt-driven-review, simplification-pass, adr-on-decision." },
         { "path": ".claude/prompts/*.md", "purpose": "Пользовательские промпты-помощники. Не вызываются автоматически — копируете в чат вручную, когда нужно." },
-        { "path": ".claude/settings.json", "purpose": "Пермишены, allowlist для Bash, конфигурация MCP-серверов. Шаблон с разумными дефолтами." },
+        { "path": ".claude/settings.json", "purpose": "Пермишены, allowlist для Bash, env. Шаблон с разумными дефолтами." },
+        { "path": ".mcp.json", "purpose": "MCP-серверы в project-scope — задокументированное место Claude Code для MCP. Создаётся только если в манифесте tools[] есть включённая запись mcp-*." },
         { "path": ".claude/hooks/*.mjs", "purpose": "Опционально. Авто-проверки на события PreToolUse / PostToolUse / Stop. Например, блокировать Edit вне разрешённых директорий." }
       ]
     },
@@ -264,8 +265,8 @@
           "body": "PreToolUse может заблокировать tool call (например, Bash с rm -rf), PostToolUse — добавить проверку после Edit, Stop — финальную валидацию. Все хуки — обычные .mjs файлы рядом с проектом."
         },
         {
-          "title": "Пермишены и MCP в settings.json",
-          "body": "Allowlist Bash-команд, явные разрешения на запись, конфигурация MCP-серверов. Один файл, рядом с проектом — можно ревьюить как обычный код."
+          "title": "Пермишены в settings.json, MCP в .mcp.json",
+          "body": "Allowlist Bash-команд и явные разрешения на запись лежат в .claude/settings.json. MCP-серверы project-scope — в .mcp.json в корне репозитория, задокументированном месте Claude Code. Оба файла — обычные текстовые, ревьюятся как любой код."
         }
       ]
     },

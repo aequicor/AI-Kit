@@ -4,7 +4,7 @@ Generates AI agent configuration files for [Claude Code](https://claude.ai/code)
 
 The orchestrating agent writes one `.aikit/manifest.yaml` describing the project (stack, modules, agents, models, providers, render targets, opt-in profiles); the binary resolves profiles, validates the manifest, and emits files for each enabled target (`CLAUDE.md`, `.claude/agents/*.md`, `AGENTS.md`, `.cursor/rules/*.mdc`, `.aider.conf.yml`, `opencode.json`, etc.).
 
-The bundle ships the v4 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → **diagnostic 4-stage Fix** targeting one commit (Анамнез + Варианты причины fused under one AWAIT → Варианты фикса → Реализация with AWAIT before commit → Commit + verify) — eight on-demand core skills — `summary-format` (bullet-only block shapes for every stage), `agent-failure-modes` (six diff-level patterns to catch a green build that's actually broken), `verify-by-hand-tiers` (per-tier rules for the Human-required section), `aikit-plan-artifact` (frozen `.aikit/plans/<id>.md` format + `Verify`-verb vocabulary), `doubt-triage` (static / mechanical / runtime classification before Human-required), `debug-loop` (Stage 1 first-half anamnesis — repro / localize / reduce), `cause-hypotheses` (Stage 1 second-half root-cause options; no AWAIT between the halves), `fix-options` (Stage 2 approach options with adaptive fast-path), five opt-in skills — `tdd-cycle`, `security-checklist`, `doubt-driven-review`, `simplification-pass`, `adr-on-decision` — and 12 stack profiles across language × framework × capability axes. The generated runner permissions auto-allow every pipeline-essential tool (git verbs, `AskUserQuestion`, `Skill`, `Agent`, stack-derived `Bash(<build-tool>:*)`) so the human is not prompted on each commit. Human validates every commit; git is the source of truth.
+The bundle ships the v4 pipeline: a 2-agent roster (Main pipeline driver + Researcher Stage-1 helper), 3 slash commands (`/kit`, `/kit-do`, `/kit-fix`) that drive a three-session loop — Plan → Execute with auto-commit per step → **diagnostic 4-stage Fix** targeting one commit (Анамнез + Варианты причины fused under one AWAIT → Варианты фикса → Реализация with AWAIT before commit → Commit + verify) — eight on-demand core skills — `summary-format` (compressed block shapes: single status header + 1–3 sentence prose paragraph + only-non-empty alert sections + one copyable `/kit-fix` defect block), `agent-failure-modes` (six diff-level patterns to catch a green build that's actually broken), `verify-by-hand-tiers` (per-tier rules for the `Verify by hand:` section), `aikit-plan-artifact` (frozen `.aikit/plans/<id>.md` format + `Verify`-verb vocabulary), `doubt-triage` (static / mechanical / runtime classification before items reach the human), `debug-loop` (Stage 1 first-half anamnesis — repro / localize / reduce), `cause-hypotheses` (Stage 1 second-half root-cause options; no AWAIT between the halves), `fix-options` (Stage 2 approach options with adaptive fast-path), five opt-in skills — `tdd-cycle`, `security-checklist`, `doubt-driven-review`, `simplification-pass`, `adr-on-decision` — and 12 stack profiles across language × framework × capability axes. The generated runner permissions auto-allow every pipeline-essential tool (git verbs, `AskUserQuestion`, `Skill`, `Agent`, stack-derived `Bash(<build-tool>:*)`) so the human is not prompted on each commit. Human validates every commit; git is the source of truth.
 
 ---
 
@@ -183,6 +183,21 @@ agents:                             # required, min 1 — v3 fixes the roster at
     prompt: { include: prompts/Researcher.md }
     tools: [Read, Glob, Grep, WebFetch]
 
+tools:                              # optional — MCP / LSP servers. For Claude Code these are
+                                    # rendered into a project-root `.mcp.json` (the documented
+                                    # project-scope location). Omit the whole key if you don't
+                                    # use MCP — no `.mcp.json` is emitted in that case.
+  - id: serena                      #   LSP-grade code intelligence (stdio)
+    kind: mcp-stdio
+    command: uvx
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
+           "--context", "ide-assistant", "--project", "."]
+    enabled: true
+  - id: knowledge-os                #   well-known id — flips KNOWLEDGE_OS_ENABLED template flag
+    kind: mcp-http
+    url: "http://localhost:8765/mcp"
+    enabled: true
+
 policies:                           # folded into the generated CLAUDE.md / AGENTS.md / rules
   forbidden_patterns:
     - "No platform-specific code (android/ios/jvm/js) in commonMain source sets"
@@ -194,7 +209,10 @@ policies:                           # folded into the generated CLAUDE.md / AGEN
     - simplification-pass           # behavior-preserving complexity reduction
     - adr-on-decision               # Architecture Decision Record per non-trivial choice
 
-knowledge: {}                       # empty for default flow; attach hot-tier docs here later
+# knowledge:                        # OPTIONAL — distinct from `tools:` above. Shape is
+                                    # `constitution / specs / session`, not `- id/path`.
+                                    # Omit unless wiring an authored constitution; MCP
+                                    # backends like KnowledgeOS belong in `tools:`.
 ```
 
 ### Field rules the verifier enforces

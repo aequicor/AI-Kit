@@ -46,9 +46,9 @@ State the defect in plain prose, one paragraph maximum, citing the localized spa
 ```
 ## DIAGNOSIS · commit `<target-hash>`
 
-**Repro:** <one-line, copy-pasteable; `(none yet)` if not reproducible. If the user supplied the structured /kit-fix template's `Шаги:`, fold the steps in here — collapse into one command when possible, or carry them verbatim if not.>
+**Repro:** <one-line, copy-pasteable; `(none yet)` if not reproducible. If the user supplied the structured /kit-fix template's `Steps:` (or its localized equivalent), fold the steps in here — collapse into one command when possible, or carry them verbatim if not.>
 **Localize:** <path:line-range>
-**Reduce:** <one-paragraph prose citing the span. When the user supplied `ФР:` / `ОР:`, the paragraph must include the contrast verbatim — "expected <ОР>, observed <ФР>" — so Stage 1 hypotheses can be checked against it.>
+**Reduce:** <one-paragraph prose citing the span. When the user supplied `Expected:` / `Got:` (or their localized equivalents), the paragraph must include the contrast verbatim — `expected <Expected>, observed <Got>` — so Stage 1 hypotheses can be checked against it.>
 
 **Plan-step context:** <slug from plan that this commit implemented; from `kit: step N/M — <slug>` of the target>
 **Out-of-scope:** <areas touched only to verify repro, not to fix; omit line if none>

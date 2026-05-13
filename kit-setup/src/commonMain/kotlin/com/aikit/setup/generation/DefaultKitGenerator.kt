@@ -133,6 +133,9 @@ class DefaultKitGenerator(
 
         // Settings file.
         renderSettings(manifest, adapter, targetRoot, written, errors)
+
+        // Project-scoped MCP file (e.g. Claude Code's `.mcp.json`).
+        renderMcpFile(manifest, adapter, targetRoot, written, errors)
     }
 
     // ── instruction file (CLAUDE.md / AGENTS.md / …) ─────────────────────────
@@ -736,6 +739,45 @@ class DefaultKitGenerator(
         // `{{...}}` that's part of the JSON value space.
         var rendered = template
         for ((k, v) in variables) rendered = rendered.replace("{{$k}}", v)
+        writeArtifact(targetRoot, outPath, rendered.trimEnd() + "\n", written, errors)
+    }
+
+    // ── project-scoped MCP file (.mcp.json) ─────────────────────────────────
+    //
+    // Claude Code reads project MCP servers from `.mcp.json` at the repo
+    // root, NOT from `.claude/settings.json → mcpServers` (the latter is
+    // silently ignored by current Claude Code releases). Adapters whose
+    // runner separates the two declare `mcp_file` + `mcp_template` in
+    // `adapter.yaml`; OpenCode and Qwen Code keep their MCP block inline in
+    // the main settings file, so `mcpFile` stays null there and this step
+    // is a no-op for them.
+    //
+    // Emission is skipped when no `tools[]` entry has an enabled `mcp-*`
+    // kind — there is no value in dropping an empty `.mcp.json` next to
+    // projects that don't use MCP.
+    private fun renderMcpFile(
+        manifest: TypedManifest,
+        adapter: Adapter,
+        targetRoot: String,
+        written: MutableList<String>,
+        errors: MutableList<GenerationError>,
+    ) {
+        val outPath = adapter.mcpFile ?: return
+        val templatePath = adapter.mcpTemplate?.let { "${adapter.packagePath}/$it" } ?: return
+        val hasMcpTool = manifest.tools.any { it.enabled && it.kind.startsWith("mcp-") }
+        if (!hasMcpTool) return
+        val template = templates.read(templatePath) ?: run {
+            errors += GenerationError(
+                path = templatePath,
+                code = "missing_mcp_template",
+                message = "MCP file template `$templatePath` not found",
+            )
+            return
+        }
+        val mcp = mcpServersJson(manifest)
+        var rendered = template.replace("{{MCP_SERVERS_JSON}}", mcp)
+        // Project file path is project-root relative, not config-dir relative —
+        // .mcp.json sits next to package.json / build.gradle, not under .claude/.
         writeArtifact(targetRoot, outPath, rendered.trimEnd() + "\n", written, errors)
     }
 

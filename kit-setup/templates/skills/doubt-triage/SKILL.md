@@ -1,10 +1,10 @@
-Classify every doubt before it lands in Human-required — static doubts go to a fresh-context subagent (or main-agent self-resolve), only runtime-evidence reaches the human.
+Classify every doubt before it lands in front of the human — static doubts go to a fresh-context subagent (or main-agent self-resolve), only runtime-evidence reaches the human's `Verify by hand:` list.
 
 # When to invoke
 
 | Stage | Trigger |
 |---|---|
-| Session 2 Stage 3 step 6 | before filling the STEP SUMMARY's Human-required section |
+| Session 2 Stage 3 step 6 | before filling the STEP SUMMARY's `Verify by hand:` and `Uncertain:` sections |
 | Session 2 Stage 4 backstop | before raising any diff-review concerns to the user |
 | Session 3 step 7 | before filling the FIX SUMMARY's `Verify by hand:` section |
 
@@ -44,7 +44,7 @@ Return exactly one of:
 
 Wait for the verdict, then apply:
 
-- **`OK`** → resolved. Drop the doubt — do not surface it in Human-required. Optionally log `Verified by subagent (static): <one-line>` inside the Agent-verified section if the doubt was material.
+- **`OK`** → resolved. Drop the doubt — do not surface it anywhere in the SUMMARY. Material static-checks that were resolved this way are agent-internal evidence; do not pad the SUMMARY with "verified by subagent" lines.
 - **`ISSUE — <X>`** → the step has a real defect. Surface it as the first bullet of the SUMMARY's `Uncertain:` section, prefixed `Subagent found issue:`, and append the gate recommendation: `Recommend /kit-fix <hash> "<short desc>" before next.` Do **not** mask the defect as `Verify by hand:` content; that hides it from the gate.
 - **`NEEDS RUNTIME — <scenario>`** → mutate the doubt into the runtime scenario the subagent specified, then fold it into `Verify by hand:` (formatted per `verify-by-hand-tiers`).
 {{/if}}
@@ -56,9 +56,9 @@ If after the role-swap re-read you cannot reach a clear verdict, demote the doub
 
 ## Dispatch — mechanical doubts
 
-The Agent-verified `BUILD:` block already reports these. If the doubt is "does this still pass lint" and `lint` is in the step's `verify:` list, the answer is in `BUILD:`. Do not restate it in Human-required.
+The SUMMARY's status header (`build green` / `build red: <verbs>` / `build skipped: <verbs>`) already reports these. If the doubt is "does this still pass lint" and `lint` is in the step's `verify:` list, the answer is in the header. Do not restate it under `Verify by hand:` or `Uncertain:`.
 
-If the doubt names a check **not** covered by `verify:`, run the tool yourself one-shot before drafting SUMMARY and add the result to `BUILD:` as a `shell:` line. Still does not belong in Human-required.
+If the doubt names a check **not** covered by `verify:`, run the tool yourself one-shot before drafting SUMMARY. If it fails, the header flips to `build red` and `<verbs>` includes the verb you ran. If it passes, the doubt is resolved silently — no SUMMARY line needed.
 
 ## Dispatch — runtime-evidence doubts
 
@@ -74,8 +74,8 @@ Then format with the depth rules in `verify-by-hand-tiers`.
 
 - **"verify by hand: read code at path:line"** — code-reading is the subagent's job (or yours). Never the human's.
 - **"uncertain: maybe X is not handled"** without having checked the lines yourself — that is a static doubt you skipped triaging.
-- **Dumping the role-swap output verbatim** into Human-required — `doubt-driven-review` produces raw doubts; this skill routes them.
-- **Pretending the BUILD block is incomplete** to push a check to the human — if a tool answers it, run the tool.
+- **Dumping the role-swap output verbatim** into `Verify by hand:` — `doubt-driven-review` produces raw doubts; this skill routes them.
+- **Pretending the build verdict is incomplete** to push a check to the human — if a tool answers it, run the tool.
 - **Hiding a subagent-found defect** inside `Verify by hand:` ("verify that null URI handling is correct") instead of in `Uncertain:` with the `Recommend /kit-fix` gate.
 
 # Why this exists

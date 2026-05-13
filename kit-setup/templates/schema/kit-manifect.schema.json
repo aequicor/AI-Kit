@@ -104,7 +104,7 @@
         },
         "permissions": {
           "type": "object",
-          "description": "Runner-permission overrides on top of the kit's built-in pipeline allow-list (git verbs, AskUserQuestion, Skill, Agent, …) and the stack-derived patterns (Bash(<build-tool>:*)). Use Claude Code grammar — adapters translate to per-runner formats (OpenCode nested object, etc.). Deny wins over allow.",
+          "description": "Runner-permission overrides on top of the kit's built-in pipeline allow-list (git verbs, Skill, Agent, TodoWrite, ExitPlanMode, file ops) and the stack-derived patterns (Bash(<build-tool>:*)). Use Claude Code grammar — adapters translate to per-runner formats (OpenCode nested object, etc.). Deny wins over allow. Note: AskUserQuestion and EnterPlanMode are UX/AWAIT primitives that Claude Code auto-allows and its settings.json schema rejects in `permissions.allow` — do not add them here.",
           "properties": {
             "allow": {
               "type": "array",

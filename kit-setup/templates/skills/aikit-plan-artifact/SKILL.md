@@ -27,7 +27,7 @@ The plan file is **frozen** after the Session 1 commit. Do not modify it from in
 
 ## Invariants
 
-<3–5 plan-level boundary statements; each is re-asserted in every STEP SUMMARY. Violating one requires rationale in the step's Plan deviations.>
+<3–5 plan-level boundary statements; each is re-checked against every step's diff by the agent before emitting STEP SUMMARY. A clean run produces no output. An intentional relaxation must surface as a bullet under the step's `Plan deviations:`; an unintentional violation means the step is broken (fix or revert).>
 
 - <invariant 1>
 - <invariant 2>

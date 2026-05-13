@@ -10,6 +10,14 @@ config_dir: ".claude"
 instruction_file: "CLAUDE.md"
 settings_file: ".claude/settings.json"
 
+# Project-scoped MCP servers live at the repo root in `.mcp.json` (per the
+# Claude Code MCP docs, project scope). `.claude/settings.json` is NOT a
+# documented place for `mcpServers` and is silently ignored by current
+# Claude Code releases — keep the two files apart so MCP config actually
+# reaches the runner.
+mcp_file: ".mcp.json"
+mcp_template: mcp.json.template
+
 # Per-artifact output paths. Use {id}, {feature}, {module} as placeholders.
 # null = runner does not support this artifact type — renderer skips with warning.
 artifact_paths:
@@ -35,7 +43,7 @@ capabilities:
   per_agent_tools: true                      # frontmatter.tools whitelist
   scoped_rules: false                        # rules apply globally via CLAUDE.md
   hooks: true                                # .claude/hooks/<event>.mjs
-  mcp_inline_in_settings: true               # .claude/settings.json mcpServers
+  mcp_inline_in_settings: false              # MCP lives in project-root .mcp.json, not settings.json
   skills_directory_format: true              # skill = directory containing SKILL.md
   skills: true                               # runner discovers / loads skills on demand
   slash_commands: true

@@ -51,12 +51,11 @@ class PermissionResolverTest {
     @Test
     fun kitPipelineEssentialsAlwaysPresent() {
         val resolved = PermissionResolver(manifestOf()).resolve()
-        // Native interactive tools the prompt asks the agent to use must not
-        // prompt the user — they are the AWAIT mechanism, not a per-call ask.
-        assertTrue("AskUserQuestion" in resolved.allow)
+        // Side-effect tools the prompt asks the agent to use must not
+        // prompt the user on every call.
         assertTrue("ExitPlanMode" in resolved.allow)
-        assertTrue("EnterPlanMode" in resolved.allow)
         assertTrue("TodoWrite" in resolved.allow)
+        assertTrue("Skill" in resolved.allow)
         // Git verbs the pipeline body actually issues.
         assertTrue("Bash(git status:*)" in resolved.allow)
         assertTrue("Bash(git commit:*)" in resolved.allow)
@@ -65,6 +64,18 @@ class PermissionResolverTest {
         // the deny pattern requires --force as the exact token.
         assertTrue("Bash(git push --force *)" in resolved.deny)
         assertTrue("Bash(git push --force)" in resolved.deny)
+    }
+
+    @Test
+    fun uxPrimitivesAreNotInDefaultAllow() {
+        // Reason: `AskUserQuestion` and `EnterPlanMode` are auto-allowed UX/AWAIT
+        // primitives in current Claude Code and the settings.json schema regex
+        // does not recognise them — emitting them in `permissions.allow` makes
+        // the whole file fail schema validation. They must not appear unless
+        // the manifest author opted in via `policies.permissions.allow`.
+        val resolved = PermissionResolver(manifestOf()).resolve()
+        assertFalse("AskUserQuestion" in resolved.allow)
+        assertFalse("EnterPlanMode" in resolved.allow)
     }
 
     @Test
@@ -138,7 +149,7 @@ class PermissionResolverTest {
         assertTrue("Bash(docker:*)" in resolved.allow)
         assertTrue("WebFetch(domain:internal.corp)" in resolved.allow)
         // Kit essentials still present.
-        assertTrue("AskUserQuestion" in resolved.allow)
+        assertTrue("ExitPlanMode" in resolved.allow)
     }
 
     @Test
@@ -160,8 +171,11 @@ class PermissionResolverTest {
         // Compact JSON array of strings, no whitespace.
         assertTrue(json.startsWith("["))
         assertTrue(json.endsWith("]"))
-        assertTrue(json.contains("\"AskUserQuestion\""))
+        assertTrue(json.contains("\"ExitPlanMode\""))
         assertTrue(json.contains("\"Bash(git status:*)\""))
+        // Schema-rejected UX primitives must NOT appear in the default output.
+        assertFalse(json.contains("\"AskUserQuestion\""))
+        assertFalse(json.contains("\"EnterPlanMode\""))
     }
 
     @Test
@@ -178,6 +192,10 @@ class PermissionResolverTest {
                     formatCommand = null,
                     runCommand = null,
                 ),
+                // AskUserQuestion is no longer in the default allow list (it
+                // breaks Claude Code's schema); add it explicitly so we still
+                // exercise the AskUserQuestion → question translation branch.
+                permissionsAllow = listOf("AskUserQuestion"),
             ),
         ).opencodePermissionJson()
         // Picker → question: "allow"
