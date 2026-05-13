@@ -3,10 +3,12 @@ package io.aeqicor.aikit.pdf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
@@ -47,6 +49,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -115,108 +128,226 @@ fun PdfViewerScreen(
         viewModel.applyZoom(state.zoomScale * zoomChange)
     }
 
-    Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("PDF Viewer") },
-                    actions = {
-                        if (state.pageCount > 0) {
-                            TextButton(onClick = { viewModel.toggleSidebar() }) {
-                                Text(if (state.isSidebarOpen) "✕☰" else "☰")
-                            }
-                        }
-                        Button(onClick = openAction) { Text("Open") }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                when {
+                    event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.F -> {
+                        viewModel.openSearch()
+                        true
                     }
-                )
-                if (state.pageCount > 0) {
-                    PdfNavigationBar(
-                        state = state,
-                        onPrevPage = { viewModel.prevPage() },
-                        onNextPage = { viewModel.nextPage() },
-                        onGoToPage = { viewModel.goToPage(it) },
-                        onZoomIn = { viewModel.zoomIn() },
-                        onZoomOut = { viewModel.zoomOut() },
-                        onResetZoom = { viewModel.resetZoom() },
-                        onFitToWidth = { viewModel.fitToWidth() }
-                    )
+                    event.type == KeyEventType.KeyDown && event.key == Key.Escape && state.isSearchOpen -> {
+                        viewModel.closeSearch()
+                        true
+                    }
+                    else -> false
                 }
             }
-        }
-    ) { paddingValues ->
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Thumbnail sidebar
-            AnimatedVisibility(
-                visible = state.isSidebarOpen,
-                enter = expandHorizontally(expandFrom = Alignment.Start),
-                exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
-            ) {
-                ThumbnailSidebar(state = state, viewModel = viewModel)
-            }
-
-            // Main content
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .onSizeChanged { size ->
-                        if (size.width > 0) viewModel.setViewportWidth(size.width)
-                    }
-                    .transformable(state = transformState),
-                contentAlignment = Alignment.Center
-            ) {
-                when {
-                    state.isLoading -> CircularProgressIndicator()
-                    state.error != null -> Text(
-                        text = "Error: ${state.error}",
-                        color = MaterialTheme.colorScheme.error
+    ) {
+        Scaffold(
+            topBar = {
+                Column {
+                    TopAppBar(
+                        title = { Text("PDF Viewer") },
+                        actions = {
+                            if (state.pageCount > 0) {
+                                TextButton(onClick = { viewModel.toggleSidebar() }) {
+                                    Text(if (state.isSidebarOpen) "✕☰" else "☰")
+                                }
+                                TextButton(onClick = {
+                                    if (state.isSearchOpen) viewModel.closeSearch()
+                                    else viewModel.openSearch()
+                                }) {
+                                    Text("Find")
+                                }
+                            }
+                            Button(onClick = openAction) { Text("Open") }
+                        }
                     )
-                    state.pageCount > 0 -> LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(state.pageCount) { pageIndex ->
-                            val bitmap = state.renderedPages[pageIndex]
-                            val density = LocalDensity.current
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(hScrollState)
-                            ) {
-                                Box(
+                    if (state.pageCount > 0) {
+                        PdfNavigationBar(
+                            state = state,
+                            onPrevPage = { viewModel.prevPage() },
+                            onNextPage = { viewModel.nextPage() },
+                            onGoToPage = { viewModel.goToPage(it) },
+                            onZoomIn = { viewModel.zoomIn() },
+                            onZoomOut = { viewModel.zoomOut() },
+                            onResetZoom = { viewModel.resetZoom() },
+                            onFitToWidth = { viewModel.fitToWidth() }
+                        )
+                    }
+                    if (state.isSearchOpen) {
+                        SearchBar(
+                            state = state,
+                            onQueryChange = { viewModel.setSearchQuery(it) },
+                            onSearch = { viewModel.executeSearch() },
+                            onClose = { viewModel.closeSearch() },
+                            onPrev = { viewModel.prevMatch() },
+                            onNext = { viewModel.nextMatch() }
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Thumbnail sidebar
+                AnimatedVisibility(
+                    visible = state.isSidebarOpen,
+                    enter = expandHorizontally(expandFrom = Alignment.Start),
+                    exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
+                ) {
+                    ThumbnailSidebar(state = state, viewModel = viewModel)
+                }
+
+                // Main content
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .onSizeChanged { size ->
+                            if (size.width > 0) viewModel.setViewportWidth(size.width)
+                        }
+                        .transformable(state = transformState),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        state.isLoading -> CircularProgressIndicator()
+                        state.error != null -> Text(
+                            text = "Error: ${state.error}",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        state.pageCount > 0 -> LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(state.pageCount) { pageIndex ->
+                                val bitmap = state.renderedPages[pageIndex]
+                                val density = LocalDensity.current
+                                val pageMatchesWithIndex = state.searchMatches
+                                    .mapIndexed { i, m -> i to m }
+                                    .filter { (_, m) -> m.pageIndex == pageIndex }
+                                Row(
                                     modifier = Modifier
-                                        .widthIn(min = with(density) { state.actualViewportWidth.toDp() })
-                                        .height(
-                                            if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
-                                            else 400.dp
-                                        )
-                                        .padding(vertical = 2.dp),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .horizontalScroll(hScrollState)
                                 ) {
-                                    if (bitmap != null) {
-                                        Image(
-                                            bitmap = bitmap,
-                                            contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
-                                            modifier = Modifier.width(
-                                                with(density) { bitmap.width.toDp() }
-                                            ),
-                                            contentScale = ContentScale.FillWidth
-                                        )
-                                    } else {
-                                        CircularProgressIndicator()
+                                    Box(
+                                        modifier = Modifier
+                                            .widthIn(min = with(density) { state.actualViewportWidth.toDp() })
+                                            .height(
+                                                if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
+                                                else 400.dp
+                                            )
+                                            .padding(vertical = 2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (bitmap != null) {
+                                            Box(
+                                                modifier = Modifier.width(
+                                                    with(density) { bitmap.width.toDp() }
+                                                )
+                                            ) {
+                                                Image(
+                                                    bitmap = bitmap,
+                                                    contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    contentScale = ContentScale.FillWidth
+                                                )
+                                                if (pageMatchesWithIndex.isNotEmpty()) {
+                                                    Canvas(modifier = Modifier.matchParentSize()) {
+                                                        pageMatchesWithIndex.forEach { (globalIdx, match) ->
+                                                            val isCurrent = globalIdx == state.currentMatchIndex
+                                                            drawRect(
+                                                                color = if (isCurrent)
+                                                                    Color(0xFFFF6600).copy(alpha = 0.55f)
+                                                                else
+                                                                    Color(0xFFFFFF00).copy(alpha = 0.40f),
+                                                                topLeft = Offset(
+                                                                    match.left * size.width,
+                                                                    match.top * size.height
+                                                                ),
+                                                                size = Size(
+                                                                    (match.right - match.left) * size.width,
+                                                                    (match.bottom - match.top) * size.height
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            CircularProgressIndicator()
+                                        }
                                     }
                                 }
                             }
                         }
+                        else -> Text("Open a PDF file to get started")
                     }
-                    else -> Text("Open a PDF file to get started")
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SearchBar(
+    state: PdfViewerState,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClose: () -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = state.searchQuery,
+            onValueChange = onQueryChange,
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            placeholder = { Text("Find in document...") },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                onSearch()
+                focusManager.clearFocus()
+            })
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        if (state.searchMatches.isNotEmpty()) {
+            Text(
+                text = "${state.currentMatchIndex + 1} / ${state.searchMatches.size}",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 4.dp).align(Alignment.CenterVertically)
+            )
+        } else if (state.searchQuery.isNotBlank()) {
+            Text(
+                text = "No results",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 4.dp).align(Alignment.CenterVertically),
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        TextButton(onClick = onPrev, enabled = state.searchMatches.isNotEmpty()) { Text("<") }
+        TextButton(onClick = onNext, enabled = state.searchMatches.isNotEmpty()) { Text(">") }
+        TextButton(onClick = onClose) { Text("✕") }
     }
 }
 

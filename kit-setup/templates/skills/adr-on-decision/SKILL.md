@@ -7,7 +7,7 @@ Record an Architecture Decision Record (`.aikit/adr/<id>.md`) when a step or fix
 |---|---|
 | Session 1 Stage 2 | the plan introduces a new public API, new persistence layer, or new top-level dependency |
 | Session 2 Stage 3 step 2 | the step's `What would be wrong` line is itself a choice between two viable options |
-| Session 3 Stage 3 | the fix selects one of multiple ways to repair the defect and others would have been defensible |
+| Session 3 Stage 2 | the fix selects one of multiple ways to repair the defect and others would have been defensible |
 
 Skip when: the change is mechanically forced by the plan (rename, lift, format), or the alternatives were ruled out by an obvious constraint (e.g. licensing, platform). An ADR for a forced choice is bureaucratic ceremony.
 

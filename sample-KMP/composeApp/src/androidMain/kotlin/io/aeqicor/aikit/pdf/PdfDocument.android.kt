@@ -34,6 +34,8 @@ actual class PdfDocument actual constructor(path: String) {
         return bitmap.asImageBitmap()
     }
 
+    actual fun findMatches(query: String): List<SearchMatch> = emptyList()
+
     actual fun close() {
         renderer.close()
         fd.close()

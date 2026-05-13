@@ -7,7 +7,7 @@ Eight red-flag patterns to scan for before approving any step that touches input
 |---|---|
 | Session 1 Stage 2 | drafting a step that touches an input or auth boundary — mark the step `standard` or `heavy` |
 | Session 2 Stage 3 step 5 | reviewing the diff of a step whose Goal mentions auth, input, SQL, secrets, or network |
-| Session 3 Stage 3 | drafting a fix for a defect reported as a security issue |
+| Session 3 Stage 2 | drafting a fix for a defect reported as a security issue |
 
 Skip when: the diff is pure styling, doc, or test-only. A diff that adds a new dependency from a registry always invokes this skill regardless of tier.
 

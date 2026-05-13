@@ -143,6 +143,58 @@ class PdfViewerViewModel : ViewModel() {
         desiredPages.value = prioritized
     }
 
+    // ── Search ────────────────────────────────────────────────────────────────
+
+    fun openSearch() {
+        _uiState.update { it.copy(isSearchOpen = true) }
+    }
+
+    fun closeSearch() {
+        _uiState.update {
+            it.copy(isSearchOpen = false, searchQuery = "", searchMatches = emptyList(), currentMatchIndex = -1)
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun executeSearch() {
+        val query = _uiState.value.searchQuery
+        if (query.isBlank()) {
+            _uiState.update { it.copy(searchMatches = emptyList(), currentMatchIndex = -1) }
+            return
+        }
+        val doc = document ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            val matches = doc.findMatches(query)
+            val firstPage = matches.firstOrNull()?.pageIndex ?: -1
+            _uiState.update { state ->
+                state.copy(
+                    searchMatches = matches,
+                    currentMatchIndex = if (matches.isNotEmpty()) 0 else -1,
+                    scrollToPage = if (firstPage >= 0) firstPage else state.scrollToPage
+                )
+            }
+        }
+    }
+
+    fun nextMatch() {
+        val state = _uiState.value
+        if (state.searchMatches.isEmpty()) return
+        val next = (state.currentMatchIndex + 1) % state.searchMatches.size
+        val page = state.searchMatches[next].pageIndex
+        _uiState.update { it.copy(currentMatchIndex = next, scrollToPage = page) }
+    }
+
+    fun prevMatch() {
+        val state = _uiState.value
+        if (state.searchMatches.isEmpty()) return
+        val prev = (state.currentMatchIndex - 1 + state.searchMatches.size) % state.searchMatches.size
+        val page = state.searchMatches[prev].pageIndex
+        _uiState.update { it.copy(currentMatchIndex = prev, scrollToPage = page) }
+    }
+
     // ── Navigation ────────────────────────────────────────────────────────────
 
     fun goToPage(pageIndex: Int) {

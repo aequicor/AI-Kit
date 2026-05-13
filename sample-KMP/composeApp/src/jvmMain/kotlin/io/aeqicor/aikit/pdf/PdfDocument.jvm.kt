@@ -20,5 +20,8 @@ actual class PdfDocument actual constructor(path: String) {
         return bufferedImage.toComposeImageBitmap()
     }
 
+    actual fun findMatches(query: String): List<SearchMatch> =
+        TextSearchStripper().search(document, query)
+
     actual fun close() = document.close()
 }

@@ -14,5 +14,9 @@ data class PdfViewerState(
     val scrollToPage: Int? = null,
     val zoomScale: Float = 1f,
     val renderToken: Long = 0,
-    val isSidebarOpen: Boolean = false
+    val isSidebarOpen: Boolean = false,
+    val isSearchOpen: Boolean = false,
+    val searchQuery: String = "",
+    val searchMatches: List<SearchMatch> = emptyList(),
+    val currentMatchIndex: Int = -1
 )

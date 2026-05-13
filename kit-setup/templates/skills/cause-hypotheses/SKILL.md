@@ -4,9 +4,9 @@ Generate 2–4 root-cause hypotheses for a Session 3 defect — each falsifiable
 
 | Stage | Trigger |
 |---|---|
-| Session 3 Stage 2 | after DIAGNOSIS is emitted, before the user has picked a cause |
+| Session 3 Stage 1 (second half) | immediately after `debug-loop` emits DIAGNOSIS, in the same uninterrupted Stage 1 pass — **no AWAIT between DIAGNOSIS and CAUSE OPTIONS**. The user sees both blocks together and replies once. |
 
-The skill produces the CAUSE OPTIONS block. After the user picks (or after fast-path auto-advance), Stage 3 generates FIX OPTIONS for the chosen cause via the `fix-options` skill.
+The skill produces the CAUSE OPTIONS block and carries the **combined Stage 1 Reply: footer** (DIAGNOSIS no longer has its own footer in v4). After the user picks (or after fast-path auto-advance), Stage 2 generates FIX OPTIONS for the chosen cause via the `fix-options` skill.
 
 # Procedure
 
@@ -25,7 +25,7 @@ Rules:
 
 ## Adaptive fast-path
 
-- **Exactly 1 plausible cause** → emit the single hypothesis with header `Auto-advanced: no plausible alternatives surfaced.` and skip the user-selection AWAIT. Record under FIX SUMMARY's `Cause considered (auto-advanced):`.
+- **Exactly 1 plausible cause** → emit the single hypothesis with header `Auto-advanced: no plausible alternatives surfaced.` and skip the user-selection AWAIT — advance straight into Stage 2 (FIX OPTIONS). Record under FIX SUMMARY's `Cause considered (auto-advanced):`.
 - **0 plausible causes** → STOP Session 3. Emit: `Cannot diagnose: no root-cause hypothesis is supported by Stage 1 evidence. Reproduce again, expand the anamnesis (different OS, larger input, fresh log), then re-invoke /kit-fix.`
 - **≥5 plausible causes** → narrow to the top 4 by `supports` strength. List the rejected 5th+ under FIX SUMMARY's `Cause considered (rejected):`.
 
@@ -37,6 +37,8 @@ Rules:
 - **Self-confirming hypothesis.** "The code at `foo.kt:42` is wrong" with no observable prediction. Every hypothesis must say what we'd see if it were true.
 
 # Output format
+
+CAUSE OPTIONS is emitted immediately after DIAGNOSIS, with one combined Reply: footer covering both blocks (DIAGNOSIS does not carry its own footer in v4):
 
 ```
 ## CAUSE OPTIONS · commit `<target-hash>`
@@ -51,13 +53,15 @@ Rules:
    ...
 
 ---
-Reply:
-- `<N>` — выбрать гипотезу №N
-- `другая: <текст>` — описать свою root-cause гипотезу
-- `копай ещё` — дополнительный research-проход (доп. чтение / repro), вернуться с обновлённым списком
+Reply (covers DIAGNOSIS + CAUSE OPTIONS):
+- `<N>` — выбрать гипотезу №N и перейти к Stage 2 (FIX OPTIONS)
+- `другая: <текст>` — описать свою root-cause гипотезу и перейти к Stage 2
+- `копай ещё [: <hint>]` — research-проход по гипотезам (DIAGNOSIS заморожен), переотрисовать CAUSE OPTIONS
+- `<correction>` — поправить контекст DIAGNOSIS и переотрисовать оба блока с нуля
+- `abort` — Session 3 END без commit'а
 ```
 
-Single-hypothesis fast-path variant (replaces the block above):
+Single-hypothesis fast-path variant (replaces the block above; the `ok` token becomes valid only in this variant):
 
 ```
 ## CAUSE OPTIONS · commit `<target-hash>`
@@ -69,5 +73,7 @@ Single-hypothesis fast-path variant (replaces the block above):
    - **Current observation:** <evidence>
    - **Assessment:** supports
 
-Proceeding to Stage 3 (fix options) without user selection. Override: reply `стоп` to force AWAIT and refine.
+Proceeding to Stage 2 (fix options) without user selection. Override: reply `стоп` to force AWAIT and refine; reply `ok` to confirm the auto-selected cause explicitly.
 ```
+
+When the runner supports a native interactive picker (AskUserQuestion or equivalent), prefer it for the cause-pick: render the numbered options as ranked rows with the one-line cause name + assessment, keep the free-text input enabled, and parse any free-text reply as `другая: <text>` / `копай ещё [: <hint>]` / `<correction>` / `abort` by prefix. The picker never replaces or expands the reply-token contract; it just removes one round-trip of typing.
