@@ -5,8 +5,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 data class PdfViewerState(
     val pageCount: Int = 0,
     val currentPage: Int = 0,
-    val renderedPage: ImageBitmap? = null,
+    val renderedPages: Map<Int, ImageBitmap> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val viewportWidth: Int = 0
+    val viewportWidth: Int = 0,
+    val scrollToPage: Int? = null
 )
