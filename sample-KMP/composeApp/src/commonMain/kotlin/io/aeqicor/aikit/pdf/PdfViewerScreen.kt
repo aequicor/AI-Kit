@@ -2,6 +2,9 @@ package io.aeqicor.aikit.pdf
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -34,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,15 +58,23 @@ fun PdfViewerScreen(
         path?.let { viewModel.openPdf(it) }
     }
 
-    // Track current page from scroll position + request render for visible items
+    // Track current page from scroll position
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .collect { viewModel.setCurrentPage(it) }
     }
 
+    // Push visible indices to render consumer
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.index } }
             .collect { visibleIndices -> viewModel.setDesiredPages(visibleIndices) }
+    }
+
+    // Re-trigger render when zoom changes (cache was cleared, consumer restarted)
+    LaunchedEffect(state.renderToken) {
+        if (state.renderToken > 0) {
+            viewModel.setDesiredPages(listState.layoutInfo.visibleItemsInfo.map { it.index })
+        }
     }
 
     // Handle scroll-to-page signal
@@ -70,6 +83,11 @@ fun PdfViewerScreen(
             listState.animateScrollToItem(page)
             viewModel.onScrollHandled()
         }
+    }
+
+    // Pinch-to-zoom (touch / trackpad gesture)
+    val transformState = rememberTransformableState { zoomChange, _, _ ->
+        viewModel.applyZoom(state.zoomScale * zoomChange)
     }
 
     Scaffold(
@@ -86,7 +104,11 @@ fun PdfViewerScreen(
                         state = state,
                         onPrevPage = { viewModel.prevPage() },
                         onNextPage = { viewModel.nextPage() },
-                        onGoToPage = { viewModel.goToPage(it) }
+                        onGoToPage = { viewModel.goToPage(it) },
+                        onZoomIn = { viewModel.zoomIn() },
+                        onZoomOut = { viewModel.zoomOut() },
+                        onResetZoom = { viewModel.resetZoom() },
+                        onFitToWidth = { viewModel.fitToWidth() }
                     )
                 }
             }
@@ -98,7 +120,8 @@ fun PdfViewerScreen(
                 .padding(paddingValues)
                 .onSizeChanged { size ->
                     if (size.width > 0) viewModel.setViewportWidth(size.width)
-                },
+                }
+                .transformable(state = transformState),
             contentAlignment = Alignment.Center
         ) {
             when {
@@ -113,22 +136,34 @@ fun PdfViewerScreen(
                 ) {
                     items(state.pageCount) { pageIndex ->
                         val bitmap = state.renderedPages[pageIndex]
-                        Box(
+                        val density = LocalDensity.current
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified else 400.dp)
-                                .padding(vertical = 2.dp),
-                            contentAlignment = Alignment.Center
+                                .horizontalScroll(rememberScrollState())
                         ) {
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap,
-                                    contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentScale = ContentScale.FillWidth
-                                )
-                            } else {
-                                CircularProgressIndicator()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(
+                                        if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
+                                        else 400.dp
+                                    )
+                                    .padding(vertical = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap,
+                                        contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
+                                        modifier = Modifier.width(
+                                            with(density) { bitmap.width.toDp() }
+                                        ),
+                                        contentScale = ContentScale.FillWidth
+                                    )
+                                } else {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
                     }
@@ -144,7 +179,11 @@ private fun PdfNavigationBar(
     state: PdfViewerState,
     onPrevPage: () -> Unit,
     onNextPage: () -> Unit,
-    onGoToPage: (Int) -> Unit
+    onGoToPage: (Int) -> Unit,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    onResetZoom: () -> Unit,
+    onFitToWidth: () -> Unit
 ) {
     var gotoText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -156,10 +195,8 @@ private fun PdfNavigationBar(
             .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextButton(
-            onClick = onPrevPage,
-            enabled = state.currentPage > 0
-        ) { Text("<") }
+        // Page navigation
+        TextButton(onClick = onPrevPage, enabled = state.currentPage > 0) { Text("<") }
 
         OutlinedTextField(
             value = gotoText,
@@ -187,11 +224,21 @@ private fun PdfNavigationBar(
             modifier = Modifier.align(Alignment.CenterVertically)
         )
 
-        Spacer(modifier = Modifier.weight(1f))
-
         TextButton(
             onClick = onNextPage,
             enabled = state.currentPage < state.pageCount - 1
         ) { Text(">") }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Zoom controls
+        TextButton(onClick = onZoomOut, enabled = state.zoomScale > 0.25f) { Text("−") }
+        Text(
+            text = "${(state.zoomScale * 100).toInt()}%",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.align(Alignment.CenterVertically)
+        )
+        TextButton(onClick = onZoomIn, enabled = state.zoomScale < 4.0f) { Text("+") }
+        TextButton(onClick = onFitToWidth) { Text("Fit") }
     }
 }

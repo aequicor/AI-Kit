@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 private const val MAX_RENDER_WIDTH = 1400
+private const val ZOOM_MIN = 0.25f
+private const val ZOOM_MAX = 4.0f
 
 class PdfViewerViewModel : ViewModel() {
     private var document: PdfDocument? = null
@@ -37,6 +39,28 @@ class PdfViewerViewModel : ViewModel() {
     fun onScrollHandled() {
         _uiState.update { it.copy(scrollToPage = null) }
     }
+
+    // ── Zoom ─────────────────────────────────────────────────────────────────
+
+    fun zoomIn() = applyZoom(_uiState.value.zoomScale * 1.25f)
+    fun zoomOut() = applyZoom(_uiState.value.zoomScale * 0.8f)
+    fun resetZoom() = applyZoom(1.0f)
+    fun fitToWidth() = applyZoom(1.0f)
+
+    fun applyZoom(factor: Float) {
+        val newScale = factor.coerceIn(ZOOM_MIN, ZOOM_MAX)
+        if (newScale == _uiState.value.zoomScale) return
+        _uiState.update { state ->
+            state.copy(
+                zoomScale = newScale,
+                renderedPages = emptyMap(),
+                renderToken = state.renderToken + 1
+            )
+        }
+        startRenderConsumer()
+    }
+
+    // ── PDF loading ───────────────────────────────────────────────────────────
 
     fun openPdf(path: String) {
         viewModelScope.launch(Dispatchers.Default) {
@@ -69,7 +93,9 @@ class PdfViewerViewModel : ViewModel() {
                     ensureActive()
                     if (_uiState.value.renderedPages.containsKey(pageIndex)) continue
                     val doc = document ?: break
-                    val w = _uiState.value.viewportWidth.takeIf { it > 0 } ?: 800
+                    val zoom = _uiState.value.zoomScale
+                    val viewportW = _uiState.value.viewportWidth.takeIf { it > 0 } ?: 800
+                    val w = (viewportW * zoom).toInt().coerceIn(1, MAX_RENDER_WIDTH)
                     try {
                         val bitmap = doc.renderPage(pageIndex, w, 0)
                         _uiState.update { state ->
@@ -91,6 +117,8 @@ class PdfViewerViewModel : ViewModel() {
             .sortedBy { idx -> visibleIndices.minOf { abs(it - idx) } }
         desiredPages.value = prioritized
     }
+
+    // ── Navigation ────────────────────────────────────────────────────────────
 
     fun goToPage(pageIndex: Int) {
         val count = _uiState.value.pageCount
