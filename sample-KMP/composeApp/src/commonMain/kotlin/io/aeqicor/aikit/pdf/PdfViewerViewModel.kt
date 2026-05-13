@@ -27,7 +27,10 @@ class PdfViewerViewModel : ViewModel() {
     private var renderJob: Job? = null
 
     fun setViewportWidth(width: Int) {
-        _uiState.update { it.copy(viewportWidth = minOf(width, MAX_RENDER_WIDTH)) }
+        _uiState.update { it.copy(
+            actualViewportWidth = width,
+            viewportWidth = minOf(width, MAX_RENDER_WIDTH)
+        ) }
     }
 
     fun setCurrentPage(page: Int) {
@@ -95,7 +98,7 @@ class PdfViewerViewModel : ViewModel() {
                     val doc = document ?: break
                     val zoom = _uiState.value.zoomScale
                     val viewportW = _uiState.value.viewportWidth.takeIf { it > 0 } ?: 800
-                    val w = (viewportW * zoom).toInt().coerceIn(1, MAX_RENDER_WIDTH)
+                    val w = (viewportW * zoom).toInt().coerceAtLeast(1)
                     try {
                         val bitmap = doc.renderPage(pageIndex, w, 0)
                         _uiState.update { state ->

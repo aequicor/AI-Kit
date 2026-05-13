@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +55,7 @@ fun PdfViewerScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val hScrollState = rememberScrollState()
 
     val openAction = rememberOpenPdfAction { path ->
         path?.let { viewModel.openPdf(it) }
@@ -83,6 +86,18 @@ fun PdfViewerScreen(
             listState.animateScrollToItem(page)
             viewModel.onScrollHandled()
         }
+    }
+
+    // Center content horizontally after bitmaps are rendered at current zoom level
+    LaunchedEffect(state.renderToken, state.actualViewportWidth) {
+        val token = state.renderToken
+        val actualVp = state.actualViewportWidth
+        if (actualVp == 0) return@LaunchedEffect
+        val rendered = viewModel.uiState.first {
+            it.renderToken == token && it.renderedPages.isNotEmpty()
+        }
+        val bitmapWidth = rendered.renderedPages.values.first().width
+        hScrollState.scrollTo(maxOf(0, (bitmapWidth - actualVp) / 2))
     }
 
     // Pinch-to-zoom (touch / trackpad gesture)
@@ -140,11 +155,11 @@ fun PdfViewerScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
+                                .horizontalScroll(hScrollState)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .widthIn(min = with(density) { state.actualViewportWidth.toDp() })
                                     .height(
                                         if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
                                         else 400.dp

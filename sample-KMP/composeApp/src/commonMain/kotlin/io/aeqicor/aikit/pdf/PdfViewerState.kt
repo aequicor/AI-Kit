@@ -9,6 +9,7 @@ data class PdfViewerState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val viewportWidth: Int = 0,
+    val actualViewportWidth: Int = 0,
     val scrollToPage: Int? = null,
     val zoomScale: Float = 1f,
     val renderToken: Long = 0
