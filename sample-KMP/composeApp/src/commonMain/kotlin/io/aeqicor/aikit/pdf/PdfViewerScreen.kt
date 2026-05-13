@@ -1,17 +1,27 @@
 package io.aeqicor.aikit.pdf
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -73,7 +83,7 @@ fun PdfViewerScreen(
             .collect { visibleIndices -> viewModel.setDesiredPages(visibleIndices) }
     }
 
-    // Re-trigger render when zoom changes (cache was cleared, consumer restarted)
+    // Re-trigger render when zoom changes
     LaunchedEffect(state.renderToken) {
         if (state.renderToken > 0) {
             viewModel.setDesiredPages(listState.layoutInfo.visibleItemsInfo.map { it.index })
@@ -107,10 +117,15 @@ fun PdfViewerScreen(
 
     Scaffold(
         topBar = {
-            androidx.compose.foundation.layout.Column {
+            Column {
                 TopAppBar(
                     title = { Text("PDF Viewer") },
                     actions = {
+                        if (state.pageCount > 0) {
+                            TextButton(onClick = { viewModel.toggleSidebar() }) {
+                                Text(if (state.isSidebarOpen) "✕☰" else "☰")
+                            }
+                        }
                         Button(onClick = openAction) { Text("Open") }
                     }
                 )
@@ -129,61 +144,144 @@ fun PdfViewerScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .onSizeChanged { size ->
-                    if (size.width > 0) viewModel.setViewportWidth(size.width)
-                }
-                .transformable(state = transformState),
-            contentAlignment = Alignment.Center
         ) {
-            when {
-                state.isLoading -> CircularProgressIndicator()
-                state.error != null -> Text(
-                    text = "Error: ${state.error}",
-                    color = MaterialTheme.colorScheme.error
-                )
-                state.pageCount > 0 -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(state.pageCount) { pageIndex ->
-                        val bitmap = state.renderedPages[pageIndex]
-                        val density = LocalDensity.current
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(hScrollState)
-                        ) {
-                            Box(
+            // Thumbnail sidebar
+            AnimatedVisibility(
+                visible = state.isSidebarOpen,
+                enter = expandHorizontally(expandFrom = Alignment.Start),
+                exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
+            ) {
+                ThumbnailSidebar(state = state, viewModel = viewModel)
+            }
+
+            // Main content
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .onSizeChanged { size ->
+                        if (size.width > 0) viewModel.setViewportWidth(size.width)
+                    }
+                    .transformable(state = transformState),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    state.isLoading -> CircularProgressIndicator()
+                    state.error != null -> Text(
+                        text = "Error: ${state.error}",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    state.pageCount > 0 -> LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(state.pageCount) { pageIndex ->
+                            val bitmap = state.renderedPages[pageIndex]
+                            val density = LocalDensity.current
+                            Row(
                                 modifier = Modifier
-                                    .widthIn(min = with(density) { state.actualViewportWidth.toDp() })
-                                    .height(
-                                        if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
-                                        else 400.dp
-                                    )
-                                    .padding(vertical = 2.dp),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .horizontalScroll(hScrollState)
                             ) {
-                                if (bitmap != null) {
-                                    Image(
-                                        bitmap = bitmap,
-                                        contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
-                                        modifier = Modifier.width(
-                                            with(density) { bitmap.width.toDp() }
-                                        ),
-                                        contentScale = ContentScale.FillWidth
-                                    )
-                                } else {
-                                    CircularProgressIndicator()
+                                Box(
+                                    modifier = Modifier
+                                        .widthIn(min = with(density) { state.actualViewportWidth.toDp() })
+                                        .height(
+                                            if (bitmap != null) androidx.compose.ui.unit.Dp.Unspecified
+                                            else 400.dp
+                                        )
+                                        .padding(vertical = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (bitmap != null) {
+                                        Image(
+                                            bitmap = bitmap,
+                                            contentDescription = "Page ${pageIndex + 1} of ${state.pageCount}",
+                                            modifier = Modifier.width(
+                                                with(density) { bitmap.width.toDp() }
+                                            ),
+                                            contentScale = ContentScale.FillWidth
+                                        )
+                                    } else {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
                         }
                     }
+                    else -> Text("Open a PDF file to get started")
                 }
-                else -> Text("Open a PDF file to get started")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThumbnailSidebar(state: PdfViewerState, viewModel: PdfViewerViewModel) {
+    val sidebarListState = rememberLazyListState()
+
+    // Keep sidebar scroll in sync with current page
+    LaunchedEffect(state.currentPage) {
+        if (state.pageCount > 0) sidebarListState.animateScrollToItem(state.currentPage)
+    }
+
+    LazyColumn(
+        state = sidebarListState,
+        modifier = Modifier
+            .width(128.dp)
+            .fillMaxHeight()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
+    ) {
+        items(state.pageCount) { pageIndex ->
+            val thumbnail = state.thumbnailPages[pageIndex]
+
+            LaunchedEffect(pageIndex) {
+                viewModel.renderThumbnailIfNeeded(pageIndex)
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.goToPage(pageIndex) }
+                    .then(
+                        if (pageIndex == state.currentPage)
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
+                        else Modifier
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (thumbnail != null) {
+                    Image(
+                        bitmap = thumbnail,
+                        contentDescription = "Page ${pageIndex + 1}",
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.707f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                }
+                Text(
+                    text = "${pageIndex + 1}",
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                        .padding(horizontal = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -210,7 +308,6 @@ private fun PdfNavigationBar(
             .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Page navigation
         TextButton(onClick = onPrevPage, enabled = state.currentPage > 0) { Text("<") }
 
         OutlinedTextField(
@@ -246,7 +343,6 @@ private fun PdfNavigationBar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Zoom controls
         TextButton(onClick = onZoomOut, enabled = state.zoomScale > 0.25f) { Text("−") }
         Text(
             text = "${(state.zoomScale * 100).toInt()}%",

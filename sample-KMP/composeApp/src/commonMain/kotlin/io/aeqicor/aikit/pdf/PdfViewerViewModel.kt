@@ -16,6 +16,7 @@ import kotlin.math.abs
 private const val MAX_RENDER_WIDTH = 1400
 private const val ZOOM_MIN = 0.25f
 private const val ZOOM_MAX = 4.0f
+private const val THUMBNAIL_WIDTH_PX = 120
 
 class PdfViewerViewModel : ViewModel() {
     private var document: PdfDocument? = null
@@ -43,6 +44,25 @@ class PdfViewerViewModel : ViewModel() {
         _uiState.update { it.copy(scrollToPage = null) }
     }
 
+    // ── Sidebar ───────────────────────────────────────────────────────────────
+
+    fun toggleSidebar() {
+        _uiState.update { it.copy(isSidebarOpen = !it.isSidebarOpen) }
+    }
+
+    fun renderThumbnailIfNeeded(pageIndex: Int) {
+        if (_uiState.value.thumbnailPages.containsKey(pageIndex)) return
+        val doc = document ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val bitmap = doc.renderPage(pageIndex, THUMBNAIL_WIDTH_PX, 0)
+                _uiState.update { state ->
+                    state.copy(thumbnailPages = state.thumbnailPages + (pageIndex to bitmap))
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     // ── Zoom ─────────────────────────────────────────────────────────────────
 
     fun zoomIn() = applyZoom(_uiState.value.zoomScale * 1.25f)
@@ -67,7 +87,9 @@ class PdfViewerViewModel : ViewModel() {
 
     fun openPdf(path: String) {
         viewModelScope.launch(Dispatchers.Default) {
-            _uiState.update { it.copy(isLoading = true, error = null, renderedPages = emptyMap()) }
+            _uiState.update {
+                it.copy(isLoading = true, error = null, renderedPages = emptyMap(), thumbnailPages = emptyMap())
+            }
             try {
                 document?.close()
                 val doc = loadPdf(path)

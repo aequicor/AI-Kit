@@ -22,7 +22,12 @@ actual class PdfDocument actual constructor(path: String) {
     actual fun renderPage(pageIndex: Int, widthPx: Int, heightPx: Int): ImageBitmap {
         val page = renderer.openPage(pageIndex)
         val w = if (widthPx > 0) widthPx else page.width
-        val h = if (heightPx > 0) heightPx else page.height
+        val h = when {
+            heightPx > 0 -> heightPx
+            widthPx > 0 && page.width > 0 ->
+                (widthPx.toLong() * page.height / page.width).toInt().coerceAtLeast(1)
+            else -> page.height
+        }
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
         page.close()
