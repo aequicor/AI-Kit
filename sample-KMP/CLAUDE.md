@@ -21,7 +21,7 @@ Communicate with the user in Russian (ru). All prose — questions, explanations
 <instructions>
 > AI-Kit pipeline — v4.
 > Multi-runner kit (Claude Code / Cursor / OpenCode / Aider / Qwen Code).
-> 3 commands × 3 sessions. /kit-do auto-commits per step; /kit-fix gates **before** commit (Stage 4 AWAIT). Human validates every change. Git is the source of truth.
+> 3 commands × 3 sessions. /kit-do auto-commits per step; /kit-fix gates **before** commit (Stage 3 AWAIT). Human validates every change. Git is the source of truth.
 
 ## Role
 
@@ -31,7 +31,7 @@ These are the AI-Kit v3 pipeline instructions for this project. Each user task m
 |---|---|---|
 | `/kit <task>` | **Plan** | Stage 1 (Context) → Stage 2 (Plan). Output: `.aikit/plans/<id>.md` + commit. End. |
 | `/kit-do <plan-id> [--resume]` | **Execute** | Stage 3 (Steps with auto-commit) → Stage 4 (Ship: squash + push gates). |
-| `/kit-fix <commit-hash> <desc>` | **Fix** | Diagnostic 5-stage recovery: Анамнез → Варианты причины → Варианты фикса → Реализация (AWAIT перед commit'ом) → Commit + verify. Output: FIX SUMMARY for paste-back. End. |
+| `/kit-fix <commit-hash> <desc>` | **Fix** | Diagnostic 4-stage recovery: Анамнез + Варианты причины (объединены) → Варианты фикса → Реализация (AWAIT перед commit'ом) → Commit + verify. Output: FIX SUMMARY for paste-back. End. |
 
 You do not write code outside the session you were entered into. You do not invent extra commands. You do not chain tasks across sessions.
 
@@ -207,56 +207,66 @@ The session ends after Stage 4. Do not start a new task in the same session.
 
 ## Session 3 — Fix (`/kit-fix <commit-hash> <description>`)
 
-Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot patch. Five stages, four AWAIT gates (Stage 4 is mandatory, Stages 1–3 may auto-advance under documented conditions).
+Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot patch. Four stages, three AWAIT gates (Stage 3 is mandatory; Stages 1–2 may auto-advance under documented conditions). Stage 1 fuses anamnesis with root-cause hypotheses into a single uninterrupted pass — the human reviews both blocks together, never the diagnosis without the hypotheses.
+
+### Description parsing
+
+The description after the commit hash may be free-form text **or** the structured template emitted by STEP SUMMARY:
+
+```
+Дефект: <name>
+Шаги:
+1) <шаг 1>
+n) <шаг n>
+ФР: <фактический результат>
+ОР: <Ожидаемый результат>
+```
+
+When the template is present:
+- `Дефект:` seeds DIAGNOSIS's `Reduce` line.
+- `Шаги:` seeds DIAGNOSIS's `Repro` line (collapse the numbered steps into one copy-pasteable command or test when possible; otherwise carry them verbatim).
+- `ФР:` and `ОР:` together describe the observed-vs-expected contrast — every Stage 1 hypothesis must explain why ФР ≠ ОР.
+
+Missing fields are not a hard error.
 
 ### Pre-checks (run before Stage 1)
 
 1. `git cat-file -e <commit-hash> 2>&1` — if it fails, STOP: `Commit <hash> does not exist in this repository.`
-2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash.`
+2. If the rest of `$ARGUMENTS` after the hash is empty, STOP: `/kit-fix needs a description of the defect after the commit hash. Use the template from STEP SUMMARY: "Дефект: … / Шаги: … / ФР: … / ОР: …".`
 3. `git status --porcelain` — if non-empty, STOP: `Working tree is dirty. Stash or commit other work first; Session 3 needs a clean tree to attribute the new fix-commit cleanly.`
 4. `git log --grep="kit: plan for" --format="%H" -n 1 <commit-hash>~` — if empty, STOP: `No "kit: plan for" commit precedes <commit-hash>. /kit-fix only operates on commits made through /kit-do. If this is a manual commit, fix it through normal git workflow instead.`
 
-### Stage 1 — Анамнез (Anamnesis)
+### Stage 1 — Анамнез + Варианты причины (Anamnesis + Cause options)
+
+Goal: in **one uninterrupted pass** gather defect context (DIAGNOSIS) and propose root-cause hypotheses (CAUSE OPTIONS). No mid-stage AWAIT — the user sees both blocks together at the end. This is the v4 change from the previous five-stage flow: anamnesis without hypotheses is useless evidence, hypotheses without evidence is guessing — so they ship together.
 
 1. `git show <commit-hash>` to read the target diff.
 2. Read `.aikit/plans/<plan-id>.md` from the plan-commit located in pre-check 4.
 3. Read related source files needed to understand the defect.
-4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**.
-5. Emit **DIAGNOSIS** block per the `debug-loop` skill's Output format.
-6. **AWAIT.** Reply tokens:
-   - `ok` → advance to Stage 2
-   - `<any other text>` → context correction; redo Stage 1 with the new constraint; re-emit DIAGNOSIS
-   - `abort` → Session 3 END without commit (tree is already clean)
-
-### Stage 2 — Варианты причины (Cause options)
-
-1. Run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to DIAGNOSIS evidence.
-2. Emit **CAUSE OPTIONS** block per the skill's Output format.
-3. **Adaptive fast-path:**
-   - 1 plausible cause → header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip AWAIT**, advance to Stage 3. User override: `стоп` within the next message forces AWAIT.
+4. Run the `debug-loop` skill to produce **Repro / Localize / Reduce**. If the user supplied the structured template, fold `Шаги:` into Repro and the ФР / ОР contrast into Reduce.
+5. **Without pausing**, run the `cause-hypotheses` skill: generate 2–4 root-cause hypotheses in predict-observe-conclude form, scoped to the evidence just collected. Each hypothesis must be able to explain why ФР ≠ ОР when the structured template was supplied.
+6. Emit **DIAGNOSIS** block, then **CAUSE OPTIONS** block, then **one combined Reply: footer** (drop the per-block footers — they would be ambiguous when stacked).
+7. **Adaptive fast-path for the cause-pick:**
+   - 1 plausible cause → CAUSE OPTIONS header carries `Auto-advanced: no plausible alternatives surfaced.`, **skip AWAIT**, advance to Stage 2 with that cause selected. User override: `стоп` within the next message forces AWAIT.
    - 0 plausible causes → STOP: `Cannot diagnose: no root-cause hypothesis is supported by Stage 1 evidence. Reproduce again, expand the anamnesis, then re-invoke /kit-fix.`
    - ≥2 → AWAIT.
-4. **AWAIT** (unless fast-path skipped it). Reply tokens:
-   - `<N>` → cause selected; advance to Stage 3
-   - `другая: <text>` → user-supplied cause; advance to Stage 3 with it
-   - `копай ещё [: <hint>]` → research pass (read more code, expand evidence); re-emit CAUSE OPTIONS. DIAGNOSIS itself is frozen.
-   - `abort` → Session 3 END without commit
+8. **AWAIT** (unless fast-path skipped it). Prefer the native interactive picker (`AskUserQuestion` or the runner's equivalent) when available — the cause list is closed (`<N>`) with a free-form fallback (`другая`), which is the picker's intended shape. If the runner has no picker, fall back to plain text. Reply tokens are listed in the combined footer above. `копай ещё` re-emits CAUSE OPTIONS only — DIAGNOSIS is frozen unless the user issues a free-form `<correction>`.
 
-### Stage 3 — Варианты фикса (Fix options)
+### Stage 2 — Варианты фикса (Fix options)
 
 1. Run the `fix-options` skill: 2–3 approaches for the chosen cause, distinguishable by Scope / Risk / Test impact / Structural vs workaround axes.
 2. Emit **FIX OPTIONS** block per the skill's Output format.
 3. **Adaptive fast-path:**
-   - 1 viable approach → `Auto-advanced: no viable alternatives surfaced.`, skip AWAIT, advance to Stage 4. Override: `стоп`.
+   - 1 viable approach → `Auto-advanced: no viable alternatives surfaced.`, skip AWAIT, advance to Stage 3. Override: `стоп`.
    - 0 → STOP: `Cannot fix: the chosen cause has no implementation path within /kit-fix scope. Open a new /kit plan to address it structurally.`
    - ≥2 → AWAIT.
-4. **AWAIT.** Reply tokens:
-   - `<N>` → approach selected; advance to Stage 4
-   - `другой: <text>` → user-supplied approach; advance to Stage 4 with it
+4. **AWAIT.** Prefer the native picker here too — same closed-list-with-free-form-fallback shape. Reply tokens:
+   - `<N>` → approach selected; advance to Stage 3
+   - `другой: <text>` → user-supplied approach; advance to Stage 3 with it
    - `копай ещё [: <hint>]` → research pass; re-emit FIX OPTIONS
    - `abort` → Session 3 END without commit
 
-### Stage 4 — Реализация (Implementation)
+### Stage 3 — Реализация (Implementation)
 
 1. Apply the chosen approach to the working tree. **Do not commit yet.**
 2. If the implementation materially diverges from the chosen FIX OPTIONS approach (more files / changed test posture / structural→workaround drift), surface it in DIFF PREVIEW's Self-check — do not silently expand.
@@ -289,27 +299,28 @@ Session 3 is a **diagnostic, multi-stage** recovery in v4 — not a one-shot pat
    ---
    Reply: `ok` · `<correction>` · `abort`
    ```
-4. **AWAIT — mandatory, no fast-path.** This is the one gate v4 protects above all. Reply tokens:
-   - `ok` → advance to Stage 5
+4. **AWAIT — mandatory, no fast-path, no native picker.** This is the one gate v4 protects above all; it stays as free-form text so the user's correction wording is preserved in the audit trail. Reply tokens:
+   - `ok` → advance to Stage 4
    - `<any correction text>` → continue editing in the same worktree; re-emit DIFF PREVIEW
    - `abort` → `git checkout -- .` to restore the worktree (changes lost), Session 3 END
 
-### Stage 5 — Commit + verify + summary
+### Stage 4 — Commit + verify + summary
 
-1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
+1. `git add -A && git commit -m "kit: fix <commit-hash> — <slug>"`. Slug derived from the user's description (kebab-case, ≤4 words; prefer `Дефект:` when the structured template was used). If commit fails (pre-commit hook) → STOP, surface error verbatim. No retry, no `--no-verify`.
 2. **Run verify.** Resolve the target step's `Verify` field from the plan (or default `[compile, test]`) via the active language profile. Capture per-verb result.
-3. If verify is red, the fix is not done. Loop back into Stage 4 (worktree is now empty; re-apply additional changes) **unless** the structural intent was a `--keep-red` carry — document the reason in FIX SUMMARY's `Verify:` explanation.
-4. Emit **FIX SUMMARY** (format below). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when Stages 2 / 3 took the fast-path; `Cause considered (rejected):` / `Approach considered (rejected):` lines when alternatives were narrowed.
+3. If verify is red, the fix is not done. Loop back into Stage 3 (worktree is now empty; re-apply additional changes) **unless** the structural intent was a `--keep-red` carry — document the reason in FIX SUMMARY's `Verify:` explanation.
+4. Emit **FIX SUMMARY** (format below). Include `Cause considered (auto-advanced):` / `Approach considered (auto-advanced):` lines when Stages 1 / 2 took the fast-path; `Cause considered (rejected):` / `Approach considered (rejected):` lines when alternatives were narrowed.
 5. END.
 
 ### Hard rules
 
-- **Single-step only.** If the chosen cause spans multiple invariants in Stage 3, STOP: `This fix needs more than one step. The chosen cause spans multiple invariants. Recommend opening a new feature plan with /kit instead.`
-- **Stage 4 AWAIT is mandatory.** Auto-`ok` here is a protocol violation.
+- **Single-step only.** If the chosen cause spans multiple invariants in Stage 2, STOP: `This fix needs more than one step. The chosen cause spans multiple invariants. Recommend opening a new feature plan with /kit instead.`
+- **Stage 3 AWAIT is mandatory.** Auto-`ok` here is a protocol violation.
+- **DIAGNOSIS is frozen once first emitted.** `копай ещё` re-emits CAUSE OPTIONS only; DIAGNOSIS only changes on a free-form `<correction>` reply (which restarts Stage 1 from step 1).
 - **Use the SUMMARY format exactly.** No narrative substitute. Each block's commit-hash anchor is mandatory.
 - **NEVER `--no-verify`** on the commit.
 - **NEVER modify** the plan file or any commit other than the new fix-commit.
-- **`abort` at any stage** ends Session 3 cleanly: Stage 1 / 2 / 3 abort leaves the tree untouched; Stage 4 abort restores via `git checkout -- .`.
+- **`abort` at any stage** ends Session 3 cleanly: Stage 1 / 2 abort leaves the tree untouched; Stage 3 abort restores via `git checkout -- .`.
 
 If the worktree gets dirty for reasons unrelated to the active stage (external editor, IDE auto-save), STOP and surface: `Working tree dirtied by external changes during Session 3: <files>. Stash or discard them, then re-emit the current stage's block.`
 
@@ -415,10 +426,17 @@ Open a new session and run:
 
 ---
 
-If a fix is needed — open a new session:
-> /kit-fix <hash> <what's wrong>
+If a fix is needed — open a new session and paste the structured defect template after `/kit-fix <hash>`. The template separates the four pieces Session 3 Stage 1 needs (Reduce, Repro, ФР, ОР) so the agent doesn't have to guess which sentence is which:
 
-(the fix session reads the plan and the commit's diff itself)
+> /kit-fix <hash>
+> Дефект: <короткое имя дефекта>
+> Шаги:
+> 1) <шаг 1>
+> n) <шаг n>
+> ФР: <фактический результат — то, что произошло на самом деле>
+> ОР: <ожидаемый результат — то, что должно было произойти>
+
+Free-form text after `/kit-fix <hash>` still works; the template is recommended when there are concrete reproduction steps. The fix session reads the plan and the commit's diff itself — repeating those in the defect description is not needed.
 
 ---
 Reply `next` for step <N+1> · `revert` to drop this commit ·
@@ -442,15 +460,15 @@ The full triage flow lives in the `doubt-triage` skill — load it before drafti
 
 **Defect:** <verbatim Reduce: line from Stage 1 DIAGNOSIS>
 
-**Cause:** <selected cause slug from Stage 2>
+**Cause:** <selected cause slug from Stage 1 (combined DIAGNOSIS + CAUSE OPTIONS)>
 
-**Cause considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
-**Cause considered (rejected):** <if Stage 2 narrowed from >4; one bullet per rejected hypothesis; omit block if absent>
+**Cause considered (auto-advanced):** <one line; present only if Stage 1 took the cause-pick fast-path>
+**Cause considered (rejected):** <if Stage 1 narrowed from >4; one bullet per rejected hypothesis; omit block if absent>
 
-**Approach:** <selected approach slug from Stage 3>
+**Approach:** <selected approach slug from Stage 2 (FIX OPTIONS)>
 
-**Approach considered (auto-advanced):** <one line; present only if Stage 3 took the fast-path>
-**Approach considered (rejected):** <if Stage 3 narrowed; one bullet per rejected approach; omit block if absent>
+**Approach considered (auto-advanced):** <one line; present only if Stage 2 took the fast-path>
+**Approach considered (rejected):** <if Stage 2 narrowed; one bullet per rejected approach; omit block if absent>
 
 **Solution:**
 - <by file, concrete>
@@ -542,11 +560,38 @@ Load the `agent-failure-modes` skill before approving any `standard` / `heavy` s
 ## Tools you may use
 
 - File operations within the project: read, write, edit, glob, grep.
-- Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4.
+- Git via shell: `status`, `add`, `commit`, `log`, `show`, `diff`, `reset --soft`, `reset --hard` (after explicit confirm), `push`, `push --force-with-lease`. Test / build / lint commands during Stage 4. All git verbs the pipeline issues are pre-approved in the kit's generated `permissions.allow` so no per-call prompt fires.
 - `Researcher` subagent (Session 1 Stage 1 only) — delegate heavy file reads and web research, receive a digest.
 - `Verifier` subagent (Session 2 Stage 3 / Session 3, static-doubt resolution) — fresh-context resolver for code-analysis doubts so they do not reach the human as "verify by hand"; see `doubt-triage` skill.
 - Helper prompts under `.claude/prompts/<name>.md` (e.g. `explore-module`) — user-pasted briefs, never auto-invoked. When the user pastes one, follow its instructions as if they had typed them inline.
-- **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker) — allowed at **non-binding gates only**: task clarification before CONTEXT SUMMARY; `y/n` confirmations such as `revert!` and the reflection-quiz mismatch; Stage 4 `ok / keep / cancel` and `push / local` pickers; baseline retry / replan-or-continue decisions. **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages).
+
+### Native runner tools (use these instead of equivalent text)
+
+The kit's generated permissions auto-allow every tool listed below so each call lands without a permission prompt. Match the tool to the runner — when a tool doesn't exist on the active runner, fall back to the text form.
+
+| Native tool | Runners | When to use | What it replaces |
+|---|---|---|---|
+| `AskUserQuestion` (Claude Code, Qwen Code) / `question` (OpenCode) | CC, OC, Qwen | Closed-list AWAIT gates: Session 3 Stage 1 cause-pick, Stage 2 approach-pick, Session 1 ambiguity clarifications | Plain-text "pick a number" reply prompts |
+| `TodoWrite` (Claude Code, OpenCode) / `todo_write` (Qwen) | CC, OC, Qwen | Session 2 Stage 3 step loop — emit a single TodoWrite at session start (`step 1`, `step 2`, … `step N` with statuses), update each as it lands | Long manual progress narration in chat |
+| `EnterPlanMode` / `ExitPlanMode` (Claude Code, Qwen Code) | CC, Qwen | Session 1 Stage 2 — emit ExitPlanMode with the structured plan body alongside the text PLAN SUMMARY; the runner shows an approve UI. Text PLAN SUMMARY stays as the durable artifact | Pure-text plan AWAIT (still used as fallback on OC/Cursor/Aider) |
+| `Monitor` (Claude Code v2.1.98+) | CC | Long-running build or `BUILD: red` diagnosis — tail the build / test log lines back to the conversation without blocking | Manual re-runs of `tail -f` over Bash |
+| `Skill(<name>)` (Claude Code) | CC | Whenever this prompt says "load the X skill" / "run the X skill" — invoke `Skill` with `name: "<X>"`, don't just paraphrase from memory | Paraphrased skill content drifting from the canonical body |
+| `Agent(Researcher / Verifier)` (Claude Code) | CC | Session 1 Stage 1 heavy reads, Session 2/3 doubt-triage static resolution | Eating the orchestrator's context window on raw file reads |
+| `CronCreate` / `ScheduleWakeup` (Claude Code) | CC | Stage 4 verify polling on slow CI, periodic re-check on `BUILD: skipped` toolchain | Manual "ping me in 5 minutes" instructions |
+
+The text artifact (CONTEXT SUMMARY / PLAN SUMMARY / STEP SUMMARY / FIX SUMMARY / DIAGNOSIS / CAUSE OPTIONS / FIX OPTIONS / DIFF PREVIEW) is **always emitted** — it is the durable audit trail. Native tools layer on top to give the human a click-target instead of a typing-target; they never replace the artifact.
+
+- **Runtime interactive prompts** (e.g. AskUserQuestion, OpenCode option picker, Cursor's choice prompt) — prefer them at **closed-list gates** when the runner supports them; they shave a typing round-trip and make the option set visible. Allowed at:
+  - task clarification before CONTEXT SUMMARY;
+  - `y/n` confirmations such as `revert!` and the reflection-quiz mismatch;
+  - Session 2 Stage 4 `ok / keep / cancel` and `push / local` pickers;
+  - baseline retry / replan-or-continue decisions;
+  - Session 3 Stage 1 **cause-pick** (`<N>` from the CAUSE OPTIONS list; the free-form `другая: <text>` / `копай ещё [: <hint>]` / `<correction>` / `abort` tokens stay available as picker fallbacks);
+  - Session 3 Stage 2 **approach-pick** (`<N>` from the FIX OPTIONS list; same free-form fallbacks for `другой` / `копай ещё` / `abort`).
+
+  When using a native picker for the Session 3 picks, render the options as ranked rows (cause / approach name + one-line gist), keep the picker's free-text input enabled, and treat free-text input as the `другая` / `другой` / `копай ещё` / `<correction>` / `abort` token (parse the prefix). The picker is a UX layer over the documented reply tokens — it never expands or replaces them.
+
+  **Forbidden** at gates whose reply carries a free-form `--reason` or a pasted block: `next` / `next --keep-red "<reason>"` / `next --skip-verify "<reason>"` / `next --no-quiz "<reason>"` after STEP SUMMARY; pasted FIX SUMMARY blocks; the post-backstop `ack`; squash-message overrides; **Session 3 Stage 3 DIFF PREVIEW AWAIT**. Those must stay text — their wording becomes part of the audit trail (Carried overrides, SUMMARY headers, commit messages, correction-driven re-diffs).
 
 Tools you may NOT use:
 - `--no-verify` on any git command.
