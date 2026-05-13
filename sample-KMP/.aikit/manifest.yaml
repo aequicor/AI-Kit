@@ -1,0 +1,82 @@
+manifest_version: "3.0.0"
+language_code: ru
+
+project:
+  name: "sample-KMP"
+  slug: "sample-kmp"
+  description: "Kotlin Multiplatform + Compose Multiplatform (Android, iOS, Desktop) с Ktor-сервером"
+
+stack:
+  languages: [kotlin]
+  frameworks: [compose-multiplatform, ktor]
+  build_command: "./gradlew build"
+  test_command: "./gradlew test"
+  lint_command: "./gradlew detekt"
+  format_command: "./gradlew ktlintFormat"
+  run_command: "./gradlew :composeApp:run"
+
+modules:
+  - name: composeApp
+    source_root: composeApp/src
+    test_root: composeApp/src/commonTest
+    responsibility: "UI-слой — Compose Multiplatform (Android, iOS, Desktop)"
+  - name: shared
+    source_root: shared/src
+    test_root: shared/src/commonTest
+    responsibility: "Общая бизнес-логика и доменные модели"
+  - name: server
+    source_root: server/src
+    test_root: server/src/test
+    responsibility: "Ktor-сервер — API и серверная логика"
+
+targets:
+  - id: claude-code
+    native_provider: anthropic
+    adapter: claude-code
+
+render_targets: [claude-code]
+
+providers:
+  - id: anthropic
+    kind: anthropic
+    auth: subscription
+
+models:
+  - id: anthropic-balanced
+    provider: anthropic
+    family: anthropic
+    model: claude-sonnet-4-6
+    tier: balanced
+    priority: 100
+
+prompt_dialects:
+  - id: anthropic
+    path: dialects/anthropic
+
+target_adapters:
+  - id: claude-code
+    path: target_adapters/claude-code
+
+agents:
+  - id: Main
+    role: orchestrator
+    description: "AI-Kit v4 pipeline driver — runs Session 1/2/3 of /kit, /kit-do, /kit-fix"
+    prompt: { include: prompts/Main.md }
+    tools: [Read, Edit, Write, Glob, Grep, Bash]
+  - id: Researcher
+    description: "Session 1 Stage 1 helper — returns one focused digest, never writes code"
+    prompt: { include: prompts/Researcher.md }
+    tools: [Read, Glob, Grep, WebFetch]
+
+policies:
+  forbidden_patterns:
+    - "не использовать println вместо логгера"
+    - "не коммитить local.properties и секреты"
+  optional_skills:
+    - tdd-cycle
+    - security-checklist
+    - doubt-driven-review
+    - simplification-pass
+    - adr-on-decision
+
+knowledge: {}
