@@ -1,3 +1,6 @@
+# Archived
+See: https://github.com/aequicor/ai-kit-v2
+
 # AI Kit
 
 Generates AI agent configuration files for [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [OpenCode](https://opencode.ai), [Aider](https://aider.chat), and [Qwen Code](https://github.com/QwenLM/qwen-code) from a single manifest.
